@@ -164,7 +164,7 @@ const st = (k, txt, level) => ({ text: txt, level, pos: pos(k) });
 const V = R.vega.ctx, O = R.ortega.ctx, Pz = R.paz.ctx, Fe = R.ferrer.ctx;
 const posTxt = k => { const p = pos(k); return p ? ' ' + (p.side === 'long' ? 'LARGO' : 'CORTO') + ' desde ' + fmt(p.entry) + ', stop ' + fmt(p.stop) + ', va ' + sR(p.rNow) + (p.live ? '.' : ' (abierta antes de empezar en vivo: no la copies a mitad).') : ''; };
 const evOf = k => events.filter(e => e.agent === k).map(e => e.text).join(' · ');
-const confTxt = s => confNow(s) ? 'Confluencia a favor (' + confWho(s) + '): puedo entrar.' : 'Solo entro con confluencia (tendencia diaria o ruptura de 5 días a favor); ahora no.';
+const confTxt = s => !E.PICK.paz.conf ? (NUB.phase === 'mature' && s === -1 ? 'Nubarrones veta mis cortos (bajista maduro).' : '') : confNow(s) ? 'Confluencia a favor (' + confWho(s) + '): puedo entrar.' : 'Solo entro con confluencia (tendencia diaria o ruptura de 5 días a favor); ahora no.';
 const RL = E.PICK.paz.rsiLo;
 const regTxt = g => g === 1 ? 'alcista' : g === -1 ? 'bajista' : 'plana';
 const notes = {
