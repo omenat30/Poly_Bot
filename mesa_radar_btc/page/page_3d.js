@@ -86,7 +86,8 @@
     ortega: { x: -5.0, z: -1.3, face: 1, seat: [-6.0, -1.3], visit: [-6.0, -0.35] },
     rios: { x: -5.0, z: 2.3, face: 1, seat: [-6.0, 2.3], visit: [-6.0, 1.35] },
     paz: { x: 5.0, z: -1.3, face: -1, seat: [6.0, -1.3], visit: [6.0, -0.35] },
-    calvo: { x: 5.0, z: 2.3, face: -1, seat: [6.0, 2.3], visit: [6.0, 1.35] }
+    calvo: { x: 5.0, z: 2.3, face: -1, seat: [6.0, 2.3], visit: [6.0, 1.35] },
+    nubarrones: { x: -3.6, z: 7.4, face: 0, seat: [-3.6, 6.45], visit: [-2.35, 6.9] }
   };
   const CORR = 0.55; // pasillo central (z)
   for (const k of M.ORDER) {
@@ -114,7 +115,13 @@
     if (along) { pl.position.set(0, 0.79, 0.43); } else { pl.position.set(-d.face * 0.43, 0.79, 0); pl.rotation.y = d.face === 1 ? -Math.PI / 2 : Math.PI / 2; }
     g.add(pl);
   }
-  const SPOTS = { coffee: [7.2, 4.35], board: [-3.6, -5.0], table: a => [Math.cos(a) * 1.6, 3.6 - Math.abs(Math.sin(a)) * 1.6], sofa: [-6.8, 4.6], er: { vega: [4.1, 7.35], ortega: [5.4, 7.3], paz: [6.7, 7.35], rios: [3.5, 8.6], calvo: [7.3, 8.3] } };
+  // la nube de Nubarrones: gris claro en alcista, oscura y con relámpago cuando hay fase bajista
+  const cloudMat = new T3.MeshStandardMaterial({ color: 0xc9d1dc, roughness: 1, transparent: true, opacity: 0.92 }), cloud = new T3.Group();
+  for (const [x, y, z, r] of [[0, 0, 0, 0.32], [0.3, 0.05, 0.05, 0.26], [-0.3, 0.02, 0, 0.24], [0.12, 0.2, -0.05, 0.24], [-0.14, 0.16, 0.08, 0.2]]) { const m = new T3.Mesh(new T3.SphereGeometry(r, 14, 10), cloudMat); m.position.set(x, y, z); cloud.add(m); }
+  cloud.position.set(DESKS.nubarrones.x, 2.35, DESKS.nubarrones.z); scene.add(cloud);
+  const bolt = new T3.Mesh(new T3.ConeGeometry(0.05, 0.4, 4), new T3.MeshBasicMaterial({ color: 0xffd23f })); bolt.position.set(0.05, -0.3, 0); bolt.rotation.z = 0.35; bolt.visible = false; cloud.add(bolt);
+  let bearPhase = 'bull';
+  const SPOTS = { coffee: [7.2, 4.35], board: [-3.6, -5.0], table: a => [Math.cos(a) * 1.6, 3.6 - Math.abs(Math.sin(a)) * 1.6], sofa: [-6.8, 4.6], er: { vega: [4.1, 7.35], ortega: [5.4, 7.3], paz: [6.7, 7.35], rios: [3.5, 8.6], calvo: [7.3, 8.3], nubarrones: [8.1, 9.3] } };
 
   // ---- people (monigotes) ----
   const skin = mat('skin', '#e2b999'), pants = mat('pants', '#2e3640');
@@ -162,7 +169,7 @@
     goTo(P[k], od.visit, () => {
       P[k].state = 'talk'; P[k].yaw = yawTo(od.visit, od.seat);
       say(k, n ? short(n.text) : 'Te cuento lo que he visto en BTC.', n && n.level);
-      setTimeout(() => { say(other, other === 'calvo' ? 'Lo apunto en el marcador.' : other === 'vega' ? 'Recibido. Riesgo sin cambios.' : 'Anotado.', 'ok', 4); }, 3500);
+      setTimeout(() => { say(other, other === 'calvo' ? 'Lo apunto en el marcador.' : other === 'nubarrones' ? (bearPhase === 'mature' ? 'Bajista maduro: nada de cortos de Paz y Ríos.' : bearPhase === 'bull' ? 'Fondo alcista. Nada que vetar.' : 'Ojo a la fase; no te fíes de los rebotes.') : other === 'vega' ? 'Recibido. Riesgo sin cambios.' : 'Anotado.', 'ok', 4); }, 3500);
       setTimeout(() => { P[other].reserved = false; backToDesk(k); }, 7600);
     });
   }
@@ -217,6 +224,7 @@
   setInterval(checkER, 20000);
   function onData(S) {
     const t = S.ticks[0];
+    { const nn = noteOf('nubarrones'); bearPhase = nn && nn.phase || 'bull'; cloudMat.color.set(bearPhase === 'mature' ? 0x4a5160 : bearPhase === 'early' || bearPhase === 'top' ? 0x7d8796 : 0xc9d1dc); }
     checkER();
     if (t && t.at !== lastTickAt && !erActive) { const first = lastTickAt == null; lastTickAt = t.at; if (!first || (Date.now() - new Date(t.at)) < 20 * 60e3) newRound(t); else M.ORDER.forEach((k, i) => { if (t.notes && t.notes[k]) setTimeout(() => say(k, short(t.notes[k].text, 110), t.notes[k].level, 6), 800 + i * 3800); }); }
     drawBoard(S); drawWall(S); drawER(); for (const k of M.ORDER) drawDesk(k, S);
@@ -321,6 +329,7 @@
   const v3 = new T3.Vector3();
   function step(dt) {
     const tnow = now();
+    cloud.position.y = 2.35 + Math.sin(tnow * 0.8) * 0.05; cloud.rotation.y = Math.sin(tnow * 0.3) * 0.2; bolt.visible = bearPhase === 'mature' && !reduce && (tnow % 4) < 0.18;
     const blink = erActive ? (Math.sin(tnow * 6) > 0 ? 1 : 0) : 0; beaconMat.emissive.setHex(blink ? 0xff2a1a : erActive ? 0x400806 : 0x000000); alarm.intensity = erActive ? (reduce ? 0.6 : 0.4 + blink * 1.4) : 0;
     const near = M.ORDER.some(k => !P[k].home && Math.hypot(P[k].pos.x - DOOR.in[0], P[k].pos.y - DOOR.in[1]) < 1.6);
     doorAngle += ((near ? -1.35 : 0) - doorAngle) * Math.min(1, dt * 4); hinge.rotation.y = doorAngle;

@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026, v5: más acierto, más R por operación y por año)
+# Mesa Radar · operativa BTC (9 oct 2026, v6: entra Nubarrones, bajistas y macro)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,30 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v6 · Nubarrones (bajistas y macro)
+
+**Diagnóstico de 2022 y 2025** (`bear_diag.py`, `bear_feat.py`):
+- Paz pierde comprando caídas en 2025 (−13R).
+- Los cortos en bajista maduro pierden.
+
+**Ley de Nubarrones**, comprobada en 2017–19 (fuera de muestra) y en 2020–26: con SMA50 < SMA200 diaria se vetan los cortos de Paz y Ríos. En ese régimen, los cortos de Ríos dan −0,10R y −0,20R por operación con un 26–29% de acierto; fuera de él, +0,53–0,56R.
+
+Su operativa propia, vender el giro (`nub_strat.py`, 108 variantes), pierde en 2017–19 y da muy pocas operaciones, así que Nubarrones no opera.
+
+Walk-forward 2020–26 (`wf3*.py`), con el veto y Paz sin confluencia:
+
+| | v5 | v6 |
+|---|---|---|
+| R por operación | +0,35 | +0,39 |
+| R al año | +33,7 | +41,7 |
+| t | 2,6 | 3,1 |
+| Operaciones/semana | 2,3 | 2,6 |
+| Acierto | 41% | 40% |
+| Caída máxima | 21,7R | 22,7R |
+| 2022 / 2025 | −13R / −1R | −3R / +14R |
+
+`parity6.js` da 0 diferencias en 1.245 operaciones.
 
 ## v5 · stops y objetivos más cortos y el Radar BTC como filtro
 

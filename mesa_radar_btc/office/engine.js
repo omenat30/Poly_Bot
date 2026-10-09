@@ -1,9 +1,10 @@
 // Mesa Radar · motor de la oficina (BTC), v4. Idéntico al backtest de research/ (engine.py, strategies.py, mgmt.py, wf.py), horario L-V 7:00-21:00 Madrid.
 // Vega: tendencia diaria (cierre vs SMA50 y momentum 50 d, largos y cortos), stop móvil 2 ATR diario, stop a +0,3R al llegar a +1R; sale al perder la tendencia.
 // Ortega: ruptura del máximo (largo) o mínimo (corto) de 5 días en cierre de 4 h, a favor de la SMA50 diaria; stop móvil 2 ATR; stop a +0,3R al llegar a +1R.
-// Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 40 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto), solo con confluencia
-//      (la tendencia diaria o la ruptura de 5 días clásicas, en SOMBRA, dentro en el mismo sentido). Stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, 96 h. Medio riesgo.
-// Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos. Medio riesgo.
+// Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 40 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto).
+//      Stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, a +0,3R al llegar a +1R, 96 h como máximo.
+// Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos.
+// Nubarrones (v6): no opera; veta los cortos de Paz y Ríos en bajista maduro (SMA50 < SMA200 diaria).
 (function (root) {
   'use strict';
   const FEE = 0.0014, STOPSLIP = 0.0003;
@@ -67,11 +68,24 @@
     }
     return { trades: out, open, pending };
   }
+  // Nubarrones: fase del mercado con el último cierre diario (sin mirar el futuro) y su veto
+  function nubarrones(X) {
+    const { D, dc } = X, S50 = sma(dc, 50), S200 = sma(dc, 200), S20 = sma(dc, 20);
+    const dayOf = ts => searchR(D.t, ts) - 2;
+    const phaseAt = d => { if (d < 200 || isNaN(S200[d])) return 'x'; const c = dc[d]; let hi = -Infinity; for (let j = Math.max(0, d - 364); j <= d; j++) hi = Math.max(hi, dc[j]); if (S50[d] < S200[d]) return 'mature'; if (c < S200[d]) return 'early'; if (c > 0.85 * hi && S20[d] < S50[d]) return 'top'; return c < S50[d] ? 'pull' : 'bull'; };
+    const veto = (ts, side) => side === -1 && S50[dayOf(ts)] < S200[dayOf(ts)];
+    const L = dc.length - 1; let hi = -Infinity; for (let j = Math.max(0, L - 364); j <= L; j++) hi = Math.max(hi, dc[j]);
+    const m90 = dc[L] / dc[L - 90] - 1;
+    return { veto, phase: phaseAt(L), ctx: { close: dc[L], s50: S50[L], s200: S200[L], dd: dc[L] / hi - 1, m90 } };
+  }
+  const combine = (...fs) => { const g = fs.filter(Boolean); return g.length ? (ts, s) => g.every(f => f(ts, s)) : null; };
   // confluencia: la señal solo vale si Vega u Ortega están dentro en el mismo sentido
   function confluence(...Rs) {
     const iv = []; for (const R of Rs) { for (const x of R.trades) iv.push([x.sigT, x.exitBar, x.side]); if (R.open) iv.push([R.open.sigT, Infinity, R.open.side]); }
     return (ts, side) => iv.some(([a, b, s]) => a <= ts && ts < b && s === side);
   }
+  // v6 (9 oct 2026): entra Nubarrones (bajistas y macro). Su ley: en bajista maduro (SMA50 < SMA200 diaria, cruce de la muerte) se vetan
+  // los cortos de Paz y Ríos, porque los rebotes de bajista los barren (2017-19: −0,10R; 2020-26: −0,20R por operación en Ríos).
   // v5 (9 oct 2026): parámetros elegidos con todos los datos hasta hoy, ponderando cada trade por recencia (vida media 2 años):
   // por agente, el de mayor (R medio × % de acierto) con t ponderada ≥ 1, entre 432 variantes (objetivos fijos de 1-3R, stops más cortos,
   // Radar BTC como filtro). Validado en walk-forward anual 2020-26. Horario L-V 7:00-21:00 (Madrid).
@@ -79,8 +93,8 @@
   const PICK = {
     vega: { n: 50, k: 2, shorts: 1, G: BE1 },
     ortega: { N: 5, k: 2, G: BE1 },
-    paz: { rsiLo: 40, en: 50, k: 2, tk: 5, maxh: 96, lb: 6, G: {}, conf: true },
-    rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false }
+    paz: { rsiLo: 40, en: 50, k: 2, tk: 5, maxh: 96, lb: 6, G: BE1, conf: false, nub: true },
+    rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false, nub: true }
   };
   // sombras para la confluencia de Paz: la tendencia diaria y la ruptura de 5 días clásicas (v3)
   const SHADOW = { vega: { n: 20, k: 3.5, shorts: 0, G: {} }, ortega: { N: 5, k: 2, G: { tp: 1.5, f: 0.33, be: 0.75, beoff: 0.3 } } };
@@ -160,6 +174,6 @@
     R.ctx = { rank: rank[N - 1], upper: m[N - 1] + 2 * sd[N - 1], lower: m[N - 1] - 2 * sd[N - 1], vol: H.v[N - 1] / vb[N - 1], regime: R50[N - 1], close: c[N - 1] };
     return R;
   }
-  root.MesaEngine = { prepare, vega, ortega, paz, rios, confluence, GEST, PICK, SHADOW, madridHour, madridWork, regime, FEE };
+  root.MesaEngine = { prepare, vega, ortega, paz, rios, confluence, nubarrones, combine, GEST, PICK, SHADOW, madridHour, madridWork, regime, FEE };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined') module.exports = globalThis.MesaEngine;
