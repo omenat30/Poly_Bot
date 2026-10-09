@@ -4,7 +4,7 @@
 // Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 40 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto).
 //      Stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, a +0,3R al llegar a +1R, 96 h como máximo.
 // Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos.
-// Ferrer (v7): squeeze de funding. Salinas (v7): gestor de carteras (tamaño, tope de riesgo, freno por caída). Ríos sale en la v7.
+// Ferrer (v7): squeeze de funding. Salinas (v7): gestor de carteras (tamaño, tope de riesgo, freno por caída). Ríos sale en la v7 y vuelve en la v8.
 // Nubarrones (v6): no opera; veta los cortos de Paz y Ríos en bajista maduro (SMA50 < SMA200 diaria).
 (function (root) {
   'use strict';
@@ -112,11 +112,11 @@
     vega: { n: 50, k: 2, shorts: 1, G: BE1 },
     ortega: { N: 5, k: 2, G: BE1 },
     paz: { rsiLo: 40, en: 50, k: 2, tk: 5, maxh: 96, lb: 6, G: BE1, conf: false, nub: true },
-    rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false, nub: true },   // despedido en la v7: ya no opera
+    rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false, nub: true },   // vuelve en la v8
     ferrer: { lo: -0.00005, hi: 0.0005, N: 12, k: 2, T: 3, G: BE1 }
   };
   // Salinas (gestor de carteras, v7): riesgo base por agente (R), tope de 2R de riesgo abierto y riesgo a la mitad si la cartera cae más de 8R desde su máximo.
-  const PM = { base: { vega: 1, ortega: 1, paz: 0.75, ferrer: 0.5 }, cap: 2.0, ddR: 8, ddCut: 0.5, minW: 0.2 };
+  const PM = { base: { vega: 1, ortega: 1, paz: 0.75, rios: 0.75, ferrer: 0.5 }, cap: 2.0, ddR: 8, ddCut: 0.5, minW: 0.2 };
   // sombras para la confluencia de Paz: la tendencia diaria y la ruptura de 5 días clásicas (v3)
   const SHADOW = { vega: { n: 20, k: 3.5, shorts: 0, G: {} }, ortega: { N: 5, k: 2, G: { tp: 1.5, f: 0.33, be: 0.75, beoff: 0.3 } } };
   const GEST = { vega: BE1, ortega: BE1, paz: {}, rios: {} };

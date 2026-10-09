@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026, v7: sale Ríos, entran Salinas y Ferrer)
+# Mesa Radar · operativa BTC (9 oct 2026, v8: vuelve Ríos)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,25 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v8 · vuelve Ríos; Ferrer (funding) y Ríos (liquidez) juntos
+
+**Colaboración** (`collab.py`, `wf4*.py`):
+- Ríos con el funding de Ferrer, solo cuando la multitud no está cargada en su lado o está atrapada en contra.
+- Ferrer con el volumen de Ríos.
+
+Ninguna mejora el walk-forward. Las rupturas con la multitud atrapada en contra aciertan el 54% (+1,06R), pero en 2023–26 no aparecen. La lectura cruzada queda como información en notas y correos.
+
+Walk-forward 2020–26 con Salinas (tope de 2R y freno a 8R):
+
+| | v7 | v8 |
+|---|---|---|
+| Operaciones/semana | 2,03 | 2,60 |
+| Acierto | 40,8% | 40,3% |
+| R por operación | +0,40 | +0,38 |
+| R al año | +28,9 | +31,2 |
+| Caída máxima | 15,5R | 15,0R |
+| R al año / caída | 1,87 | 2,08 |
 
 ## v7 · sale Ríos, entran Salinas (gestor de carteras) y Ferrer (funding)
 

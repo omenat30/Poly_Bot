@@ -14,7 +14,7 @@
   const scene = new T3.Scene(), cam = new T3.PerspectiveCamera(38, 1.6, 0.1, 100);
   const hemi = new T3.HemisphereLight(0xffffff, 0x8899aa, 0.75); scene.add(hemi);
   const sun = new T3.DirectionalLight(0xffffff, 0.7); sun.position.set(6, 12, 8); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
-  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 12, bottom: -12 }); scene.add(sun);
+  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 12, bottom: -12 }); scene.add(sun);
   const mats = {}; const mat = (k, c, o = {}) => (mats[k] = mats[k] || new T3.MeshStandardMaterial(Object.assign({ color: c, roughness: .85 }, o)));
   const box = (w, h, d, m, x, y, z, parent = scene) => { const b = new T3.Mesh(new T3.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = b.receiveShadow = true; parent.add(b); return b; };
   const cyl = (r1, r2, h, m, x, y, z, parent = scene, seg = 14) => { const c = new T3.Mesh(new T3.CylinderGeometry(r1, r2, h, seg), m); c.position.set(x, y, z); c.castShadow = true; parent.add(c); return c; };
@@ -23,10 +23,10 @@
   const mkCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const tx = new T3.CanvasTexture(c); return { c, g: c.getContext('2d'), tx }; };
   const wallScr = mkCanvas(512, 256), board = mkCanvas(512, 320), deskScr = {};
 
-  // ---- room (v7: 26 m de ancho, suelo de madera, pared derecha con ventanas) ----
-  const W = 26, D = 12, DX = 16; // la planta va de z = -6 a z = 10
+  // ---- room (v8: 30 m de ancho, suelo de madera, pared derecha con ventanas) ----
+  const W = 30, D = 12, DX = 16; // la planta va de z = -6 a z = 10
   const wood = mkCanvas(512, 512); { const g = wood.g; g.fillStyle = 'hsl(32, 30%, 60%)'; g.fillRect(0, 0, 512, 512); for (let r = 0; r < 16; r++) for (let k = 0; k < 6; k++) { const off = (r % 2) * 64; const l = 0.55 + Math.random() * 0.12; g.fillStyle = `hsl(32, 30%, ${Math.round(l * 100)}%)`; g.fillRect(k * 128 + off - 128, r * 32, 128, 32); g.strokeStyle = 'rgba(60,40,20,.25)'; g.strokeRect(k * 128 + off - 128, r * 32, 128, 32); } }
-  wood.tx.wrapS = wood.tx.wrapT = T3.RepeatWrapping; wood.tx.repeat.set(6, 4); wood.tx.needsUpdate = true;
+  wood.tx.wrapS = wood.tx.wrapT = T3.RepeatWrapping; wood.tx.repeat.set(7, 4); wood.tx.needsUpdate = true;
   const floorMat = new T3.MeshStandardMaterial({ map: wood.tx, roughness: .8 }); mats.floor = floorMat;
   const floor = new T3.Mesh(new T3.PlaneGeometry(W, DX), floorMat); floor.rotation.x = -Math.PI / 2; floor.position.z = 2; floor.receiveShadow = true; scene.add(floor);
   box(W, 3.2, 0.2, mat('wall', css('--wall')), 0, 1.6, -D / 2);
@@ -37,7 +37,7 @@
   const winMat = new T3.MeshBasicMaterial({ color: 0x9cc3ea });
   const windowAt = (x, z, ry) => { const g = new T3.Group(); g.position.set(x, 0, z); g.rotation.y = ry; scene.add(g); box(1.6, 1.5, 0.04, winMat, 0, 1.75, 0.02, g); for (const yy of [2.52, 0.98]) box(1.72, 0.08, 0.1, mat('frame', '#7d8894'), 0, yy, 0.04, g); for (const xx of [-0.84, 0, 0.84]) box(0.06, 1.6, 0.1, mat('frame'), xx, 1.75, 0.04, g); for (let k = 0; k < 6; k++) box(1.6, 0.025, 0.05, mat('blind', '#e8e6e0'), 0, 2.4 - k * 0.07, 0.09, g); };
   for (const x of [3.8, 5.8, 7.6]) windowAt(x, -D / 2 + 0.11, 0);
-  for (const z of [1.5, 4.0]) windowAt(W / 2 - 0.11, z, -Math.PI / 2);
+  for (const z of [1.5, 4.0, 6.5]) windowAt(W / 2 - 0.11, z, -Math.PI / 2);
   // pantalla mural con BTC
   const scr = new T3.Mesh(new T3.PlaneGeometry(3.6, 1.8), new T3.MeshBasicMaterial({ map: wallScr.tx })); scr.position.set(0, 2.05, -D / 2 + 0.13); scene.add(scr);
   box(3.8, 2.0, 0.08, mat('bezel', '#1a1f26'), 0, 2.05, -D / 2 + 0.09);
@@ -51,7 +51,7 @@
   drawClock(); setInterval(drawClock, 30000);
   // cuadros
   const poster = (x, txt, col) => { const c = mkCanvas(256, 320); c.g.fillStyle = col; c.g.fillRect(0, 0, 256, 320); c.g.strokeStyle = 'rgba(255,255,255,.8)'; c.g.lineWidth = 6; c.g.beginPath(); let y = 240; c.g.moveTo(20, y); for (let k = 1; k <= 12; k++) { y += (Math.random() - 0.62) * 40; c.g.lineTo(20 + k * 18, Math.max(60, Math.min(280, y))); } c.g.stroke(); c.g.fillStyle = '#fff'; c.g.font = '700 30px sans-serif'; c.g.fillText(txt, 20, 44); c.tx.needsUpdate = true; const m = new T3.Mesh(new T3.PlaneGeometry(0.8, 1.0), new T3.MeshBasicMaterial({ map: c.tx })); m.position.set(x, 1.9, -D / 2 + 0.13); scene.add(m); box(0.88, 1.08, 0.04, mat('frameD', '#2b2b2b'), x, 1.9, -D / 2 + 0.11); };
-  poster(-8.6, '2017', '#2a59c9'); poster(-10.2, '2021', '#0b7a57'); poster(2.55, '2024', '#8f5f00');
+  poster(-8.6, '2017', '#2a59c9'); poster(-10.2, '2021', '#0b7a57'); poster(-11.8, '2026', '#9b3d8f'); poster(2.55, '2024', '#8f5f00');
   // mesa de reuniones con alfombra y sillas
   const rug = new T3.Mesh(new T3.CircleGeometry(2.6, 40), new T3.MeshStandardMaterial({ color: 0x8e5b4a, roughness: 1 })); rug.rotation.x = -Math.PI / 2; rug.position.set(0, 0.006, 3.6); rug.receiveShadow = true; scene.add(rug);
   cyl(1.15, 1.15, 0.06, mat('desk', css('--desk')), 0, 0.74, 3.6); cyl(0.12, 0.3, 0.72, mat('metal', css('--metal')), 0, 0.37, 3.6);
@@ -60,26 +60,28 @@
   box(0.35, 1.0, 0.35, mat('cooler', '#dfe5ea'), 8.8, 0.5, 4.9); cyl(0.14, 0.14, 0.4, new T3.MeshStandardMaterial({ color: 0x8fc4ee, transparent: true, opacity: .7 }), 8.8, 1.2, 4.9);
   // plantas
   const plant = (x, z, big) => { cyl(0.22, 0.18, 0.45, mat('pot', '#9a7b5f'), x, 0.22, z); const s = new T3.Mesh(new T3.SphereGeometry(big ? 0.55 : 0.42, 12, 10), mat('leaf', '#3f8a5a')); s.position.set(x, big ? 1.05 : 0.85, z); s.scale.y = 1.25; s.castShadow = true; scene.add(s); };
-  plant(-8.3, -5.3); plant(8.4, -5.2, true); plant(-3.2, 9.3); plant(3.0, -5.3); plant(-12.4, -5.4, true); plant(12.4, 9.4, true); plant(-12.4, 9.5);
+  plant(-8.3, -5.3); plant(8.4, -5.2, true); plant(-3.2, 9.3); plant(3.0, -5.3); plant(-14.4, -5.4, true); plant(14.4, 9.4, true); plant(-14.4, 9.5); plant(-7.6, 9.4);
   // biblioteca y salita (ala izquierda)
-  for (const z of [-4.4, -2.6, -0.8]) { const g = new T3.Group(); g.position.set(-12.7, 0, z); scene.add(g); box(0.4, 2.2, 1.7, mat('shelf', '#6b5440'), 0, 1.1, 0, g); for (let r = 0; r < 4; r++) for (let b = 0; b < 9; b++) { const hh = 0.28 + Math.random() * 0.1; box(0.26, hh, 0.13, mat('book' + (b % 5), ['#8b2f2f', '#2f4f8b', '#3f6b3a', '#b08a2e', '#5b3f7a'][b % 5]), 0.05, 0.25 + r * 0.52 + hh / 2, -0.7 + b * 0.17, g); } }
-  box(2.2, 0.45, 0.8, mat('sofa', '#5d6b7c'), -10.8, 0.23, 5.3); box(2.2, 0.6, 0.2, mat('sofa'), -10.8, 0.6, 5.65); for (const sx of [-1.15, 1.15]) box(0.2, 0.55, 0.8, mat('sofa'), -10.8 + sx, 0.4, 5.3);
-  box(1.0, 0.4, 0.6, mat('desk'), -10.8, 0.2, 4.2);
-  for (const x of [-11.6, -10.0]) { box(0.8, 0.4, 0.8, mat('arm', '#7a5c4b'), x, 0.2, 2.6); box(0.8, 0.5, 0.15, mat('arm'), x, 0.55, 2.95); }
-  box(0.7, 0.9, 0.55, mat('printer', '#d9dde2'), -12.5, 0.45, 1.2); box(0.6, 0.12, 0.45, mat('bezel'), -12.5, 0.95, 1.2);
+  for (const z of [-4.4, -2.6, -0.8, 1.0]) { const g = new T3.Group(); g.position.set(-14.7, 0, z); scene.add(g); box(0.4, 2.2, 1.7, mat('shelf', '#6b5440'), 0, 1.1, 0, g); for (let r = 0; r < 4; r++) for (let b = 0; b < 9; b++) { const hh = 0.28 + Math.random() * 0.1; box(0.26, hh, 0.13, mat('book' + (b % 5), ['#8b2f2f', '#2f4f8b', '#3f6b3a', '#b08a2e', '#5b3f7a'][b % 5]), 0.05, 0.25 + r * 0.52 + hh / 2, -0.7 + b * 0.17, g); } }
+  box(2.2, 0.45, 0.8, mat('sofa', '#5d6b7c'), -12.3, 0.23, 5.3); box(2.2, 0.6, 0.2, mat('sofa'), -12.3, 0.6, 5.65); for (const sx of [-1.15, 1.15]) box(0.2, 0.55, 0.8, mat('sofa'), -12.3 + sx, 0.4, 5.3);
+  box(1.0, 0.4, 0.6, mat('desk'), -12.3, 0.2, 4.2);
+  for (const x of [-13.1, -11.5]) { box(0.8, 0.4, 0.8, mat('arm', '#7a5c4b'), x, 0.2, 2.6); box(0.8, 0.5, 0.15, mat('arm'), x, 0.55, 2.95); }
+  box(0.7, 0.9, 0.55, mat('printer', '#d9dde2'), -14.5, 0.45, 2.6); box(0.6, 0.12, 0.45, mat('bezel'), -14.5, 0.95, 2.6);
+  // pizarra compartida de Ríos y Ferrer: liquidez × funding
+  const lfb = mkCanvas(512, 256), lfM = new T3.Mesh(new T3.PlaneGeometry(1.8, 0.9), new T3.MeshBasicMaterial({ map: lfb.tx })); lfM.position.set(-6.2, 1.55, 6.25); scene.add(lfM); box(1.9, 0.98, 0.05, mat('frame'), -6.2, 1.55, 6.22); for (const dx of [-0.8, 0.8]) box(0.05, 1.1, 0.05, mat('metal'), -6.2 + dx, 0.55, 6.22);
   // lámparas colgantes
   const lampMat = new T3.MeshStandardMaterial({ color: 0x2c2f33, emissive: 0x000000 }), bulbMat = new T3.MeshBasicMaterial({ color: 0xfff1c9 });
   const pendant = (x, z) => { cyl(0.008, 0.008, 0.6, mat('metal'), x, 3.0, z).castShadow = false; cyl(0.08, 0.3, 0.22, lampMat, x, 2.62, z, scene, 20).castShadow = false; const b = new T3.Mesh(new T3.CircleGeometry(0.26, 20), bulbMat); b.rotation.x = Math.PI / 2; b.position.set(x, 2.505, z); scene.add(b); };
-  for (const [x, z] of [[0, -3.6], [-5, -1.3], [-5, 2.3], [5, -1.3], [5, 2.3], [0, 3.6], [-3.6, 7.2], [11.2, -3.3], [-10.8, 4.6]]) pendant(x, z);
+  for (const [x, z] of [[0, -3.6], [-5, -1.3], [-5, 2.3], [-5, 4.4], [5, -1.3], [5, 2.3], [0, 3.6], [-3.6, 7.2], [12.6, -3.3], [-12.3, 4.6]]) pendant(x, z);
   // despacho de Salinas (cristal, esquina derecha del fondo)
-  const PMO = { x0: 9.3, x1: 12.9, z0: -5.9, z1: -0.7, door: 10.0 };
+  const PMO = { x0: 10.3, x1: 14.9, z0: -5.9, z1: -0.7, door: 11.0 };
   const pmGlass = new T3.MeshStandardMaterial({ color: 0xcfe0ef, transparent: true, opacity: .2, roughness: .1, depthWrite: false, side: T3.DoubleSide });
   const gpane = (w, x, z, ry) => { const m = new T3.Mesh(new T3.PlaneGeometry(w, 2.5), pmGlass); m.position.set(x, 1.25, z); m.rotation.y = ry; scene.add(m); box(ry ? 0.05 : w, 0.06, ry ? w : 0.05, mat('frame'), x, 2.5, z); };
   gpane(PMO.z1 - PMO.z0, PMO.x0, (PMO.z0 + PMO.z1) / 2, Math.PI / 2);
   gpane(PMO.door - 0.5 - PMO.x0, (PMO.x0 + PMO.door - 0.5) / 2, PMO.z1, 0); gpane(PMO.x1 - PMO.door - 0.5, (PMO.door + 0.5 + PMO.x1) / 2, PMO.z1, 0);
-  const pmScr = mkCanvas(512, 256), pmMon = new T3.Mesh(new T3.PlaneGeometry(2.2, 1.1), new T3.MeshBasicMaterial({ map: pmScr.tx })); pmMon.position.set(11.2, 1.95, -5.86); scene.add(pmMon); box(2.3, 1.2, 0.05, mat('bezel'), 11.2, 1.95, -5.9);
+  const pmScr = mkCanvas(512, 256), pmMon = new T3.Mesh(new T3.PlaneGeometry(2.2, 1.1), new T3.MeshBasicMaterial({ map: pmScr.tx })); pmMon.position.set(12.6, 1.95, -5.86); scene.add(pmMon); box(2.3, 1.2, 0.05, mat('bezel'), 12.6, 1.95, -5.9);
   const pmSign = mkCanvas(256, 48); pmSign.g.fillStyle = '#1f2a3a'; pmSign.g.fillRect(0, 0, 256, 48); pmSign.g.fillStyle = '#fff'; pmSign.g.font = '600 24px sans-serif'; pmSign.g.textAlign = 'center'; pmSign.g.fillText('SALINAS · CARTERA', 128, 32); pmSign.tx.needsUpdate = true;
-  const pmS = new T3.Mesh(new T3.PlaneGeometry(1.4, 0.26), new T3.MeshBasicMaterial({ map: pmSign.tx, side: T3.DoubleSide })); pmS.position.set(11.4, 2.25, PMO.z1); scene.add(pmS);
+  const pmS = new T3.Mesh(new T3.PlaneGeometry(1.4, 0.26), new T3.MeshBasicMaterial({ map: pmSign.tx, side: T3.DoubleSide })); pmS.position.set(12.8, 2.25, PMO.z1); scene.add(pmS);
 
   // ---- puerta de la calle (pared izquierda): entran a las 7:00 y se van a casa a las 21:00, de lunes a viernes ----
   const DOOR = { x: -W / 2 + 0.11, z: 8.0, w: 1.1, in: [-W / 2 + 0.55, 8.0] };
@@ -118,10 +120,11 @@
     vega: { x: 0, z: -3.8, face: 0, seat: [0, -4.75], visit: [1.25, -4.3] },
     ortega: { x: -5.0, z: -1.3, face: 1, seat: [-6.0, -1.3], visit: [-6.0, -0.35] },
     ferrer: { x: -5.0, z: 2.3, face: 1, seat: [-6.0, 2.3], visit: [-6.0, 1.35] },
+    rios: { x: -5.0, z: 4.4, face: -1, seat: [-4.0, 4.4], visit: [-3.1, 4.4] },
     paz: { x: 5.0, z: -1.3, face: -1, seat: [6.0, -1.3], visit: [6.0, -0.35] },
     calvo: { x: 5.0, z: 2.3, face: -1, seat: [6.0, 2.3], visit: [6.0, 1.35] },
     nubarrones: { x: -3.6, z: 7.4, face: 0, seat: [-3.6, 6.45], visit: [-2.35, 6.9] },
-    salinas: { x: 11.2, z: -3.3, face: 0, seat: [11.2, -4.25], visit: [10.0, -3.0], side: [10.0, -4.25] }
+    salinas: { x: 12.6, z: -3.3, face: 0, seat: [12.6, -4.25], visit: [11.0, -3.0] }
   };
   const CORR = 0.55; // pasillo central (z)
   for (const k of M.ORDER) {
@@ -164,13 +167,13 @@
   cloud.position.set(DESKS.nubarrones.x, 2.35, DESKS.nubarrones.z); scene.add(cloud);
   const bolt = new T3.Mesh(new T3.ConeGeometry(0.05, 0.4, 4), new T3.MeshBasicMaterial({ color: 0xffd23f })); bolt.position.set(0.05, -0.3, 0); bolt.rotation.z = 0.35; bolt.visible = false; cloud.add(bolt);
   let bearPhase = 'bull';
-  const SPOTS = { coffee: [7.2, 4.35], board: [-3.6, -5.0], table: a => [Math.cos(a) * 1.6, 3.6 - Math.abs(Math.sin(a)) * 1.6], sofa: [-10.8, 4.6], er: { vega: [4.1, 7.35], ortega: [5.4, 7.3], paz: [6.7, 7.35], ferrer: [3.5, 8.6], calvo: [7.3, 8.3], nubarrones: [8.1, 9.3], salinas: [2.5, 9.3] } };
+  const SPOTS = { coffee: [7.2, 4.35], board: [-3.6, -5.0], table: a => [Math.cos(a) * 1.6, 3.6 - Math.abs(Math.sin(a)) * 1.6], sofa: [-12.3, 4.6], er: { vega: [4.1, 7.35], ortega: [5.4, 7.3], paz: [6.7, 7.35], ferrer: [3.5, 8.6], rios: [2.4, 7.8], calvo: [7.3, 8.3], nubarrones: [8.1, 9.3], salinas: [2.5, 9.3] } };
 
   // ---- people (monigotes) ----
   const skin = mat('skin', '#e2b999'), pants = mat('pants', '#2e3640');
   // estilo de cada uno: pelo, gafas, barba, traje
   const LOOK = {
-    vega: { hair: 'short', hc: '#2a2420', skin: '#e2b999' }, ortega: { hair: 'curly', hc: '#3b2a1e', skin: '#c99a73' },
+    vega: { hair: 'short', hc: '#2a2420', skin: '#e2b999' }, rios: { hair: 'curly', hc: '#7a4a24', skin: '#d8a982' }, ortega: { hair: 'curly', hc: '#3b2a1e', skin: '#c99a73' },
     paz: { hair: 'pony', hc: '#5a3a22', skin: '#efc6a6' }, ferrer: { hair: 'short', hc: '#151515', skin: '#a8754f', glasses: true },
     nubarrones: { hair: 'grey', hc: '#c4c4c4', skin: '#e8c3a3', beard: true, glasses: true, pants: '#3a3f47' },
     salinas: { hair: 'slick', hc: '#222', skin: '#dcb08c', suit: true, glasses: true, pants: '#1f2530' }, calvo: { hair: 'bald', hc: '#e0b493', skin: '#e0b493' }
@@ -259,7 +262,7 @@
       const hot = M.ORDER.filter(k => t.notes && t.notes[k] && (t.notes[k].level === 'trade' || t.notes[k].level === 'alerta'));
       if (hot.length && !reduce && !erActive) {
         meeting = true; let i = 0;
-        for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 6); const spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), 19000 + i * 400); }
+        for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 7); const spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), 19000 + i * 400); }
         setTimeout(() => { hot.forEach((k, j) => setTimeout(() => say(k, short(t.notes[k].text, 130), t.notes[k].level, 8), j * 8500)); }, 27000);
         setTimeout(() => { meeting = false; M.ORDER.forEach(k => backToDesk(k)); }, 27000 + hot.length * 8500 + 4000);
       }
@@ -296,7 +299,7 @@
     { const nn = noteOf('nubarrones'); bearPhase = nn && nn.phase || 'bull'; cloudMat.color.set(bearPhase === 'mature' ? 0x4a5160 : bearPhase === 'early' || bearPhase === 'top' ? 0x7d8796 : 0xc9d1dc); }
     checkER();
     if (t && t.at !== lastTickAt && !erActive) { const first = lastTickAt == null; lastTickAt = t.at; if (!first || (Date.now() - new Date(t.at)) < 20 * 60e3) newRound(t); else M.ORDER.forEach((k, i) => { if (t.notes && t.notes[k]) setTimeout(() => say(k, short(t.notes[k].text, 110), t.notes[k].level, 6), 800 + i * 3800); }); }
-    drawBoard(S); drawWall(S); drawER(); drawPM(S); for (const k of M.ORDER) drawDesk(k, S);
+    drawBoard(S); drawWall(S); drawER(); drawPM(S); drawLF(S); for (const k of M.ORDER) drawDesk(k, S);
     if (S.sel) { const n = noteOf(S.sel); say(S.sel, n ? short(n.text, 160) : M.AG[S.sel].job, n && n.level, 10); }
   }
   M.listeners.push(onData);
@@ -313,6 +316,16 @@
       g.strokeStyle = pts[pts.length - 1] >= pts[0] ? '#3cc49d' : '#f07466'; g.lineWidth = 3; g.beginPath(); pts.forEach((v, i) => i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v))); g.stroke();
       g.fillStyle = '#93a3b4'; g.font = '16px monospace'; g.fillText('últimas ' + pts.length + ' rondas', c.width - 190, 34);
     } else { g.fillStyle = '#93a3b4'; g.font = '18px monospace'; g.fillText('El gráfico se llena con cada ronda', 18, 150); }
+    tx.needsUpdate = true;
+  }
+  function drawLF(S) {
+    const { g, c, tx } = lfb, t = S.ticks[0], nr = t && t.notes && t.notes.rios, nf = t && t.notes && t.notes.ferrer;
+    g.fillStyle = '#f7f8f6'; g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#8f5f00'; g.font = '700 26px sans-serif'; g.fillText('LIQUIDEZ', 18, 36); g.fillStyle = '#b0479a'; g.fillText('× FUNDING', 160, 36);
+    g.font = '17px sans-serif'; g.fillStyle = '#334155';
+    const wrap = (txt, y) => { const words = String(txt || '—').split(' '); let line = ''; for (const w of words) { if (g.measureText(line + w).width > 470) { g.fillText(line, 18, y); y += 22; line = ''; } line += w + ' '; if (y > 240) break; } g.fillText(line, 18, y); return y + 26; };
+    let y = wrap('Ríos: ' + (nr ? nr.text.split('. ').slice(0, 2).join('. ') : 'esperando ronda'), 68);
+    wrap('Ferrer: ' + (nf ? nf.text.split('. ').slice(0, 2).join('. ') : 'esperando ronda'), y);
     tx.needsUpdate = true;
   }
   function drawPM(S) {
@@ -398,13 +411,13 @@
   setInterval(applyTheme, 60000);
 
   // ---- camera (drag to orbit) ----
-  let az = -0.25, el = 0.88, dist = 26, dragging = null;
+  let az = -0.25, el = 0.88, dist = 29, dragging = null;
   const placeCam = () => { cam.position.set(Math.sin(az) * Math.cos(el) * dist, Math.sin(el) * dist, Math.cos(az) * Math.cos(el) * dist + 2.6); cam.lookAt(0, 0.4, 2.2); };
   stage.addEventListener('pointerdown', e => { dragging = [e.clientX, e.clientY, az, el]; stage.classList.add('drag'); stage.setPointerCapture(e.pointerId); });
   stage.addEventListener('pointermove', e => { if (!dragging) return; az = dragging[2] - (e.clientX - dragging[0]) * 0.005; el = Math.max(0.35, Math.min(1.25, dragging[3] + (e.clientY - dragging[1]) * 0.004)); az = Math.max(-1.2, Math.min(1.2, az)); placeCam(); });
   const endDrag = () => { dragging = null; stage.classList.remove('drag'); };
   stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
-  function resize() { const r = stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / Math.max(1, r.height); dist = cam.aspect < 1.2 ? 36 : 26; cam.updateProjectionMatrix(); placeCam(); }
+  function resize() { const r = stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / Math.max(1, r.height); dist = cam.aspect < 1.2 ? 40 : 29; cam.updateProjectionMatrix(); placeCam(); }
   new ResizeObserver(resize).observe(stage); resize();
 
   // ---- loop ----
@@ -453,6 +466,16 @@
   document.addEventListener('visibilitychange', () => { visible = !document.hidden; last = performance.now(); });
   function frame(ts) { requestAnimationFrame(frame); if (!visible) return; const dt = Math.min(0.05, (ts - last) / 1000); last = ts; step(dt); renderer.render(scene, cam); overlayPos(); }
   applyTheme(); onData(M.S); requestAnimationFrame(frame);
+  // vuelta de Ríos (semana del 9 de octubre de 2026): Calvo le pide perdón en nombre de la mesa
+  setTimeout(() => {
+    if (Date.now() > Date.UTC(2026, 9, 17) || !officeOn || reduce) return;
+    let lead = 'calvo'; const rd = DESKS.rios;
+    goTo(P[lead], rd.visit, () => { P[lead].state = 'talk'; P[lead].yaw = yawTo(rd.visit, rd.seat);
+      say(lead, 'Ríos, perdónanos. Nos equivocamos al dejarte ir: sin ti la mesa perdía operaciones y equilibrio. Bienvenido de vuelta.', 'ok', 8);
+      setTimeout(() => say('rios', 'Disculpas aceptadas. Me siento con Ferrer: liquidez y funding, juntos.', 'trade', 7), 8200);
+      setTimeout(() => say('ferrer', 'Te he guardado la mitad de la pizarra.', 'ok', 5), 15000);
+      setTimeout(() => backToDesk(lead), 16500); });
+  }, 6000);
   // demo-free idle: if there is no round yet, each agent introduces their job once
   setTimeout(() => { if (!M.S.ticks.length) M.ORDER.forEach((k, i) => setTimeout(() => say(k, M.AG[k].job, 'ok', 7), i * 2500)); }, 1500);
 })();
