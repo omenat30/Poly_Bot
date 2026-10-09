@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026, v2: 4 agentes en largo y corto)
+# Mesa Radar · operativa BTC (9 oct 2026, v3: más acierto y más R por operación)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,32 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v3 · más acierto y más R por operación, con 2–3 operaciones por semana
+
+Probado y descartado:
+- **Gestión de la salida sola** (`mg_run.py`): parciales y stop a break-even. Sube el acierto unos puntos, pero baja el R por operación.
+- **Filtros por hora, volatilidad, día de la semana o alineación de medias** (`feat.py`): mejoran en 2017–21 pero no se sostienen en 2022–26.
+
+Lo que sí funciona:
+- **Confluencia** (`conf.py`): Paz y Ríos solo entran si Vega u Ortega ya están dentro en el mismo sentido. Sube el R esperado.
+
+Para elegir la combinación (`desk3.py`) se probaron 144 combinaciones de gestión y confluencia. La regla, fijada solo con 2017–21, fue: 2–3 operaciones por semana, acierto de al menos 45% y el mayor R esperado. La elegida:
+- **Ortega** cobra un 33% a +1,5R y pone el stop en +0,3R al llegar a +0,75R.
+- **Paz** filtra por confluencia y pone el stop en +0,3R al llegar a +1,5R.
+- **Ríos** filtra por confluencia y pone el stop en +0,3R al llegar a +1R.
+- **Vega** no cambia.
+
+| 2022–26 | v2 | v3 |
+|---|---|---|
+| Operaciones/semana | 3,9 | 2,4 |
+| Acierto | 29% | 37% (45% en 2017–21) |
+| R por operación | +0,18 | +0,29 |
+| R al año (ponderado) | +23,9 | +22,3 |
+| Caída máxima | 33,7R | 17,7R |
+| R por operación con costes ×2 | +0,06 | +0,19 |
+
+Hay un límite: las combinaciones que llegan a un 45% de acierto en 2022–26 se quedan en +0,10–0,17R por operación. En BTC la tendencia gana con pocas ganadoras grandes. La paridad JS/Python (`parity3.js`) da 0 diferencias en 1.262 operaciones.
 
 ## Motor en vivo
 
