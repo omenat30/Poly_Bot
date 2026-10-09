@@ -29,7 +29,8 @@
 
   // ---------- office status ----------
   const madridDow = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short' }).format(new Date());
-  function officeOpen() { const m = madridNow(), d = madridDow(); return d !== 'Sat' && d !== 'Sun' && m >= 7 * 60 && m < 21 * 60; }
+  const OPEN_EXTRA_UNTIL = 1791577014000;   // apertura extra de 5 minutos pedida el 9 oct 2026; después, horario normal
+  function officeOpen() { if (Date.now() < OPEN_EXTRA_UNTIL) return true; const m = madridNow(), d = madridDow(); return d !== 'Sat' && d !== 'Sun' && m >= 7 * 60 && m < 21 * 60; }
   window.MESA_OPEN = officeOpen;
   function renderTop() {
     const open = officeOpen(), chip = $('#officeChip');
