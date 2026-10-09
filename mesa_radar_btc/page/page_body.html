@@ -4,7 +4,7 @@
     <div>
       <span class="eyebrow">Oficina de agentes · solo BTC · Binance futuros vía OpenMarket</span>
       <h1>Mesa Radar</h1>
-      <p>Seis agentes leen BTC a la vez cada 15 minutos, de lunes a viernes de 7:00 a 21:00, las horas con más volumen. Cuatro operan, cada uno su especialidad, en largo y en corto; Nubarrones, experto en bajistas y macro, marca la fase del mercado y veta lo que en esa fase pierde. Calvo vigila el riesgo y convoca la sala de emergencias si el mercado da un tirón. Todo salió de 10 años de datos y se comprobó en años que no se usaron para elegirlo. No copian al Radar BTC.</p>
+      <p>Siete agentes leen BTC a la vez cada 15 minutos, de lunes a viernes de 7:00 a 21:00, las horas con más volumen. Cuatro operan, cada uno su especialidad, en largo y en corto, con el tamaño que decide Salinas, el gestor de carteras; Nubarrones, experto en bajistas y macro, marca la fase del mercado y veta lo que en esa fase pierde. Calvo vigila el riesgo y convoca la sala de emergencias si el mercado da un tirón. Todo salió de 10 años de datos y se comprobó en años que no se usaron para elegirlo. No copian al Radar BTC.</p>
     </div>
     <div class="status" aria-live="polite">
       <span class="chip" id="officeChip"><i></i><span id="officeTxt">Comprobando horario…</span></span>
@@ -35,7 +35,7 @@
   </section>
 
   <section class="sec" aria-labelledby="bookTitle">
-    <div class="sec-head"><h2 id="bookTitle">Operativa en vivo</h2><p>Largos y cortos en BTC, siempre a favor de la media de 50 días. Vega y Ortega arriesgan un 0,5% por operación; Paz y Ríos, un 0,375%. Cada entrada, movimiento de stop, cierre y reunión de emergencia te llega por correo.</p></div>
+    <div class="sec-head"><h2 id="bookTitle">Operativa en vivo</h2><p>Largos y cortos en BTC, siempre a favor de la media de 50 días. Salinas dimensiona cada entrada: Vega y Ortega un 0,5%, Paz un 0,375% y Ferrer un 0,25%, con un tope del 1% abierto. Cada entrada, movimiento de stop, cierre y reunión de emergencia te llega por correo.</p></div>
     <div class="book" id="book"></div>
     <div class="feed" id="feed"></div>
   </section>
@@ -59,6 +59,7 @@
       <div class="sec-head"><h3>Todo lo que se probó</h3><span class="eyebrow">591 variantes en 8 familias, más la estacionalidad</span></div>
       <div class="tbl"><table class="t" id="resFam"></table></div>
       <ul class="notes">
+        <li><b>v7 · Salinas y Ferrer, sale Ríos.</b> Salinas probó repartir el riesgo según el rendimiento reciente de cada agente (no aportó), un tope de riesgo abierto y un freno por caída (sí aportaron: la caída máxima baja de 23,7R a 15,5R). Ferrer usa el funding de Binance de 2020–26, de dos datasets públicos que coinciden en 572 de 572 liquidaciones. Como filtro de las demás operaciones no discrimina. Su squeeze (la multitud atrapada y el precio rompiendo en su contra) sale positivo en 43 de 216 variantes en las dos mitades, con ventaja pequeña. Sin Ríos se pierden unas 0,6 operaciones por semana.</li>
         <li><b>v6 · Nubarrones.</b> 2022 y 2025 eran años negativos. El diagnóstico: Paz comprando caídas en mercados que giraban y cortos de Paz y Ríos en bajistas maduros. Los cortos de Ríos con la media de 50 días bajo la de 200 pierden en 2017–19 (−0,10R) y en 2020–26 (−0,20R). Sin ese régimen ganan +0,53–0,56R. Nubarrones los veta. Su propia operativa (vender el giro) se probó en 108 variantes: en 2017–19 pierde y da muy pocas operaciones, así que no opera. Resultado: +0,39R por operación y +42R al año, frente a +0,35R y +34R, con 2022 en −3R y 2025 en +14R.</li>
         <li><b>v5 · stops y objetivos más cortos y el Radar BTC.</b> Se probaron objetivos fijos de 1, 1,5, 2 y 3R, stops más cortos y el Radar BTC como filtro (no entrar si su última señal de 24 h va en contra), en 432 variantes. Los objetivos de 1–1,5R suben el acierto al 47–49%, pero el R al año se queda por debajo de la mitad. El stop más corto sí entra en Vega (2 ATR). El Radar no se incorpora: fuera de su periodo de ajuste (2017–2020) no mejora a Vega, Ortega ni Ríos, y con él la mesa baja de 2 operaciones por semana algunos años. Ganó la regla «R medio × acierto», con Paz y Ríos a 0,75R.</li>
         <li><b>v4 · más R al año.</b> Con el horario L–V 7:00–21:00 y la selección por recencia, Vega pasa a la media de 50 días en los dos sentidos y Ortega a la ruptura de 3 días, las dos con el stop a +0,3R al llegar a +1R. En los datos recientes son sus mejores versiones, con más del 45% de acierto. Ríos deja la confluencia, que últimamente le restaba. Paz es la más irregular: en los dos últimos años su t ponderada ronda 1, así que se queda con medio riesgo y solo con confluencia.</li>
@@ -94,7 +95,7 @@
     <div class="sec-head"><h2 id="rulesTitle">Reglas de la casa</h2></div>
     <div class="rules">
       <div><b>Nadie ejecuta solo</b>Los agentes leen OpenMarket en modo lectura y te escriben. Las órdenes las pones tú. Ningún agente tiene claves de un exchange.</div>
-      <div><b>Riesgo por agente</b>Vega y Ortega arriesgan un 0,5% por operación; Paz y Ríos, un 0,375%. Con los cuatro dentro, un 1,75% como mucho. Sin multiplicar el riesgo por la convicción.</div>
+      <div><b>Salinas manda en el tamaño</b>Vega y Ortega 0,5% por operación, Paz 0,375%, Ferrer 0,25%. Nunca más de un 1% abierto (2R). Si la cartera cae más de 8R desde su máximo, todo a mitad de riesgo hasta recuperar.</div>
       <div><b>El stop, en el exchange</b>Se pone al entrar y solo se mueve a favor. Cuando toca moverlo te llega un correo con el precio.</div>
       <div><b>Horario L–V 7:00–21:00</b>Las horas con más volumen y menos señales falsas. Las señales de fuera de horario no se ejecutan y los stops siguen en el exchange. El backtest ya lo tiene en cuenta.</div>
       <div><b>Sala de emergencias</b>Movimiento de 3,5 desviaciones o más en 1–3 h: todos se reúnen. Solo se entra si un sistema da señal; nunca se persigue el tirón ni se le da la vuelta a mano.</div>

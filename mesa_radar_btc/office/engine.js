@@ -4,6 +4,7 @@
 // Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 40 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto).
 //      Stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, a +0,3R al llegar a +1R, 96 h como máximo.
 // Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos.
+// Ferrer (v7): squeeze de funding. Salinas (v7): gestor de carteras (tamaño, tope de riesgo, freno por caída). Ríos sale en la v7.
 // Nubarrones (v6): no opera; veta los cortos de Paz y Ríos en bajista maduro (SMA50 < SMA200 diaria).
 (function (root) {
   'use strict';
@@ -78,6 +79,23 @@
     const m90 = dc[L] / dc[L - 90] - 1;
     return { veto, phase: phaseAt(L), ctx: { close: dc[L], s50: S50[L], s200: S200[L], dd: dc[L] / hi - 1, m90 } };
   }
+  // Ferrer (funding, v7): squeeze. Media de las 9 últimas liquidaciones (3 días) muy positiva y el precio rompe el mínimo de N h -> corto;
+  // muy negativa y rompe el máximo -> largo. Decide en cierres de 4 h (UTC). Stop k ATR (semanal×√24) móvil, objetivo 3R, stop a +0,3R en +1R.
+  // fund: [[t_liquidación, tasa decimal por 8 h], ...] ordenado.
+  function ferrer(X, nowMask, fund, P = PICK.ferrer) {
+    const { H, N } = X, t = H.t, c = H.c, A4 = atr(H, 168), A4s = Float64Array.from(A4, v => v * Math.sqrt(24));
+    const ft = fund.map(x => x[0]), fr = fund.map(x => x[1]), F3 = new Float64Array(N).fill(NaN);
+    for (let i = 0; i < N; i++) { const j = searchR(ft, t[i] + 3600) - 1; if (j >= 8 && t[i] <= ft[ft.length - 1] + 8 * 3600) { let s = 0; for (let q = j - 8; q <= j; q++) s += fr[q]; F3[i] = s / 9; } }
+    const hh = rollmax(H.h, P.N), ll = rollmin(H.l, P.N), sigs = [];
+    for (let i = 1; i < N; i++) {
+      if ((Math.floor(t[i] / 3600) % 24) % 4 !== 3 || isNaN(F3[i])) continue;
+      if (F3[i] < P.lo && c[i] > hh[i - 1]) { const st = c[i] - P.k * A4s[i]; sigs.push([i, 1, st, c[i] + P.T * (c[i] - st), 240]); }
+      if (F3[i] > P.hi && c[i] < ll[i - 1]) { const st = c[i] + P.k * A4s[i]; sigs.push([i, -1, st, c[i] - P.T * (st - c[i]), 240]); }
+    }
+    const R = sim(X, sigs, [P.k, A4s], null, nowMask, P.G || {});
+    R.ctx = { f3: F3[N - 1], last: fr.length ? fr[fr.length - 1] : NaN, hi: hh[N - 1], lo: ll[N - 1], lastT: ft.length ? ft[ft.length - 1] : NaN };
+    return R;
+  }
   const combine = (...fs) => { const g = fs.filter(Boolean); return g.length ? (ts, s) => g.every(f => f(ts, s)) : null; };
   // confluencia: la señal solo vale si Vega u Ortega están dentro en el mismo sentido
   function confluence(...Rs) {
@@ -94,8 +112,11 @@
     vega: { n: 50, k: 2, shorts: 1, G: BE1 },
     ortega: { N: 5, k: 2, G: BE1 },
     paz: { rsiLo: 40, en: 50, k: 2, tk: 5, maxh: 96, lb: 6, G: BE1, conf: false, nub: true },
-    rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false, nub: true }
+    rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false, nub: true },   // despedido en la v7: ya no opera
+    ferrer: { lo: -0.00005, hi: 0.0005, N: 12, k: 2, T: 3, G: BE1 }
   };
+  // Salinas (gestor de carteras, v7): riesgo base por agente (R), tope de 2R de riesgo abierto y riesgo a la mitad si la cartera cae más de 8R desde su máximo.
+  const PM = { base: { vega: 1, ortega: 1, paz: 0.75, ferrer: 0.5 }, cap: 2.0, ddR: 8, ddCut: 0.5, minW: 0.2 };
   // sombras para la confluencia de Paz: la tendencia diaria y la ruptura de 5 días clásicas (v3)
   const SHADOW = { vega: { n: 20, k: 3.5, shorts: 0, G: {} }, ortega: { N: 5, k: 2, G: { tp: 1.5, f: 0.33, be: 0.75, beoff: 0.3 } } };
   const GEST = { vega: BE1, ortega: BE1, paz: {}, rios: {} };
@@ -174,6 +195,6 @@
     R.ctx = { rank: rank[N - 1], upper: m[N - 1] + 2 * sd[N - 1], lower: m[N - 1] - 2 * sd[N - 1], vol: H.v[N - 1] / vb[N - 1], regime: R50[N - 1], close: c[N - 1] };
     return R;
   }
-  root.MesaEngine = { prepare, vega, ortega, paz, rios, confluence, nubarrones, combine, GEST, PICK, SHADOW, madridHour, madridWork, regime, FEE };
+  root.MesaEngine = { prepare, vega, ortega, paz, rios, ferrer, PM, confluence, nubarrones, combine, GEST, PICK, SHADOW, madridHour, madridWork, regime, FEE };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined') module.exports = globalThis.MesaEngine;

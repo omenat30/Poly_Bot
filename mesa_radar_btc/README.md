@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026, v6: entra Nubarrones, bajistas y macro)
+# Mesa Radar · operativa BTC (9 oct 2026, v7: sale Ríos, entran Salinas y Ferrer)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,30 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v7 · sale Ríos, entran Salinas (gestor de carteras) y Ferrer (funding)
+
+**Datos de funding** (`funding.py`): funding de Binance BTCUSDT cada 8 h, de 2020-01 a 2026-10, unido de dos datasets públicos de GitHub (`zwmjj/funding-rate-arb` y `gelatotrade/HMM-Decentralised-Perpetual-Futures`). Coinciden en las 572 liquidaciones que comparten. En vivo, OpenMarket `FUNDING_RATE_AGG` da 167 h.
+
+**Ferrer, funding** (`fund_diag.py`, `fund_strat.py`):
+- Como filtro de las operaciones de los demás, el funding no discrimina de forma estable.
+- Su operativa propia, el squeeze (media de 3 días > 0,05% o < −0,005% y rotura en contra de la multitud), sale positiva en las dos mitades en 43 de 216 variantes. La ventaja es pequeña y opera unas 3 veces al año.
+
+**Salinas, gestor de carteras** (`pm.py`, walk-forward 2020–26):
+- Repartir el riesgo según el rendimiento reciente de cada agente no aportó.
+- Un tope de 2R de riesgo abierto y riesgo a la mitad tras 8R de caída sí bajan la caída máxima de 23,7R a 15,5R.
+
+| Walk-forward 2020–26 | v6 (con Ríos) | v7 |
+|---|---|---|
+| Acierto | 40,3% | 40,8% |
+| R por operación | +0,39 | +0,40 |
+| Operaciones/semana | 2,56 | 2,03 |
+| Caída máxima | 22,7R | 15,5R |
+| R al año | +41,7 | +28,9 |
+
+La paridad JS/Python de Ferrer (`parity_f.js`) da 0 diferencias. La rutina de cada ronda está en `rutina_mesa.txt`.
+
+**Oficina:** 26 m de ancho, despacho de cristal para Salinas, biblioteca y salita, suelo de madera, lámparas, reloj, cuadros, mesas con más detalle y monigotes con codos, rodillas y estilo propio.
 
 ## v6 · Nubarrones (bajistas y macro)
 

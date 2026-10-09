@@ -7,7 +7,7 @@
 // Escribe en dir_salida los documentos y pinta: WRITES <json para ArtifactData batch>, EMAIL_JSON <...>, RESUMEN <...>
 const fs = require('fs'), path = require('path');
 const E = require(path.join(__dirname, 'engine.js'));
-const [, , minPath, livePath, dbDir, outDir, knownArg] = process.argv;
+const [, , minPath, livePath, dbDir, outDir, knownArg, fundPath] = process.argv;
 const now = Math.floor((+process.env.MESA_NOW || Date.now()) / 1000);
 const GO_LIVE = +process.env.MESA_GO_LIVE || Date.UTC(2026, 9, 9, 16, 0) / 1000;   // 9 oct 2026, 18:00 Madrid (mesa de 4 agentes, largos y cortos)
 const URL_ = 'https://claude.ai/artifact/MxNVeAAFhmbBYRg4qi6LJy';
@@ -49,18 +49,32 @@ const lastPx = (() => { const ks = [...LV.keys()].sort((a, b) => a - b); return 
 
 // 3) los agentes leen y deciden
 const X = E.prepare(H), hNow = E.madridHour(now), office = E.madridWork(now), N = H.t.length;
-const AGS = ['vega', 'ortega', 'paz', 'rios'];
+const AGS = ['vega', 'ortega', 'paz', 'ferrer'];
 const R = {}; R.vega = E.vega(X, office); R.ortega = E.ortega(X, office);
 const SH = { vega: E.vega(X, false, E.SHADOW.vega), ortega: E.ortega(X, false, E.SHADOW.ortega) };   // sombras de la confluencia
 const CONF = E.confluence(SH.vega, SH.ortega), NUB = E.nubarrones(X), nubF = (ts, sd) => !NUB.veto(ts, sd);
 const filtFor = k => E.combine(E.PICK[k].conf ? CONF : null, E.PICK[k].nub ? nubF : null);
-R.paz = E.paz(X, office, filtFor('paz')); R.rios = E.rios(X, office, filtFor('rios'));
+R.paz = E.paz(X, office, filtFor('paz'));
+// funding (OpenMarket FUNDING_RATE_AGG, HOUR, en % por 8 h): la liquidación es la lectura que cierra a las 00, 08 y 16 UTC
+let FUND = [];
+try { const FJ = JSON.parse(fs.readFileSync(fundPath, 'utf8')), fs_ = (FJ.data && FJ.data.series && FJ.data.series[0]) || (FJ.series && FJ.series[0]) || FJ, fc = fs_.columns || [], ti = fc.indexOf('t'), ri = fc.indexOf('rateClose');
+  for (const r of fs_.rows || []) { const t0 = typeof r[ti] === 'number' ? (r[ti] > 1e12 ? r[ti] / 1000 : r[ti]) : Date.parse(r[ti]) / 1000, ts = t0 + 3600; if (ts % 28800 === 0 && ts <= now && Number.isFinite(+r[ri])) FUND.push([ts, +r[ri] / 100]); }
+  FUND.sort((a, b) => a[0] - b[0]);
+} catch (e) { }
+if (FUND.length < 9) problems.push('funding insuficiente (' + FUND.length + ' liquidaciones)');
+R.ferrer = E.ferrer(X, office, FUND);
 const confWho = s => SH.vega.open && SH.vega.open.side === s ? 'la tendencia diaria' : SH.ortega.open && SH.ortega.open.side === s ? 'la ruptura de 5 días' : null;
 const confNow = s => !!confWho(s);
-const NAMES = { vega: 'Vega · tendencia diaria', ortega: 'Ortega · ruptura de 5 días', paz: 'Paz · retroceso a favor', rios: 'Ríos · compresión y volumen' };
-const RISK = { vega: 0.5, ortega: 0.5, paz: 0.375, rios: 0.375 };   // % del capital por operación
-const W = { vega: 1, ortega: 1, paz: 0.75, rios: 0.75 };
-const MAXH = { paz: 96, rios: 240, ortega: 2880 };
+const NAMES = { vega: 'Vega · tendencia diaria', ortega: 'Ortega · ruptura de 5 días', paz: 'Paz · retroceso a favor', ferrer: 'Ferrer · squeeze de funding' };
+const PM = E.PM, W = PM.base, R1 = 0.5;   // 1R = 0,5% del capital
+const MAXH = { paz: 96, ferrer: 240, ortega: 2880 };
+// Salinas: estado de la cartera en vivo (R ponderado de las operaciones cerradas desde el arranque) y riesgo abierto
+const liveClosed = AGS.flatMap(k => R[k].trades.filter(t => t.sigT >= GO_LIVE).map(t => [t.exitT, t.r * W[k]])).sort((a, b) => a[0] - b[0]);
+let eqR = 0, pkR = 0; for (const [, r] of liveClosed) { eqR += r; pkR = Math.max(pkR, eqR); }
+const ddR = pkR - eqR;
+let openR = AGS.filter(k => R[k].open && R[k].open.sigT >= GO_LIVE).reduce((p, k) => p + W[k], 0);
+const sizeFor = k => { let w = W[k] * (ddR > PM.ddR ? PM.ddCut : 1); const room = PM.cap - openR; if (w > room) w = room; return w >= PM.minW ? +w.toFixed(2) : 0; };
+const RISK = {}; for (const k of AGS) RISK[k] = R1 * W[k];
 const SIDE = s => s === 1 ? 'LARGO' : 'CORTO', VERB = s => s === 1 ? 'Compra' : 'Vende';
 const known = new Set(String(knownArg || '').split(/[\s,]+/).filter(Boolean)); const sd = path.join(dbDir, 'signals'); if (fs.existsSync(sd)) for (const f of fs.readdirSync(sd)) known.add(f.replace(/\.json$/, ''));
 let cal = null; const cd = path.join(dbDir, 'calendar'), readCal = f => { try { const d = JSON.parse(fs.readFileSync(f, 'utf8')); cal = d.data || d; } catch (e) {} };
@@ -68,19 +82,21 @@ if (fs.existsSync(cd)) for (const f of fs.readdirSync(cd)) readCal(path.join(cd,
 if (fs.existsSync(path.join(dbDir, 'cal.json'))) readCal(path.join(dbDir, 'cal.json'));
 const events = [], emails = [];
 const tag = s => new Date(s * 1000).toISOString().slice(0, 13).replace(/[-T]/g, '');
-const sizeLine = (k, risk) => 'Tamaño con un ' + String(RISK[k]).replace('.', ',') + '% de riesgo: (capital × ' + (RISK[k] / 100) + ') / ' + fmt(risk) + ' BTC.';
+const sizeLine = (k, risk, w = W[k]) => { const pc = +(R1 * w).toFixed(3); return 'Tamaño (Salinas): ' + String(pc).replace('.', ',') + '% de riesgo' + (w < W[k] ? ' (rebajado: ' + (ddR > PM.ddR ? 'la cartera cae ' + ddR.toFixed(1).replace('.', ',') + 'R desde su máximo' : 'tope de riesgo abierto de ' + String(PM.cap).replace('.', ',') + 'R') + ')' : '') + ' → (capital × ' + (pc / 100) + ') / ' + fmt(risk) + ' BTC.'; };
 const calSoon = () => { if (!cal || !cal.events) return []; const loc = new Date(new Date(now * 1000).toLocaleString('en-US', { timeZone: 'Europe/Madrid' })); return cal.events.filter(e => { const [H_, M_] = String(e.hora || '').split(':').map(Number); if (!Number.isFinite(H_)) return false; const diff = (H_ * 60 + (M_ || 0)) - (loc.getHours() * 60 + loc.getMinutes()); return diff >= -15 && diff <= 90; }); };
 const calWarn = () => { const s = calSoon(); return s.length ? '\n⚠ Calvo: ' + s.map(e => e.hora + ' ' + e.evento).join(' · ') + ' (dato macro cerca: la entrada puede saltar).' : ''; };
-const REF = 'Mesa v6 con Nubarrones (L-V 7:00-21:00; reglas elegidas por R medio × acierto, pesando más los años recientes; sin cortos de Paz y Ríos en bajista maduro). En walk-forward 2020-26, sin ver nunca el año operado: 2,6 operaciones por semana, 40% de acierto, +0,39R por operación y +42R al año.';
+const REF = 'Mesa v7 (sale Ríos; entran Salinas, gestor de carteras, y Ferrer, funding). En walk-forward 2020-26, sin ver nunca el año operado: 2,0 operaciones por semana, 41% de acierto, +0,40R por operación y caída máxima de 15,5R.';
 const G = E.GEST;
 const plan = (k, s, e, dist) => { const g = G[k] || {}, L = []; if (g.tp) L.push('Pon también una orden límite para cerrar el ' + Math.round(g.f * 100) + '% en ' + fmt(e + s * g.tp * dist) + ' (+' + String(g.tp).replace('.', ',') + 'R).'); if (g.be) L.push('Cuando el precio llegue a ' + fmt(e + s * g.be * dist) + ' (+' + String(g.be).replace('.', ',') + 'R) te avisaré de mover el stop a ' + fmt(e + s * g.beoff * dist) + ' (+' + String(g.beoff).replace('.', ',') + 'R): a partir de ahí la operación ya no puede perder.'); return L.length ? L.join('\n') + '\n' : ''; };
 for (const k of AGS) {
   const r = R[k];
   if (r.pending && r.pending.sigT >= GO_LIVE) {
-    const p = r.pending, s = p.side, id = k + '-in-' + tag(p.sigT), e = lastPx, stop = e - s * p.dist;
-    if (!known.has(id)) {
+    const p = r.pending, s = p.side, id = k + '-in-' + tag(p.sigT), e = lastPx, stop = e - s * p.dist, w = sizeFor(k);
+    if (!known.has(id) && !w) { const bid = k + '-pm-' + tag(p.sigT); if (!known.has(bid)) events.push({ id: bid, agent: 'salinas', type: 'bloqueo', at: new Date(now * 1000).toISOString(), real: true, text: 'Salinas no deja entrar a ' + NAMES[k].split(' ·')[0] + ': riesgo abierto al tope (' + String(openR).replace('.', ',') + 'R de ' + PM.cap + ')' }); }
+    else if (!known.has(id)) {
+      openR += w;
       events.push({ id, agent: k, type: 'entrada', at: new Date(now * 1000).toISOString(), side: s === 1 ? 'long' : 'short', entry: +e.toFixed(1), stop: +stop.toFixed(1), real: true, text: 'Entrada ' + SIDE(s) + ' a mercado ≈ ' + fmt(e) + ', stop ' + fmt(stop) + ' (' + pct((stop - e) / e) + ')' });
-      emails.push({ subject: (s === 1 ? '🟢' : '🔴') + ' Mesa Radar · ' + NAMES[k] + ' · ' + SIDE(s) + ' BTC ≈ ' + fmt(e) + ' · stop ' + fmt(stop), body: 'Nueva entrada de la Mesa (' + NAMES[k] + ').\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop inicial: ' + fmt(stop) + ' (' + pct((stop - e) / e) + '), colócalo en el exchange al entrar.\n' + (MAXH[k] && MAXH[k] < 1000 ? 'Sin objetivo fijo: stop móvil a favor y cierre como mucho a las ' + MAXH[k] + ' h.' : 'Sin objetivo fijo: el stop se mueve solo a favor.') + ' La Mesa te avisa cuando lo tengas que mover y cuando haya que cerrar.\n' + plan(k, s, e, p.dist) + (k === 'paz' && confWho(s) ? 'Confluencia: ' + confWho(s) + ' está a favor.\n' : '') + sizeLine(k, p.dist) + calWarn() + '\n\n' + REF + ' Apunta la ejecución en Mesa Radar: ' + URL_ });
+      emails.push({ subject: (s === 1 ? '🟢' : '🔴') + ' Mesa Radar · ' + NAMES[k] + ' · ' + SIDE(s) + ' BTC ≈ ' + fmt(e) + ' · stop ' + fmt(stop), body: 'Nueva entrada de la Mesa (' + NAMES[k] + ').\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop inicial: ' + fmt(stop) + ' (' + pct((stop - e) / e) + '), colócalo en el exchange al entrar.\n' + (MAXH[k] && MAXH[k] < 1000 ? 'Sin objetivo fijo: stop móvil a favor y cierre como mucho a las ' + MAXH[k] + ' h.' : 'Sin objetivo fijo: el stop se mueve solo a favor.') + ' La Mesa te avisa cuando lo tengas que mover y cuando haya que cerrar.\n' + plan(k, s, e, p.dist) + (k === 'paz' && confWho(s) ? 'Confluencia: ' + confWho(s) + ' está a favor.\n' : '') + sizeLine(k, p.dist, w) + calWarn() + '\n\n' + REF + ' Apunta la ejecución en Mesa Radar: ' + URL_ });
     }
   }
   if (r.open && r.open.sigT >= GO_LIVE) {
@@ -125,7 +141,7 @@ if (Math.abs(big.z) >= 3.5 && !problems.length) {
     else if (k === 'vega') votes[k] = { vote: 'nada', why: c.on ? 'Tendencia diaria alcista, pero la entrada fue en el giro: no persigo.' : 'Sin tendencia diaria: no hay nada que comprar.' };
     else if (k === 'ortega') votes[k] = { vote: 'nada', why: 'Solo opero el cierre de 4 h fuera del rango de 5 días (' + fmt(c.low) + '–' + fmt(c.level) + ') a favor de la SMA50; próxima vela a las ' + hm(c.nextDecision) + '.' };
     else if (k === 'paz') votes[k] = { vote: 'nada', why: (c.regime === dir ? 'El movimiento va a favor de la SMA50: no es un retroceso, no entro.' : 'Es un retroceso contra la SMA50: espero a que el precio recupere la EMA50 de 1 h (' + fmt(c.ema) + ').') };
-    else votes[k] = { vote: 'nada', why: 'La ruptura sin compresión previa (percentil ' + Math.round(c.rank * 100) + ') no es mi patrón.' };
+    else votes[k] = { vote: 'nada', why: 'Funding medio de 3 días ' + (isNaN(c.f3) ? 'sin datos' : (c.f3 * 100).toFixed(4).replace('.', ',') + '%') + ': sin multitud atrapada no hay squeeze que operar.' };
   }
   votes.nubarrones = { vote: 'nada', why: NUB.phase === 'mature' ? (dir === -1 ? 'Bajista maduro: vender este desplome es vender abajo. Los rebotes barren cortos.' : 'Rebote de bajista maduro: no es un cambio de tendencia hasta recuperar la SMA200.') : NUB.phase === 'early' ? 'Giro bajista temprano: si algún sistema vende, es la mejor fase para cortos.' : NUB.phase === 'top' ? 'Posible techo: no compraría este movimiento.' : 'Fondo alcista: los sustos se compran solo con señal.' };
   const entries = AGS.filter(k => votes[k].vote === 'largo' || votes[k].vote === 'corto');
@@ -145,7 +161,7 @@ if (Math.abs(big.z) >= 3.5 && !problems.length) {
 // 5) notas de cada agente
 const pos = k => { if (TEST && k === 'ortega' && !(R[k] && R[k].open)) return testPos; const o = R[k] && R[k].open; if (!o) return null; return { side: o.side === 1 ? 'long' : 'short', entry: +o.entry.toFixed(1), stop: +o.stop.toFixed(1), since: new Date(o.entryT * 1000).toISOString(), rNow: +o.rNow.toFixed(2), live: o.sigT >= GO_LIVE }; };
 const st = (k, txt, level) => ({ text: txt, level, pos: pos(k) });
-const V = R.vega.ctx, O = R.ortega.ctx, Pz = R.paz.ctx, Ri = R.rios.ctx;
+const V = R.vega.ctx, O = R.ortega.ctx, Pz = R.paz.ctx, Fe = R.ferrer.ctx;
 const posTxt = k => { const p = pos(k); return p ? ' ' + (p.side === 'long' ? 'LARGO' : 'CORTO') + ' desde ' + fmt(p.entry) + ', stop ' + fmt(p.stop) + ', va ' + sR(p.rNow) + (p.live ? '.' : ' (abierta antes de empezar en vivo: no la copies a mitad).') : ''; };
 const evOf = k => events.filter(e => e.agent === k).map(e => e.text).join(' · ');
 const confTxt = s => confNow(s) ? 'Confluencia a favor (' + confWho(s) + '): puedo entrar.' : 'Solo entro con confluencia (tendencia diaria o ruptura de 5 días a favor); ahora no.';
@@ -155,7 +171,7 @@ const notes = {
   vega: st('vega', (evOf('vega') ? evOf('vega') + '. ' : '') + 'Cierre diario ' + fmt(V.close) + ' frente a SMA' + V.n + ' ' + fmt(V.sma) + ' (' + pct(V.close / V.sma - 1) + '), momentum ' + V.n + ' d ' + pct(V.mom) + ': ' + (V.state === 1 ? 'TENDENCIA ALCISTA.' : V.state === -1 ? 'TENDENCIA BAJISTA.' : 'sin tendencia clara, fuera.') + (R.vega.open ? posTxt('vega') : V.state ? ' Entro en el próximo giro de tendencia.' : ' Compro con cierre sobre ' + fmt(V.sma) + ' y momentum positivo; vendo con cierre bajo ella y momentum negativo.'), evOf('vega') ? 'trade' : V.state ? 'idea' : 'ok'),
   ortega: st('ortega', (evOf('ortega') ? evOf('ortega') + '. ' : '') + 'Rango de ' + O.N + ' días ' + fmt(O.low) + '–' + fmt(O.level) + ', SMA50 ' + regTxt(O.regime) + '. ' + (R.ortega.open ? posTxt('ortega') : O.regime === 1 ? 'Compro si una vela de 4 h cierra sobre ' + fmt(O.level) + ' (' + pct(O.level / lastPx - 1) + '); próxima a las ' + hm(O.nextDecision) + '.' : O.regime === -1 ? 'Vendo si una vela de 4 h cierra bajo ' + fmt(O.low) + ' (' + pct(O.low / lastPx - 1) + '); próxima a las ' + hm(O.nextDecision) + '.' : 'Sin tendencia de fondo, quieto.'), evOf('ortega') ? 'trade' : Math.min(Math.abs(O.level / lastPx - 1), Math.abs(O.low / lastPx - 1)) < 0.01 ? 'idea' : 'ok'),
   paz: st('paz', (evOf('paz') ? evOf('paz') + '. ' : '') + 'SMA50 diaria ' + regTxt(Pz.regime) + ', RSI 1 h ' + Pz.rsi.toFixed(0) + ' (mín. 6 h ' + Pz.rsiMin.toFixed(0) + ', máx. ' + Pz.rsiMax.toFixed(0) + '), EMA50 1 h ' + fmt(Pz.ema) + '. ' + (R.paz.open ? posTxt('paz') : Pz.regime === 1 ? (Pz.rsiMin < RL ? 'Hay retroceso: compro si una vela cierra sobre ' + fmt(Pz.ema) + '.' : 'Espero un retroceso (RSI < ' + RL + ') para comprar.') + ' ' + confTxt(1) : Pz.regime === -1 ? (Pz.rsiMax > 100 - RL ? 'Hay rebote: vendo si una vela cierra bajo ' + fmt(Pz.ema) + '.' : 'Espero un rebote (RSI > ' + (100 - RL) + ') para vender.') + ' ' + confTxt(-1) : 'Sin tendencia de fondo.'), evOf('paz') ? 'trade' : (Pz.regime === 1 && Pz.rsiMin < RL) || (Pz.regime === -1 && Pz.rsiMax > 100 - RL) ? 'idea' : 'ok'),
-  rios: st('rios', (evOf('rios') ? evOf('rios') + '. ' : '') + 'Bollinger 1 h en el percentil ' + Math.round(Ri.rank * 100) + ' de 30 días (busco ≤ 20), volumen ' + Ri.vol.toFixed(1).replace('.', ',') + '× su media, SMA50 ' + regTxt(Ri.regime) + '. ' + (R.rios.open ? posTxt('rios') : Ri.rank <= 0.2 ? 'Mercado comprimido: vigilo ' + (Ri.regime === 1 ? 'la ruptura de ' + fmt(Ri.upper) : 'la caída bajo ' + fmt(Ri.lower)) + ' con volumen.' : 'Sin compresión todavía.'), evOf('rios') ? 'trade' : Ri.rank <= 0.2 ? 'idea' : 'ok'),
+  ferrer: st('ferrer', (evOf('ferrer') ? evOf('ferrer') + '. ' : '') + (isNaN(Fe.f3) ? 'Sin datos de funding suficientes.' : 'Funding de Binance: última liquidación ' + (Fe.last * 100).toFixed(4).replace('.', ',') + '% (8 h), media de 3 días ' + (Fe.f3 * 100).toFixed(4).replace('.', ',') + '%. ') + (R.ferrer.open ? posTxt('ferrer') : Fe.f3 > E.PICK.ferrer.hi ? 'Largos pagando caro: si el precio pierde ' + fmt(Fe.lo) + ' vendo el squeeze.' : Fe.f3 < E.PICK.ferrer.lo ? 'Cortos pagando: si el precio rompe ' + fmt(Fe.hi) + ' compro el squeeze.' : 'Sin multitud atrapada (busco media > 0,05% o < −0,005%).'), evOf('ferrer') ? 'trade' : (Fe.f3 > E.PICK.ferrer.hi || Fe.f3 < E.PICK.ferrer.lo) ? 'idea' : 'ok'),
 };
 // Nubarrones: fase del mercado (bajistas) y lectura macro
 const NC = NUB.ctx, PHT = { bull: 'ALCISTA', pull: 'ALCISTA EN CORRECCIÓN', top: 'POSIBLE TECHO', early: 'GIRO BAJISTA TEMPRANO', mature: 'BAJISTA MADURO', x: 'SIN DATOS' };
@@ -168,8 +184,9 @@ for (const k of AGS) { const T = R[k].trades.filter(t => t.sigT >= GO_LIVE); con
 const weeks = Math.max(1, (now - GO_LIVE) / 604800);
 score.mesa = { n: nAll, win: wAll, sumR: +sumR.toFixed(2), sumW: +sumW.toFixed(2), perWeek: +(nAll / weeks).toFixed(2), since: new Date(GO_LIVE * 1000).toISOString() };
 const openRisk = AGS.filter(k => R[k].open && R[k].open.sigT >= GO_LIVE).reduce((p, k) => p + RISK[k], 0);
+notes.salinas = st('salinas', (events.some(e => e.agent === 'salinas') ? events.filter(e => e.agent === 'salinas').map(e => e.text).join(' · ') + '. ' : '') + 'Cartera en vivo: ' + sR(eqR, 1) + ' (caída desde el máximo ' + ddR.toFixed(1).replace('.', ',') + 'R). Riesgo abierto ' + String(+openR.toFixed(2)).replace('.', ',') + 'R de ' + String(PM.cap).replace('.', ',') + 'R. ' + (ddR > PM.ddR ? 'FRENO ACTIVO: riesgo a la mitad hasta recuperar.' : 'Tamaños normales: Vega y Ortega 1R (0,5%), Paz 0,75R, Ferrer 0,5R.'), ddR > PM.ddR || openR >= PM.cap ? 'alerta' : 'ok');
 const soon = calSoon();
-notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergency.move) + ' en ' + emergency.hours + ' h. Veredicto: ' + emergency.verdict + '. ' : '') + (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento).join(' · ') + '.' + (soon.length ? ' Dato macro en menos de 90 min.' : '') : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy sin leer.') + ' Riesgo abierto ' + String(openRisk).replace('.', ',') + '%. En vivo: ' + (nAll ? nAll + ' cerradas, ' + Math.round(wAll / nAll * 100) + '% ganadoras, ' + sR(sumR / nAll) + ' por operación (ref. +0,39R, 40% ganadoras).' : 'aún ninguna cerrada.') + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (nAll >= 30 && sumR / nAll < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : ''), emergency || problems.length || soon.length ? 'alerta' : 'ok');
+notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergency.move) + ' en ' + emergency.hours + ' h. Veredicto: ' + emergency.verdict + '. ' : '') + (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento).join(' · ') + '.' + (soon.length ? ' Dato macro en menos de 90 min.' : '') : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy sin leer.') + ' Riesgo abierto ' + String(openRisk).replace('.', ',') + '%. En vivo: ' + (nAll ? nAll + ' cerradas, ' + Math.round(wAll / nAll * 100) + '% ganadoras, ' + sR(sumR / nAll) + ' por operación (ref. +0,40R, 41% ganadoras).' : 'aún ninguna cerrada.') + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (nAll >= 30 && sumR / nAll < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : ''), emergency || problems.length || soon.length ? 'alerta' : 'ok');
 
 // 6) salida
 fs.mkdirSync(outDir, { recursive: true });
@@ -181,5 +198,5 @@ const writes = [{ op: 'set', collection: 'ticks', doc_id: id, data: tick }];
 for (const e of events) { fs.writeFileSync(path.join(outDir, e.id + '.json'), JSON.stringify(e)); writes.push({ op: 'set', collection: 'signals', doc_id: e.id, data: e }); }
 console.log('WRITES ' + JSON.stringify(writes));
 for (const m of emails) console.log('EMAIL_JSON ' + JSON.stringify(m));
-const NM = Object.assign({ calvo: 'Calvo · sala de emergencias' }, NAMES);
+const NM = Object.assign({ calvo: 'Calvo · sala de emergencias', salinas: 'Salinas · cartera' }, NAMES);
 console.log('RESUMEN ' + (events.length ? events.map(e => NM[e.agent] + ': ' + e.text).join(' | ') : 'Ronda sin novedades') + ' · BTC ' + fmt(lastPx) + (problems.length ? ' · DATOS: ' + problems.join('; ') : ''));
