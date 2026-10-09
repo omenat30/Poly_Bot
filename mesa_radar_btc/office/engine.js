@@ -1,10 +1,9 @@
-// Mesa Radar · motor de la oficina (BTC). Idéntico al backtest de research/ (engine.py + strategies.py, modo horario de oficina).
-// Vega: tendencia diaria (cierre > SMA20 y momentum 20 d > 0), stop móvil 3,5 ATR diario, sale al perder la tendencia. REAL.
-// Ortega: ruptura del máximo (largo) o mínimo (corto) de 5 días en cierre de 4 h, a favor de la SMA50 diaria; stop móvil 2 ATR (ATR horario de 1 semana × √24). REAL.
-// v3 (más win rate y más R por operación): Ortega toma un 33% a +1,5R y pone el stop en +0,3R al llegar a +0,75R; Paz y Ríos solo entran si Vega u Ortega
-// ya están dentro en el mismo sentido, y suben el stop a +0,3R al llegar a +1,5R (Paz) o +1R (Ríos).
-// Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 45 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto), stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, máximo 96 h. REAL (medio riesgo).
-// Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos. REAL (medio riesgo).
+// Mesa Radar · motor de la oficina (BTC), v4. Idéntico al backtest de research/ (engine.py, strategies.py, mgmt.py, wf.py), horario L-V 7:00-21:00 Madrid.
+// Vega: tendencia diaria (cierre vs SMA50 y momentum 50 d, largos y cortos), stop móvil 2,5 ATR diario, stop a +0,3R al llegar a +1R; sale al perder la tendencia.
+// Ortega: ruptura del máximo (largo) o mínimo (corto) de 3 días en cierre de 4 h, a favor de la SMA50 diaria; stop móvil 2 ATR; stop a +0,3R al llegar a +1R.
+// Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 40 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto), solo con confluencia
+//      (la tendencia diaria o la ruptura de 5 días clásicas, en SOMBRA, dentro en el mismo sentido). Stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, 96 h. Medio riesgo.
+// Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos. Medio riesgo.
 (function (root) {
   'use strict';
   const FEE = 0.0014, STOPSLIP = 0.0003;
@@ -15,6 +14,8 @@
   const rollmin = (x, n) => Float64Array.from(rollmax(Float64Array.from(x, v => -v), n), v => -v);
   const searchR = (a, v) => { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= v) lo = m + 1; else hi = m; } return lo; };
   const searchL = (a, v) => { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; };
+  // horario de oficina: lunes a viernes, 7:00-21:00 (Madrid), según la hora de inicio de la vela
+  const madridWork = (() => { const f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short', hour: '2-digit', hourCycle: 'h23' }); return t => { const p = f.formatToParts(new Date(t * 1000)), wd = p.find(x => x.type === 'weekday').value, hh = +p.find(x => x.type === 'hour').value; return wd !== 'Sat' && wd !== 'Sun' && hh >= 7 && hh < 21; }; })();
   const madridHour = (() => { const f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hourCycle: 'h23' }); return t => +f.format(new Date(t * 1000)); })();
 
   function prepare(H) {
@@ -23,7 +24,7 @@
     for (let i = 0; i < N; i++) { const d = Math.floor(H.t[i] / 86400) * 86400, k = D.t.length - 1; if (k < 0 || D.t[k] !== d) { D.t.push(d); D.o.push(H.o[i]); D.h.push(H.h[i]); D.l.push(H.l[i]); D.c.push(H.c[i]); } else { D.h[k] = Math.max(D.h[k], H.h[i]); D.l[k] = Math.min(D.l[k], H.l[i]); D.c[k] = H.c[i]; } }
     const hd = new Int32Array(N); for (let i = 0; i < N; i++) hd[i] = searchR(D.t, H.t[i]) - 2;
     const toH = x => { const o = new Float64Array(N).fill(NaN); for (let i = 0; i < N; i++) if (hd[i] >= 0) o[i] = x[hd[i]]; return o; };
-    const mask = new Uint8Array(N); for (let i = 0; i < N; i++) { const hh = madridHour(H.t[i]); mask[i] = hh >= 7 && hh < 20 ? 1 : 0; }
+    const mask = new Uint8Array(N); for (let i = 0; i < N; i++) mask[i] = madridWork(H.t[i]) ? 1 : 0;
     const A1 = atr(H, 24);
     return { H, D, N, hd, toH, mask, A1, dc: Float64Array.from(D.c) };
   }
@@ -71,14 +72,25 @@
     const iv = []; for (const R of Rs) { for (const x of R.trades) iv.push([x.sigT, x.exitBar, x.side]); if (R.open) iv.push([R.open.sigT, Infinity, R.open.side]); }
     return (ts, side) => iv.some(([a, b, s]) => a <= ts && ts < b && s === side);
   }
-  const GEST = { ortega: { tp: 1.5, f: 0.33, be: 0.75, beoff: 0.3 }, paz: { be: 1.5, beoff: 0.3 }, rios: { be: 1, beoff: 0.3 } };
+  // v4 (9 oct 2026): parámetros elegidos con todos los datos hasta hoy, ponderando cada trade por recencia (vida media 2 años):
+  // el de más R al año por agente con t ponderada ≥ 1. Validado en walk-forward anual 2020-26. Horario L-V 7:00-21:00 (Madrid).
+  const BE1 = { be: 1, beoff: 0.3 };
+  const PICK = {
+    vega: { n: 50, k: 2.5, shorts: 1, G: BE1 },
+    ortega: { N: 3, k: 2, G: BE1 },
+    paz: { rsiLo: 40, en: 50, k: 2, tk: 5, maxh: 96, lb: 6, G: {}, conf: true },
+    rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false }
+  };
+  // sombras para la confluencia de Paz: la tendencia diaria y la ruptura de 5 días clásicas (v3)
+  const SHADOW = { vega: { n: 20, k: 3.5, shorts: 0, G: {} }, ortega: { N: 5, k: 2, G: { tp: 1.5, f: 0.33, be: 0.75, beoff: 0.3 } } };
+  const GEST = { vega: BE1, ortega: BE1, paz: {}, rios: {} };
 
-  function vega(X, nowMask, P = { n: 20, k: 3.5 }) {
+  function vega(X, nowMask, P = PICK.vega) {
     const { D, N, H, hd, toH, dc } = X, n = P.n, k = P.k;
     const Ad = atr({ h: D.h, l: D.l, c: D.c }, 14), S = sma(dc, n), st = new Int8Array(dc.length);
-    for (let d = 0; d < dc.length; d++) { const m = d >= n ? dc[d] / dc[d - n] - 1 : NaN; st[d] = dc[d] > S[d] && m > 0 ? 1 : 0; }
-    const stH = toH(Float64Array.from(st)), exitL = new Uint8Array(N);
-    for (let i = 0; i < N; i++) { const nd = i === 0 || hd[i] !== hd[i - 1]; if (nd && stH[i] !== 1) exitL[i] = 1; }
+    for (let d = 0; d < dc.length; d++) { const m = d >= n ? dc[d] / dc[d - n] - 1 : NaN; st[d] = dc[d] > S[d] && m > 0 ? 1 : (P.shorts && dc[d] < S[d] && m < 0 ? -1 : 0); }
+    const stH = toH(Float64Array.from(st)), exitL = new Uint8Array(N), exitS = new Uint8Array(N);
+    for (let i = 0; i < N; i++) { const nd = i === 0 || hd[i] !== hd[i - 1]; if (nd && stH[i] !== 1) exitL[i] = 1; if (nd && stH[i] !== -1) exitS[i] = 1; }
     const sigs = [];
     for (let d = 1; d < dc.length; d++) {
       if (st[d] !== 0 && st[d] !== st[d - 1] && !isNaN(S[d])) {
@@ -86,14 +98,15 @@
         if (hi >= N) continue;
         if (D.t[d] + 86400 > H.t[N - 1] + 3600) continue;   // el día aún no ha cerrado
         const e = hi + 1 < N ? H.o[hi + 1] : H.c[hi];
-        sigs.push([hi, 1, e - k * Ad[d], NaN, 24 * 400]);
+        sigs.push([hi, st[d], e - st[d] * k * Ad[d], NaN, 24 * 400]);
       }
     }
-    const R = sim(X, sigs, [k, toH(Ad)], { 1: exitL, '-1': new Uint8Array(N) }, nowMask);
-    R.ctx = { sma: S[dc.length - 1], close: dc[dc.length - 1], mom: dc[dc.length - 1] / dc[dc.length - 1 - n] - 1, atr: Ad[dc.length - 1], on: st[dc.length - 1] === 1, dayOpen: D.t[D.t.length - 1] };
+    const R = sim(X, sigs, [k, toH(Ad)], { 1: exitL, '-1': exitS }, nowMask, P.G || {});
+    const L = dc.length - 1;
+    R.ctx = { n, sma: S[L], close: dc[L], mom: dc[L] / dc[L - n] - 1, atr: Ad[L], on: st[L] === 1, state: st[L], dayOpen: D.t[D.t.length - 1] };
     return R;
   }
-  function ortega(X, nowMask, P = { N: 5, k: 2 }) {
+  function ortega(X, nowMask, P = PICK.ortega) {
     const { H, N } = X, W = P.N * 24, hi = rollmax(H.h, W), lo = rollmin(H.l, W), A4 = atr(H, 168), A4s = Float64Array.from(A4, v => v * Math.sqrt(24)), R50 = regime(X, 50);
     const sigs = [];
     for (let i = 1; i < N; i++) {
@@ -101,11 +114,11 @@
       if (H.c[i] > hi[i - 1] && R50[i] === 1) sigs.push([i, 1, H.c[i] - P.k * A4s[i], NaN, 24 * 120]);
       if (H.c[i] < lo[i - 1] && R50[i] === -1) sigs.push([i, -1, H.c[i] + P.k * A4s[i], NaN, 24 * 120]);
     }
-    const R = sim(X, sigs, [P.k, A4s], null, nowMask, GEST.ortega);
-    R.ctx = { level: hi[N - 1], low: lo[N - 1], regime: R50[N - 1], close: H.c[N - 1], atr: A4s[N - 1], nextDecision: (() => { let t = H.t[N - 1] + 3600; while ((Math.floor(t / 3600) % 24) % 4 !== 0) t += 3600; return t; })() };
+    const R = sim(X, sigs, [P.k, A4s], null, nowMask, P.G || {});
+    R.ctx = { N: P.N, level: hi[N - 1], low: lo[N - 1], regime: R50[N - 1], close: H.c[N - 1], atr: A4s[N - 1], nextDecision: (() => { let t = H.t[N - 1] + 3600; while ((Math.floor(t / 3600) % 24) % 4 !== 0) t += 3600; return t; })() };
     return R;
   }
-  function paz(X, nowMask, filt = null, P = { rsiLo: 45, en: 50, k: 2, tk: 5, maxh: 96, lb: 6 }) {
+  function paz(X, nowMask, filt = null, P = PICK.paz) {
     const { H, N, A1, mask } = X, c = H.c, h = H.h, l = H.l, E = ema(c, P.en), lb = P.lb;
     const up = new Float64Array(N), dn = new Float64Array(N);
     for (let i = 0; i < N; i++) { const d = i ? c[i] - c[i - 1] : 0; up[i] = Math.max(d, 0); dn[i] = Math.max(-d, 0); }
@@ -126,12 +139,12 @@
         sigs.push([i, -1, stop, NaN, P.maxh]);
       }
     }
-    const R = sim(X, sigs, [P.tk, A1], null, nowMask, GEST.paz, filt);
+    const R = sim(X, sigs, [P.tk, A1], null, nowMask, P.G || {}, filt);
     const i = N - 1; let mn = Infinity, mx = -Infinity; for (let j = i - lb; j < i; j++) { mn = Math.min(mn, rsi[j]); mx = Math.max(mx, rsi[j]); }
     R.ctx = { rsi: rsi[i], rsiMin: mn, rsiMax: mx, ema: E[i], regime: R50[i], close: c[i] };
     return R;
   }
-  function rios(X, nowMask, filt = null, P = { q: 0.2, vm: 1.0, k: 4 }) {
+  function rios(X, nowMask, filt = null, P = PICK.rios) {
     const { H, N, A1 } = X, c = H.c, m = sma(c, 20), c2 = sma(Float64Array.from(c, v => v * v), 20), W = 720;
     const sd = Float64Array.from(m, (v, i) => Math.sqrt(Math.max(c2[i] - v * v, 0))), bw = Float64Array.from(m, (v, i) => 4 * sd[i] / v);
     const rank = new Float64Array(N).fill(NaN);
@@ -142,10 +155,10 @@
       if (c[i] > m[i] + 2 * sd[i] && R50[i] === 1) sigs.push([i, 1, c[i] - P.k * A1[i], NaN, 240]);
       if (c[i] < m[i] - 2 * sd[i] && R50[i] === -1) sigs.push([i, -1, c[i] + P.k * A1[i], NaN, 240]);
     }
-    const R = sim(X, sigs, [P.k, A1], null, nowMask, GEST.rios, filt);
+    const R = sim(X, sigs, [P.k, A1], null, nowMask, P.G || {}, filt);
     R.ctx = { rank: rank[N - 1], upper: m[N - 1] + 2 * sd[N - 1], lower: m[N - 1] - 2 * sd[N - 1], vol: H.v[N - 1] / vb[N - 1], regime: R50[N - 1], close: c[N - 1] };
     return R;
   }
-  root.MesaEngine = { prepare, vega, ortega, paz, rios, confluence, GEST, madridHour, regime, FEE };
+  root.MesaEngine = { prepare, vega, ortega, paz, rios, confluence, GEST, PICK, SHADOW, madridHour, madridWork, regime, FEE };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined') module.exports = globalThis.MesaEngine;

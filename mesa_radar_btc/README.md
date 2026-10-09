@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026, v3: más acierto y más R por operación)
+# Mesa Radar · operativa BTC (9 oct 2026, v4: L–V 7–21 y selección por recencia)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,34 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v4 · horario L–V 7:00–21:00, selección ponderada por recencia, más R al año
+
+- **Horario:** entradas y movimientos de stop solo de lunes a viernes, de 7:00 a 21:00 en Madrid (`office_mask2.npy`, `madridWork` en el motor). Las rondas corren de lunes a viernes, de 7:01 a 20:46.
+- **Recencia** (`wf.py`, `wf_sel*.py`): para cada agente hay un menú de 114 variantes. Cada año se elige la que más R al año dio en los años anteriores, ponderando cada operación por 0,5^(antigüedad/2 años) y exigiendo una t ponderada ≥ 1. Ese año se opera sin verlo (walk-forward 2020–26).
+
+Walk-forward 2020–26, con riesgos 1 / 1 / ½ / ½:
+
+| | v3 fija (mismo horario) | v4 |
+|---|---|---|
+| Operaciones/semana | 1,7 | 3,0 |
+| Acierto | 41% | 34% |
+| R por operación | +0,40 | +0,30 |
+| R al año | +22,3 | +27,4 |
+| t | 2,6 | 3,0 |
+| Caída máxima | 17,6R | 30,9R |
+
+Selección en vivo, con datos hasta el 9 oct 2026:
+- **Vega:** SMA50 con momentum, largos y cortos, stop 2,5 ATR, break-even a +1R.
+- **Ortega:** ruptura de 3 días, stop 2 ATR, break-even a +1R.
+- **Paz:** RSI < 40 y confluencia con las sombras v3.
+- **Ríos:** sin confluencia.
+
+Aporte de cada agente: Vega suma poco en el walk-forward (+2R al año). Sin Ortega, 2026 queda negativo.
+
+La paridad JS/Python (`parity4.js`) da 0 diferencias en 1.101 operaciones.
+
+**Modo prueba:** `MESA_TEST=long|short` simula una entrada de Ortega marcada como PRUEBA (correo, base de datos y tablero) sin afectar al marcador.
 
 ## v3 · más acierto y más R por operación, con 2–3 operaciones por semana
 

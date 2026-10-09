@@ -4,7 +4,7 @@
     <div>
       <span class="eyebrow">Oficina de agentes · solo BTC · Binance futuros vía OpenMarket</span>
       <h1>Mesa Radar</h1>
-      <p>Cinco agentes leen BTC a la vez cada 15 minutos, de 7:00 a 20:00. Cuatro operan, cada uno su especialidad, en largo y en corto; Calvo vigila el riesgo y convoca la sala de emergencias si el mercado da un tirón. Todo salió de 10 años de datos y se comprobó en años que no se usaron para elegirlo. No copian al Radar BTC.</p>
+      <p>Cinco agentes leen BTC a la vez cada 15 minutos, de lunes a viernes de 7:00 a 21:00, las horas con más volumen. Cuatro operan, cada uno su especialidad, en largo y en corto; Calvo vigila el riesgo y convoca la sala de emergencias si el mercado da un tirón. Todo salió de 10 años de datos y se comprobó en años que no se usaron para elegirlo. No copian al Radar BTC.</p>
     </div>
     <div class="status" aria-live="polite">
       <span class="chip" id="officeChip"><i></i><span id="officeTxt">Comprobando horario…</span></span>
@@ -17,7 +17,7 @@
     <div class="stage" id="stage">
       <div class="fallback" id="fallback">Cargando la oficina en 3D…</div>
       <div id="overlay"></div>
-      <div class="night" id="night" hidden><div><b>Oficina cerrada</b><br><span class="muted" id="nightTxt">Abre a las 7:00 (hora de Madrid). Los stops siguen en el exchange.</span></div></div>
+      <div class="night" id="night" hidden><div><b>Oficina cerrada</b><br><span class="muted" id="nightTxt">Todos en casa. Vuelven de lunes a viernes a las 7:00 (hora de Madrid). Los stops siguen en el exchange.</span></div></div>
       <div class="stage-cap"><span id="capL">Arrastra para girar la oficina</span><span id="capR">–</span></div>
     </div>
     <aside class="round" aria-live="polite">
@@ -28,26 +28,26 @@
   </section>
 
   <section class="sec" aria-labelledby="perfTitle">
-    <div class="sec-head"><h2 id="perfTitle">Rendimiento</h2><p>Win rate, operaciones por semana y R esperado por operación de cada agente: lo que dio el backtest en 2022–2026, años que no se usaron para elegir nada, y lo que va dando en vivo desde el 9 de octubre de 2026. El objetivo: 2–3 operaciones por semana con más acierto y más R por operación.</p></div>
+    <div class="sec-head"><h2 id="perfTitle">Rendimiento</h2><p>Win rate, operaciones por semana y R esperado por operación de cada agente: lo que dio el walk-forward de 2020 a 2026 (cada año operado con reglas elegidas solo con los años anteriores, pesando más los recientes) y lo que va dando en vivo desde el 9 de octubre de 2026. El objetivo: 2–3 operaciones por semana con más acierto y más R por operación.</p></div>
     <div class="kpis" id="perfKpis"></div>
     <div class="card"><div class="tbl"><table class="t" id="perfTbl"></table></div>
       <p class="muted" style="font-size:.85rem">R = lo que arriesgas en cada operación (distancia al stop). El R medio de la mesa no está ponderado: cada operación cuenta igual, aunque Paz y Ríos arriesgan la mitad.</p></div>
   </section>
 
   <section class="sec" aria-labelledby="bookTitle">
-    <div class="sec-head"><h2 id="bookTitle">Operativa en vivo</h2><p>Largos y cortos en BTC, siempre a favor de la media de 50 días (Vega solo compra). Vega y Ortega arriesgan un 0,5% por operación; Paz y Ríos, un 0,25%. Cada entrada, movimiento de stop, cierre y reunión de emergencia te llega por correo.</p></div>
+    <div class="sec-head"><h2 id="bookTitle">Operativa en vivo</h2><p>Largos y cortos en BTC, siempre a favor de la media de 50 días. Vega y Ortega arriesgan un 0,5% por operación; Paz y Ríos, un 0,25%. Cada entrada, movimiento de stop, cierre y reunión de emergencia te llega por correo.</p></div>
     <div class="book" id="book"></div>
     <div class="feed" id="feed"></div>
   </section>
 
   <section class="sec" aria-labelledby="resTitle">
-    <div class="sec-head"><h2 id="resTitle">La investigación: 10 años de BTC</h2><p>Velas de 1 minuto de 2016 a octubre de 2026. Los parámetros se eligieron solo con 2017–2021 y luego se midieron en 2022–2026. Entrada en la apertura siguiente, solo en horario de oficina, con 0,14% de costes por operación y 0,03% más en los stops.</p></div>
+    <div class="sec-head"><h2 id="resTitle">La investigación: 10 años de BTC</h2><p>Velas de 1 minuto de 2016 a octubre de 2026. Desde la v4, cada año se eligen las reglas con los años anteriores, pesando más los recientes (vida media de 2 años), y se opera el año siguiente sin verlo. Entrada en la apertura siguiente, solo de lunes a viernes de 7:00 a 21:00, con 0,14% de costes por operación y 0,03% más en los stops.</p></div>
     <div class="thesis" id="thesis"></div>
     <div class="kpis" id="resKpis"></div>
     <div class="grid2">
       <div class="card">
         <div class="sec-head"><h3>Resultado acumulado</h3><span class="eyebrow">R ponderado por el riesgo de cada agente</span></div>
-        <svg id="resChart" viewBox="0 0 720 280" role="img" aria-label="Resultado acumulado de 2017 a 2026 de Vega, Ortega, Paz, Ríos y la mesa combinada"></svg>
+        <svg id="resChart" viewBox="0 0 720 280" role="img" aria-label="Resultado acumulado walk-forward de 2020 a 2026 de Vega, Ortega, Paz, Ríos y la mesa combinada"></svg>
         <div class="legend" id="resLegend"></div>
       </div>
       <div class="card">
@@ -59,7 +59,8 @@
       <div class="sec-head"><h3>Todo lo que se probó</h3><span class="eyebrow">591 variantes en 8 familias, más la estacionalidad</span></div>
       <div class="tbl"><table class="t" id="resFam"></table></div>
       <ul class="notes">
-        <li><b>Más acierto y más R por operación (v3).</b> Se probaron 144 combinaciones de gestión de la salida (parciales, stop a +0,3R) y de filtros de confluencia, eligiendo con 2017–21. Las ganadoras: Paz y Ríos solo entran si Vega u Ortega ya están dentro, y las operaciones que van bien se protegen pronto. En 2022–26 el acierto pasa del 29% al 37% y el R por operación de +0,18 a +0,29. Los filtros por hora, volatilidad o día de la semana que funcionaban en 2017–21 no se sostuvieron en 2022–26, así que no se usan.</li>
+        <li><b>v4 · más R al año.</b> Con el horario L–V 7:00–21:00 y la selección por recencia, Vega pasa a la media de 50 días en los dos sentidos y Ortega a la ruptura de 3 días, las dos con el stop a +0,3R al llegar a +1R. En los datos recientes son sus mejores versiones, con más del 45% de acierto. Ríos deja la confluencia, que últimamente le restaba. Paz es la más irregular: en los dos últimos años su t ponderada ronda 1, así que se queda con medio riesgo y solo con confluencia.</li>
+        <li><b>v3.</b> Se probaron 144 combinaciones de gestión de la salida (parciales, stop a +0,3R) y de filtros de confluencia, eligiendo con 2017–21. Las ganadoras: Paz y Ríos solo entran si Vega u Ortega ya están dentro, y las operaciones que van bien se protegen pronto. En 2022–26 el acierto pasa del 29% al 37% y el R por operación de +0,18 a +0,29. Los filtros por hora, volatilidad o día de la semana que funcionaban en 2017–21 no se sostuvieron en 2022–26, así que no se usan.</li>
         <li><b>Movimientos bruscos:</b> se probó seguir el tirón y darle la vuelta (72 variantes). Solo 6 salen positivas en 2022–26. En la sala de emergencias, si ningún sistema da entrada, el veredicto es no hacer nada.</li>
         <li>El patrón sigue siendo el mismo: en BTC gana seguir la tendencia y pierde apostar a que se gire. Los cortos solo se abren con la media de 50 días a la baja.</li>
       </ul>
@@ -93,7 +94,7 @@
       <div><b>Nadie ejecuta solo</b>Los agentes leen OpenMarket en modo lectura y te escriben. Las órdenes las pones tú. Ningún agente tiene claves de un exchange.</div>
       <div><b>Riesgo por agente</b>Vega y Ortega arriesgan un 0,5% por operación; Paz y Ríos, un 0,25%. Con los cuatro dentro, un 1,5% como mucho. Sin multiplicar el riesgo por la convicción.</div>
       <div><b>El stop, en el exchange</b>Se pone al entrar y solo se mueve a favor. Cuando toca moverlo te llega un correo con el precio.</div>
-      <div><b>Horario 7:00–20:00</b>Las señales que salen de noche se ejecutan a las 7:00. El backtest ya lo tiene en cuenta.</div>
+      <div><b>Horario L–V 7:00–21:00</b>Las horas con más volumen y menos señales falsas. Las señales de fuera de horario no se ejecutan y los stops siguen en el exchange. El backtest ya lo tiene en cuenta.</div>
       <div><b>Sala de emergencias</b>Movimiento de 3,5 desviaciones o más en 1–3 h: todos se reúnen. Solo se entra si un sistema da señal; nunca se persigue el tirón ni se le da la vuelta a mano.</div>
       <div><b>Parada por pérdidas</b>−3R en 7 días: nada nuevo hasta el lunes. −10R desde el máximo: se para todo y se revisa. Si tras 30 operaciones en vivo el R medio baja de −0,1, Calvo da el aviso.</div>
     </div>

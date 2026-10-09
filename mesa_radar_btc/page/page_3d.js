@@ -44,9 +44,18 @@
   box(1.4, 0.9, 0.6, mat('desk'), 7.6, 0.45, 4.9); box(0.45, 0.55, 0.4, mat('coffee', '#2b2f35'), 7.4, 1.18, 4.9); cyl(0.06, 0.05, 0.12, mat('cup', '#f2f2f2'), 7.9, 0.96, 4.85);
   // plants
   const plant = (x, z) => { cyl(0.22, 0.18, 0.45, mat('pot', '#9a7b5f'), x, 0.22, z); const s = new T3.Mesh(new T3.SphereGeometry(0.42, 12, 10), mat('leaf', '#3f8a5a')); s.position.set(x, 0.85, z); s.scale.y = 1.25; s.castShadow = true; scene.add(s); };
-  plant(-8.3, -5.3); plant(8.4, -5.2); plant(-8.3, 5.2); plant(3.0, -5.3);
+  plant(-8.3, -5.3); plant(8.4, -5.2); plant(-3.2, 9.3); plant(3.0, -5.3);
   // sofa
   box(2.2, 0.45, 0.8, mat('sofa', '#5d6b7c'), -6.8, 0.23, 5.3); box(2.2, 0.6, 0.2, mat('sofa'), -6.8, 0.6, 5.65);
+
+  // ---- puerta de la calle (pared izquierda): entran a las 7:00 y se van a casa a las 21:00, de lunes a viernes ----
+  const DOOR = { x: -W / 2 + 0.11, z: 8.0, w: 1.1, in: [-8.45, 8.0] };
+  box(0.12, 2.35, 0.1, mat('frame'), DOOR.x + 0.02, 1.17, DOOR.z - DOOR.w / 2 - 0.05); box(0.12, 2.35, 0.1, mat('frame'), DOOR.x + 0.02, 1.17, DOOR.z + DOOR.w / 2 + 0.05); box(0.12, 0.1, DOOR.w + 0.2, mat('frame'), DOOR.x + 0.02, 2.36, DOOR.z);
+  const hinge = new T3.Group(); hinge.position.set(DOOR.x + 0.06, 0, DOOR.z - DOOR.w / 2); scene.add(hinge);
+  box(0.06, 2.25, DOOR.w, mat('doorLeaf', '#7b5b3e'), 0, 1.13, DOOR.w / 2, hinge); cyl(0.03, 0.03, 0.04, mat('metal'), 0.07, 1.05, DOOR.w - 0.12, hinge, 8).rotation.z = Math.PI / 2;
+  const exitSign = mkCanvas(256, 64); exitSign.g.fillStyle = '#0b7a57'; exitSign.g.fillRect(0, 0, 256, 64); exitSign.g.fillStyle = '#fff'; exitSign.g.font = '700 30px sans-serif'; exitSign.g.textAlign = 'center'; exitSign.g.fillText('SALIDA · CASA', 128, 43); exitSign.tx.needsUpdate = true;
+  const exM = new T3.Mesh(new T3.PlaneGeometry(1.1, 0.27), new T3.MeshBasicMaterial({ map: exitSign.tx })); exM.position.set(DOOR.x + 0.08, 2.62, DOOR.z); exM.rotation.y = Math.PI / 2; scene.add(exM);
+  let doorAngle = 0;
 
   // ---- sala de emergencias (esquina delantera derecha, paredes de cristal) ----
   const ER = { x0: 1.6, x1: 8.9, z0: 6.3, z1: 10, door: [2.3, 6.3], cx: 5.4, cz: 8.3 };
@@ -167,6 +176,7 @@
   // a new round: everyone back, reading data, then the ones with news present them at the table
   let lastTickAt = null, meeting = false;
   function newRound(t) {
+    if (!officeOn) return;
     for (const k of M.ORDER) { if (P[k].state !== 'sit') backToDesk(k); P[k].reading = now() + 9; }
     setTimeout(() => {
       M.ORDER.forEach((k, i) => { const n = t.notes && t.notes[k]; if (n) setTimeout(() => say(k, short(n.text, 110), n.level, 6), i * 3800); });
@@ -197,6 +207,7 @@
   }
   function dismiss() { clearER(); erActive = null; meeting = false; M.ORDER.forEach(k => { P[k].rush = false; backToDesk(k); }); }
   function checkER() {
+    if (!officeOn) { drawER(); return; }
     const e = M.emergency();
     if (e && (!erActive || erActive.id !== e.id) && !reduce) convene(e);
     else if (e && reduce && !erActive) { erActive = e; say('calvo', 'Sala de emergencias: ' + e.verdict + '.', 'emergencia', 12); }
@@ -261,6 +272,24 @@
     } else { g.fillStyle = '#93a3b4'; g.fillText('Se reúnen con un tirón de 3,5σ en 1–3 h', 18, 90); }
     tx.needsUpdate = true;
   }
+  // ---- llegada y salida de la oficina ----
+  let officeOn = true, firstTheme = true;
+  const showP = (k, v) => { P[k].g.visible = v; tags[k].hidden = !v; bubs[k].hidden = !v; };
+  function updateNight() { document.getElementById('night').hidden = officeOn || !M.ORDER.every(k => P[k].home); }
+  function sendHome(k, instant) {
+    const p = P[k]; if (p.home || p.leaving) return;
+    if (erActive) dismiss();
+    const gone = () => { p.home = true; p.leaving = false; p.state = 'home'; p.reserved = false; showP(k, false); updateNight(); };
+    if (instant || reduce) return gone();
+    p.leaving = true; p.reserved = true; say(k, k === 'calvo' ? 'Cierro la oficina. Los stops siguen en el exchange.' : 'Hasta mañana, me voy a casa.', 'ok', 4);
+    goTo(p, DOOR.in, () => { p.yaw = -Math.PI / 2; setTimeout(gone, 700); });
+  }
+  function comeBack(k) {
+    const p = P[k]; if (!p.home && !p.leaving) return;
+    p.home = false; p.leaving = false; p.reserved = false; showP(k, true);
+    if (reduce) { const d = DESKS[k]; p.pos.set(d.seat[0], d.seat[1]); p.state = 'sit'; p.yaw = d.yaw; return; }
+    p.pos.set(DOOR.in[0], DOOR.in[1]); p.state = 'stand'; backToDesk(k);
+  }
   // ---- theme and time of day ----
   function applyTheme() {
     mats.floor.color.set(css('--floor')); mats.wall.color.set(css('--wall')); mats.desk.color.set(css('--desk')); mats.metal.color.set(css('--metal'));
@@ -268,10 +297,11 @@
     const day = Math.max(0, Math.min(1, Math.min(m - 6.5, 21 - m) / 1.5));
     winMat.color.set(new T3.Color(0x16233a).lerp(new T3.Color(0xa8cdf0), day));
     scene.background = new T3.Color(css('--bg'));
-    const open = m >= 7 && m < 20; document.getElementById('night').hidden = open;
-    for (const k of M.ORDER) P[k].g.visible = open, tags[k].hidden = !open, bubs[k].hidden = !open;
+    const open = window.MESA_OPEN ? window.MESA_OPEN() : true;
+    if (open !== officeOn || firstTheme) { officeOn = open; M.ORDER.forEach((k, i) => open ? setTimeout(() => comeBack(k), firstTheme ? 0 : i * 2500) : sendHome(k, firstTheme)); }
+    firstTheme = false; updateNight();
     hemi.intensity = open ? 0.75 : 0.35; sun.intensity = open ? 0.7 : 0.15;
-    document.getElementById('capR').textContent = open ? 'Rondas cada 15 min · 7:00–20:00' : 'Fuera de horario';
+    document.getElementById('capR').textContent = open ? 'Rondas cada 15 min · L–V 7:00–21:00' : 'Fuera de horario · en casa';
   }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
   new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -292,14 +322,17 @@
   function step(dt) {
     const tnow = now();
     const blink = erActive ? (Math.sin(tnow * 6) > 0 ? 1 : 0) : 0; beaconMat.emissive.setHex(blink ? 0xff2a1a : erActive ? 0x400806 : 0x000000); alarm.intensity = erActive ? (reduce ? 0.6 : 0.4 + blink * 1.4) : 0;
+    const near = M.ORDER.some(k => !P[k].home && Math.hypot(P[k].pos.x - DOOR.in[0], P[k].pos.y - DOOR.in[1]) < 1.6);
+    doorAngle += ((near ? -1.35 : 0) - doorAngle) * Math.min(1, dt * 4); hinge.rotation.y = doorAngle;
     for (const k of M.ORDER) {
       const p = P[k];
+      if (p.home) continue;
       p.phase += dt * (p.state === 'walk' ? (p.rush ? 12 : 7.5) : 2);
       if (p.state === 'walk') {
         const tgt = p.path[0];
         if (!tgt) { p.state = 'stand'; const f = p.after; p.after = null; f ? f() : backToDesk(k); }
         else { const dx = tgt[0] - p.pos.x, dz = tgt[1] - p.pos.y, d = Math.hypot(dx, dz), sp = (p.rush ? 2.6 : 1.25) * dt; if (d <= sp) { p.pos.set(tgt[0], tgt[1]); p.path.shift(); } else { p.pos.x += dx / d * sp; p.pos.y += dz / d * sp; p.yaw = Math.atan2(dx, dz); } }
-      } else if (p.state === 'sit' && !meeting && !reduce && tnow > p.until && !p.reserved) wander(k);
+      } else if (p.state === 'sit' && officeOn && !meeting && !reduce && tnow > p.until && !p.reserved) wander(k);
       // pose
       const sit = p.state === 'sit', walk = p.state === 'walk', sw = walk ? Math.sin(p.phase) * 0.55 : 0;
       p.g.position.set(p.pos.x, sit ? -0.38 : 0, p.pos.y);
