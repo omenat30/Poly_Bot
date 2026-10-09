@@ -1,0 +1,16 @@
+const { mesa, panel } = require('./sim.js'); const T = require('./panel_trades.json');
+const st = Z => { const n = Z.length; if (!n) return 'n=0'; const s = Z.reduce((p, x) => p + x.r, 0); const w = Z.filter(x => x.r > 0).length; let c = 0, pk = 0, dd = 0; for (const x of Z) { c += x.r; pk = Math.max(pk, c); dd = Math.max(dd, pk - c); } const m=s/n, sd=Math.sqrt(Z.reduce((p,x)=>p+(x.r-m)**2,0)/(n-1)); return `n=${n} win=${(w/n*100).toFixed(1)}% exp=${m.toFixed(3)} tot=${s.toFixed(0)} dd=${dd.toFixed(1)} t=${(m/sd*Math.sqrt(n)).toFixed(1)}`; };
+const IS = x => x.t >= 1609459200, OOS = x => x.t < 1609459200 && x.t >= 1483228800;
+const show = (name, R) => console.log(name.padEnd(46), '| 21-26', st(R.filter(IS)), '| 17-20', st(R.filter(OOS)));
+const base = { hrs: 8, pen: 0, entryFee: 0.0004, exitFee: () => 0.0004, stopSlip: 0 };
+const M = o => T.map(t => mesa(t, o)).filter(x => x && x.filled);
+show('MESA como en la página (toque=lleno, 0,08%)', M(base));
+show('MESA perforar 0,02% para llenar', M({ ...base, pen: 0.0002 }));
+show('MESA perforar 0,05%', M({ ...base, pen: 0.0005 }));
+show('MESA costes reales Binance (maker .02/taker .05 + 0,05% slip stop)', M({ ...base, pen: 0.0002, entryFee: 0.0002, exitFee: w => w === 'target' ? 0.0002 : 0.0005, stopSlip: 0.0005 }));
+show('MESA costes x2', M({ ...base, pen: 0.0002, entryFee: 0.0008, exitFee: () => 0.0008 }));
+const P = o => T.map(t => panel(t, o)).filter(x => x && !x.skip);
+const pb = { fee: 0.0008, stopSlip: 0, mktSlip: 0 };
+show('PANEL como en la página (apertura siguiente)', P({ ...pb, delay: 0 }));
+for (const d of [2, 5, 10, 17, 30]) show(`PANEL entrando ${d} min tarde (+0,02% slip)`, P({ ...pb, delay: d, mktSlip: 0.0002 }));
+show('PANEL 17 min + costes reales (0,10%+0,05% stop)', P({ fee: 0.001, stopSlip: 0.0005, mktSlip: 0.0002, delay: 17 }));
