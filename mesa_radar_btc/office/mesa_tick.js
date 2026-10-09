@@ -9,7 +9,7 @@ const fs = require('fs'), path = require('path');
 const E = require(path.join(__dirname, 'engine.js'));
 const [, , minPath, livePath, dbDir, outDir, knownArg] = process.argv;
 const now = Math.floor((+process.env.MESA_NOW || Date.now()) / 1000);
-const GO_LIVE = +process.env.MESA_GO_LIVE || Date.UTC(2026, 9, 9, 17, 0) / 1000;   // 9 oct 2026, 19:00 Madrid (mesa de 4 agentes, largos y cortos)
+const GO_LIVE = +process.env.MESA_GO_LIVE || Date.UTC(2026, 9, 9, 16, 0) / 1000;   // 9 oct 2026, 18:00 Madrid (mesa de 4 agentes, largos y cortos)
 const URL_ = 'https://claude.ai/artifact/MxNVeAAFhmbBYRg4qi6LJy';
 const fmt = x => Math.round(x).toLocaleString('es-ES'), pct = x => (x >= 0 ? '+' : '−') + Math.abs(x * 100).toFixed(1).replace('.', ',') + '%', sR = x => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(2).replace('.', ',') + 'R';
 const madrid = s => new Date(s * 1000).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
