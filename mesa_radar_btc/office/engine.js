@@ -1,7 +1,8 @@
 // Mesa Radar · motor de la oficina (BTC). Idéntico al backtest de research/ (engine.py + strategies.py, modo horario de oficina).
 // Vega: tendencia diaria (cierre > SMA20 y momentum 20 d > 0), stop móvil 3,5 ATR diario, sale al perder la tendencia. REAL.
-// Ortega: ruptura del máximo de 5 días en cierre de 4 h, stop móvil 2 ATR (ATR horario de 1 semana × √24). REAL.
-// Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria. PAPEL.
+// Ortega: ruptura del máximo (largo) o mínimo (corto) de 5 días en cierre de 4 h, a favor de la SMA50 diaria; stop móvil 2 ATR (ATR horario de 1 semana × √24). REAL.
+// Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 45 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto), stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, máximo 96 h. REAL (medio riesgo).
+// Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos. REAL (medio riesgo).
 (function (root) {
   'use strict';
   const FEE = 0.0014, STOPSLIP = 0.0003;
@@ -9,6 +10,7 @@
   const sma = (x, n) => { const o = new Float64Array(x.length).fill(NaN); let s = 0; for (let i = 0; i < x.length; i++) { s += x[i]; if (i >= n) s -= x[i - n]; if (i >= n - 1) o[i] = s / n; } return o; };
   const atr = (B, n) => { const tr = new Float64Array(B.c.length); for (let i = 0; i < tr.length; i++) { const pc = i ? B.c[i - 1] : B.c[0]; tr[i] = Math.max(B.h[i] - B.l[i], Math.abs(B.h[i] - pc), Math.abs(B.l[i] - pc)); } return ema(tr, n); };
   const rollmax = (x, n) => { const o = new Float64Array(x.length).fill(NaN), dq = []; for (let i = 0; i < x.length; i++) { while (dq.length && x[dq[dq.length - 1]] <= x[i]) dq.pop(); dq.push(i); if (dq[0] <= i - n) dq.shift(); if (i >= n - 1) o[i] = x[dq[0]]; } return o; };
+  const rollmin = (x, n) => Float64Array.from(rollmax(Float64Array.from(x, v => -v), n), v => -v);
   const searchR = (a, v) => { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= v) lo = m + 1; else hi = m; } return lo; };
   const searchL = (a, v) => { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; };
   const madridHour = (() => { const f = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hourCycle: 'h23' }); return t => +f.format(new Date(t * 1000)); })();
@@ -75,11 +77,41 @@
     return R;
   }
   function ortega(X, nowMask, P = { N: 5, k: 2 }) {
-    const { H, N } = X, W = P.N * 24, hi = rollmax(H.h, W), A4 = atr(H, 168), A4s = Float64Array.from(A4, v => v * Math.sqrt(24));
+    const { H, N } = X, W = P.N * 24, hi = rollmax(H.h, W), lo = rollmin(H.l, W), A4 = atr(H, 168), A4s = Float64Array.from(A4, v => v * Math.sqrt(24)), R50 = regime(X, 50);
     const sigs = [];
-    for (let i = 1; i < N; i++) { const hr = Math.floor(H.t[i] / 3600) % 24; if (hr % 4 === 3 && H.c[i] > hi[i - 1]) sigs.push([i, 1, H.c[i] - P.k * A4s[i], NaN, 24 * 120]); }
+    for (let i = 1; i < N; i++) {
+      const hr = Math.floor(H.t[i] / 3600) % 24; if (hr % 4 !== 3) continue;
+      if (H.c[i] > hi[i - 1] && R50[i] === 1) sigs.push([i, 1, H.c[i] - P.k * A4s[i], NaN, 24 * 120]);
+      if (H.c[i] < lo[i - 1] && R50[i] === -1) sigs.push([i, -1, H.c[i] + P.k * A4s[i], NaN, 24 * 120]);
+    }
     const R = sim(X, sigs, [P.k, A4s], null, nowMask);
-    R.ctx = { level: hi[N - 1], close: H.c[N - 1], atr: A4s[N - 1], nextDecision: (() => { let t = H.t[N - 1] + 3600; while ((Math.floor(t / 3600) % 24) % 4 !== 0) t += 3600; return t; })() };
+    R.ctx = { level: hi[N - 1], low: lo[N - 1], regime: R50[N - 1], close: H.c[N - 1], atr: A4s[N - 1], nextDecision: (() => { let t = H.t[N - 1] + 3600; while ((Math.floor(t / 3600) % 24) % 4 !== 0) t += 3600; return t; })() };
+    return R;
+  }
+  function paz(X, nowMask, P = { rsiLo: 45, en: 50, k: 2, tk: 5, maxh: 96, lb: 6 }) {
+    const { H, N, A1, mask } = X, c = H.c, h = H.h, l = H.l, E = ema(c, P.en), lb = P.lb;
+    const up = new Float64Array(N), dn = new Float64Array(N);
+    for (let i = 0; i < N; i++) { const d = i ? c[i] - c[i - 1] : 0; up[i] = Math.max(d, 0); dn[i] = Math.max(-d, 0); }
+    const U = ema(up, 14), Dn = ema(dn, 14), rsi = Float64Array.from(U, (u, i) => 100 - 100 / (1 + u / Math.max(Dn[i], 1e-9)));
+    const R50 = regime(X, 50), sigs = [];
+    for (let i = lb; i < N; i++) {
+      if (!mask[i]) continue;
+      let mn = Infinity, mx = -Infinity; for (let j = i - lb; j < i; j++) { mn = Math.min(mn, rsi[j]); mx = Math.max(mx, rsi[j]); }
+      const pc = c[i - 1], pE = E[i - 1];
+      if (c[i] > E[i] && pc <= pE && mn < P.rsiLo && R50[i] === 1) {
+        let sw = Infinity; for (let j = Math.max(0, i - lb); j <= i; j++) sw = Math.min(sw, l[j]);
+        let stop = Math.min(sw, c[i] - 0.5 * A1[i]) - 0.2 * A1[i]; if (c[i] - stop > P.k * A1[i]) stop = c[i] - P.k * A1[i];
+        sigs.push([i, 1, stop, NaN, P.maxh]);
+      }
+      if (c[i] < E[i] && pc >= pE && mx > 100 - P.rsiLo && R50[i] === -1) {
+        let sw = -Infinity; for (let j = Math.max(0, i - lb); j <= i; j++) sw = Math.max(sw, h[j]);
+        let stop = Math.max(sw, c[i] + 0.5 * A1[i]) + 0.2 * A1[i]; if (stop - c[i] > P.k * A1[i]) stop = c[i] + P.k * A1[i];
+        sigs.push([i, -1, stop, NaN, P.maxh]);
+      }
+    }
+    const R = sim(X, sigs, [P.tk, A1], null, nowMask);
+    const i = N - 1; let mn = Infinity, mx = -Infinity; for (let j = i - lb; j < i; j++) { mn = Math.min(mn, rsi[j]); mx = Math.max(mx, rsi[j]); }
+    R.ctx = { rsi: rsi[i], rsiMin: mn, rsiMax: mx, ema: E[i], regime: R50[i], close: c[i] };
     return R;
   }
   function rios(X, nowMask, P = { q: 0.2, vm: 1.0, k: 4 }) {
@@ -88,11 +120,15 @@
     const rank = new Float64Array(N).fill(NaN);
     for (let i = W - 1; i < N; i++) { const x = bw[i]; let cnt = 0; for (let j = i - W + 1; j <= i; j++) if (bw[j] < x) cnt++; rank[i] = cnt / W; }
     const vb = sma(H.v, 168), R50 = regime(X, 50), sigs = [];
-    for (let i = 1; i < N; i++) if (rank[i - 1] <= P.q && c[i] > m[i] + 2 * sd[i] && H.v[i] > P.vm * vb[i] && R50[i] === 1) sigs.push([i, 1, c[i] - P.k * A1[i], NaN, 240]);
+    for (let i = 1; i < N; i++) {
+      if (!(rank[i - 1] <= P.q && H.v[i] > P.vm * vb[i])) continue;
+      if (c[i] > m[i] + 2 * sd[i] && R50[i] === 1) sigs.push([i, 1, c[i] - P.k * A1[i], NaN, 240]);
+      if (c[i] < m[i] - 2 * sd[i] && R50[i] === -1) sigs.push([i, -1, c[i] + P.k * A1[i], NaN, 240]);
+    }
     const R = sim(X, sigs, [P.k, A1], null, nowMask);
-    R.ctx = { rank: rank[N - 1], upper: m[N - 1] + 2 * sd[N - 1], vol: H.v[N - 1] / vb[N - 1], regime: R50[N - 1], close: c[N - 1] };
+    R.ctx = { rank: rank[N - 1], upper: m[N - 1] + 2 * sd[N - 1], lower: m[N - 1] - 2 * sd[N - 1], vol: H.v[N - 1] / vb[N - 1], regime: R50[N - 1], close: c[N - 1] };
     return R;
   }
-  root.MesaEngine = { prepare, vega, ortega, rios, madridHour, FEE };
+  root.MesaEngine = { prepare, vega, ortega, paz, rios, madridHour, regime, FEE };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 if (typeof module !== 'undefined') module.exports = globalThis.MesaEngine;

@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026)
+# Mesa Radar · operativa BTC (9 oct 2026, v2: 4 agentes en largo y corto)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -27,9 +27,33 @@ La mesa (Vega + Ortega) en horario de oficina obtiene estos resultados:
 - **Con costes dobles:** alrededor de +0,23R por operación.
 - **Peor año:** 2022, con −10R, porque fue bajista y la mesa solo compra.
 
+## v2 · al menos 2 operaciones por semana
+
+Con Vega y Ortega solo en largo, la mesa hacía unas 0,7 operaciones por semana. Para pasar de 2:
+
+- **Ortega** también opera en corto, siempre a favor de la SMA50 diaria. Las 12 variantes con ese filtro salen positivas en 2022–26.
+- **Paz** entra en los retrocesos de 1 h a favor de la SMA50 diaria (`paz3.py`). Condición: RSI14 por debajo de 45 en las 6 h anteriores (por encima de 55 en cortos) y un cierre que recupera la EMA50 de 1 h. Stop bajo el mínimo de 6 h, como mucho a 2 ATR; stop móvil a 5 ATR; 96 h como máximo. Variante elegida: la de mejor t en 2017–21 entre las que operan en corto. 169 de 216 variantes salen positivas en 2022–26.
+- **Ríos** pasa a real y opera en ambos sentidos.
+- **Movimientos bruscos** (`fam2.py calvo`): se probó tanto seguir el tirón como darle la vuelta, en 72 variantes. Solo 6 son positivas en 2022–26, así que esta familia se descarta. La sala de emergencias solo autoriza entradas que vengan de un sistema.
+
+Riesgo: 1R para Vega y Ortega y ½R para Paz y Ríos (`desk2.py`). Resultados de la mesa en horario de oficina:
+
+| Periodo | Operaciones/semana | Win rate | R por operación | t (ponderado) | R/año | Caída máxima |
+|---|---|---|---|---|---|---|
+| 2017–21 | 3,4 | 35% | +0,40 | 5,1 | +41,6 | 14,4 |
+| 2022–26 | 3,9 | 29% | +0,18 | 1,8 | +23,9 | 33,7 |
+| 2022–26, costes ×2 | 3,9 | 27% | +0,06 | 0,9 | +11,3 | 43,5 |
+
+Más frecuencia supone menos R por operación y más sensibilidad a los costes.
+
+La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
+
+**Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
 ## Motor en vivo
 
-- `office/engine.js` porta las estrategias a JavaScript. `parity.js` comprueba que reproduce el backtest operación por operación: 0 diferencias.
+- `office/engine.js` porta las estrategias a JavaScript (Vega, Ortega, Paz y Ríos). `parity2.js` comprueba que reproduce el backtest operación por operación.
+- `page/` contiene las piezas de la página del artefacto; `build_mesa.sh` las monta.
 - `office/mesa_tick.js` hace una ronda completa. Une el histórico de Bitstamp con 167 h de Binance futuros (OpenMarket) y escribe la nota de cada agente, las señales y los correos.
 - `replay.sh` reproduce rondas cada 15 minutos sobre el histórico para probar los avisos.
 - Cuatro rutinas en Haiku, a :01, :16, :31 y :46 entre las 7:00 y las 19:59, ejecutan el script y escriben en la base de datos del artefacto Mesa Radar.

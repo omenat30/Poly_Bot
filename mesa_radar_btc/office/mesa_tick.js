@@ -1,4 +1,5 @@
 // Mesa Radar · ronda de la oficina (cada 15 min, 7:00-20:00 Madrid). Todos los agentes leen los datos a la vez.
+// Vega, Ortega, Paz y Ríos operan BTC (largos y cortos según la SMA50 diaria); Calvo vigila riesgo, datos y calendario y preside la sala de emergencias.
 // Uso: node mesa_tick.js <bitstamp_1min.csv> <live.json> <dir_db> <dir_salida> [ids,de,signals,ya,registradas]
 //   dir_db/cal.json: calendario de hoy (opcional)
 //   live.json: respuesta de OpenMarket `points` (BINANCE_FUTURES BTCUSDT, HOUR, 167h)
@@ -8,7 +9,7 @@ const fs = require('fs'), path = require('path');
 const E = require(path.join(__dirname, 'engine.js'));
 const [, , minPath, livePath, dbDir, outDir, knownArg] = process.argv;
 const now = Math.floor((+process.env.MESA_NOW || Date.now()) / 1000);
-const GO_LIVE = +process.env.MESA_GO_LIVE || Date.UTC(2026, 9, 9, 16, 0) / 1000;   // 9 oct 2026, 18:00 Madrid
+const GO_LIVE = +process.env.MESA_GO_LIVE || Date.UTC(2026, 9, 9, 17, 0) / 1000;   // 9 oct 2026, 19:00 Madrid (mesa de 4 agentes, largos y cortos)
 const URL_ = 'https://claude.ai/artifact/MxNVeAAFhmbBYRg4qi6LJy';
 const fmt = x => Math.round(x).toLocaleString('es-ES'), pct = x => (x >= 0 ? '+' : '−') + Math.abs(x * 100).toFixed(1).replace('.', ',') + '%', sR = x => (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(2).replace('.', ',') + 'R';
 const madrid = s => new Date(s * 1000).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -47,64 +48,110 @@ if (lastT + 3600 < Math.floor(now / 3600) * 3600) problems.push('la última vela
 const lastPx = (() => { const ks = [...LV.keys()].sort((a, b) => a - b); return ks.length ? LV.get(ks[ks.length - 1])[3] : H.c[H.c.length - 1]; })();
 
 // 3) los agentes leen y deciden
-const X = E.prepare(H), hNow = E.madridHour(now), office = hNow >= 7 && hNow < 20;
-const R = { vega: E.vega(X, office), ortega: E.ortega(X, office), rios: E.rios(X, office) };
-const NAMES = { vega: 'Vega · tendencia diaria', ortega: 'Ortega · ruptura de 5 días', rios: 'Ríos · compresión y volumen (papel)' };
-const REAL = { vega: true, ortega: true, rios: false };
-// eventos ya registrados
+const X = E.prepare(H), hNow = E.madridHour(now), office = hNow >= 7 && hNow < 20, N = H.t.length;
+const AGS = ['vega', 'ortega', 'paz', 'rios'];
+const R = {}; for (const k of AGS) R[k] = E[k](X, office);
+const NAMES = { vega: 'Vega · tendencia diaria', ortega: 'Ortega · ruptura de 5 días', paz: 'Paz · retroceso a favor', rios: 'Ríos · compresión y volumen' };
+const RISK = { vega: 0.5, ortega: 0.5, paz: 0.25, rios: 0.25 };   // % del capital por operación
+const W = { vega: 1, ortega: 1, paz: 0.5, rios: 0.5 };
+const MAXH = { paz: 96, rios: 240, ortega: 2880 };
+const SIDE = s => s === 1 ? 'LARGO' : 'CORTO', VERB = s => s === 1 ? 'Compra' : 'Vende';
 const known = new Set(String(knownArg || '').split(/[\s,]+/).filter(Boolean)); const sd = path.join(dbDir, 'signals'); if (fs.existsSync(sd)) for (const f of fs.readdirSync(sd)) known.add(f.replace(/\.json$/, ''));
 let cal = null; const cd = path.join(dbDir, 'calendar'), readCal = f => { try { const d = JSON.parse(fs.readFileSync(f, 'utf8')); cal = d.data || d; } catch (e) {} };
 if (fs.existsSync(cd)) for (const f of fs.readdirSync(cd)) readCal(path.join(cd, f));
 if (fs.existsSync(path.join(dbDir, 'cal.json'))) readCal(path.join(dbDir, 'cal.json'));
 const events = [], emails = [];
 const tag = s => new Date(s * 1000).toISOString().slice(0, 13).replace(/[-T]/g, '');
-const sizeLine = risk => 'Tamaño con un 0,5% de riesgo: (capital × 0,005) / ' + fmt(risk) + ' BTC.';
-const calWarn = () => { if (!cal || !cal.events) return ''; const soon = cal.events.filter(e => { const [H_, M_] = String(e.hora || '').split(':').map(Number); if (!Number.isFinite(H_)) return false; const d = new Date(now * 1000); const loc = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Madrid' })); const diff = (H_ * 60 + (M_ || 0)) - (loc.getHours() * 60 + loc.getMinutes()); return diff >= -15 && diff <= 90; }); return soon.length ? '\n⚠ Paz: ' + soon.map(e => e.hora + ' ' + e.evento).join(' · ') + ' (dato macro cerca: la entrada puede saltar).' : ''; };
-for (const k of ['vega', 'ortega', 'rios']) {
+const sizeLine = (k, risk) => 'Tamaño con un ' + String(RISK[k]).replace('.', ',') + '% de riesgo: (capital × ' + (RISK[k] / 100) + ') / ' + fmt(risk) + ' BTC.';
+const calSoon = () => { if (!cal || !cal.events) return []; const loc = new Date(new Date(now * 1000).toLocaleString('en-US', { timeZone: 'Europe/Madrid' })); return cal.events.filter(e => { const [H_, M_] = String(e.hora || '').split(':').map(Number); if (!Number.isFinite(H_)) return false; const diff = (H_ * 60 + (M_ || 0)) - (loc.getHours() * 60 + loc.getMinutes()); return diff >= -15 && diff <= 90; }); };
+const calWarn = () => { const s = calSoon(); return s.length ? '\n⚠ Calvo: ' + s.map(e => e.hora + ' ' + e.evento).join(' · ') + ' (dato macro cerca: la entrada puede saltar).' : ''; };
+const REF = 'Backtest 2017-2026 en horario de oficina, parámetros elegidos con 2017-21: en 2022-26 la mesa hizo unas 3,9 operaciones por semana, 29% de acierto y +0,18R por operación (los cortos y largos de los cuatro agentes juntos).';
+for (const k of AGS) {
   const r = R[k];
   if (r.pending && r.pending.sigT >= GO_LIVE) {
-    const id = k + '-in-' + tag(r.pending.sigT), e = lastPx, stop = e - r.pending.dist;
+    const p = r.pending, s = p.side, id = k + '-in-' + tag(p.sigT), e = lastPx, stop = e - s * p.dist;
     if (!known.has(id)) {
-      events.push({ id, agent: k, type: 'entrada', at: new Date(now * 1000).toISOString(), side: 'long', entry: +e.toFixed(1), stop: +stop.toFixed(1), real: REAL[k], text: 'Entrada LARGO a mercado ≈ ' + fmt(e) + ', stop ' + fmt(stop) + ' (' + pct((stop - e) / e) + ')' });
-      if (REAL[k]) emails.push({ subject: '🟢 Mesa Radar · ' + NAMES[k] + ' · LARGO BTC ≈ ' + fmt(e) + ' · stop ' + fmt(stop), body: 'Nueva entrada de la Mesa (' + NAMES[k] + ').\n\nCompra BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop inicial: ' + fmt(stop) + ' (' + pct((stop - e) / e) + '), colócalo en el exchange al entrar.\nSin objetivo fijo: el stop sube solo a favor; la Mesa te avisa cuando lo tengas que mover y cuando haya que cerrar.\n' + sizeLine(r.pending.dist) + calWarn() + '\n\nBacktest 2017-2026 en horario de oficina: Vega y Ortega juntos +0,26R por operación en 2022-2026 (años no usados para elegir parámetros), unas 33 operaciones al año. Apunta la ejecución en Mesa Radar: ' + URL_ });
+      events.push({ id, agent: k, type: 'entrada', at: new Date(now * 1000).toISOString(), side: s === 1 ? 'long' : 'short', entry: +e.toFixed(1), stop: +stop.toFixed(1), real: true, text: 'Entrada ' + SIDE(s) + ' a mercado ≈ ' + fmt(e) + ', stop ' + fmt(stop) + ' (' + pct((stop - e) / e) + ')' });
+      emails.push({ subject: (s === 1 ? '🟢' : '🔴') + ' Mesa Radar · ' + NAMES[k] + ' · ' + SIDE(s) + ' BTC ≈ ' + fmt(e) + ' · stop ' + fmt(stop), body: 'Nueva entrada de la Mesa (' + NAMES[k] + ').\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop inicial: ' + fmt(stop) + ' (' + pct((stop - e) / e) + '), colócalo en el exchange al entrar.\n' + (MAXH[k] && MAXH[k] < 1000 ? 'Sin objetivo fijo: stop móvil a favor y cierre como mucho a las ' + MAXH[k] + ' h.' : 'Sin objetivo fijo: el stop se mueve solo a favor.') + ' La Mesa te avisa cuando lo tengas que mover y cuando haya que cerrar.\n' + sizeLine(k, p.dist) + calWarn() + '\n\n' + REF + ' Apunta la ejecución en Mesa Radar: ' + URL_ });
     }
   }
   if (r.open && r.open.sigT >= GO_LIVE) {
-    const o = r.open, step = Math.floor((o.stop - o.stop0) * o.side / (1 * o.risk));
-    if (step >= 1 && office) { const id = k + '-stop-' + tag(o.sigT) + '-' + step; if (!known.has(id)) { events.push({ id, agent: k, type: 'stop', at: new Date(now * 1000).toISOString(), stop: +o.stop.toFixed(1), real: REAL[k], text: 'Sube el stop a ' + fmt(o.stop) + ' (asegura ' + sR((o.stop - o.entry) * o.side / o.risk) + ')' }); if (REAL[k]) emails.push({ subject: '⬆ Mesa Radar · ' + NAMES[k] + ' · sube el stop a ' + fmt(o.stop), body: 'Posición LARGO BTC desde ' + fmt(o.entry) + '.\nMueve el stop a ' + fmt(o.stop) + ' (asegura ' + sR((o.stop - o.entry) * o.side / o.risk) + '). Precio ahora ≈ ' + fmt(lastPx) + '.\n\n' + URL_ }); } }
-    if (o.exitDue && office) { const id = k + '-out-' + tag(o.sigT); if (!known.has(id)) { const rr = ((lastPx - o.entry) * o.side - E.FEE * o.entry) / o.risk; events.push({ id, agent: k, type: 'salida', at: new Date(now * 1000).toISOString(), exit: +lastPx.toFixed(1), r: +rr.toFixed(2), real: REAL[k], text: 'Cierra a mercado ≈ ' + fmt(lastPx) + ': la tendencia diaria se ha perdido (' + sR(rr) + ')' }); if (REAL[k]) emails.push({ subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · CIERRA BTC ≈ ' + fmt(lastPx) + ' (' + sR(rr) + ')', body: 'La tendencia diaria se ha perdido: cierra la posición LARGO a mercado (≈ ' + fmt(lastPx) + ') y quita el stop.\nResultado aproximado: ' + sR(rr) + '.\n\n' + URL_ }); } }
+    const o = r.open, s = o.side, step = Math.floor((o.stop - o.stop0) * s / o.risk);
+    if (step >= 1 && office) { const id = k + '-stop-' + tag(o.sigT) + '-' + step; if (!known.has(id)) { events.push({ id, agent: k, type: 'stop', at: new Date(now * 1000).toISOString(), stop: +o.stop.toFixed(1), real: true, text: (s === 1 ? 'Sube' : 'Baja') + ' el stop a ' + fmt(o.stop) + ' (asegura ' + sR((o.stop - o.entry) * s / o.risk) + ')' }); emails.push({ subject: (s === 1 ? '⬆' : '⬇') + ' Mesa Radar · ' + NAMES[k] + ' · ' + (s === 1 ? 'sube' : 'baja') + ' el stop a ' + fmt(o.stop), body: 'Posición ' + SIDE(s) + ' BTC desde ' + fmt(o.entry) + '.\nMueve el stop a ' + fmt(o.stop) + ' (asegura ' + sR((o.stop - o.entry) * s / o.risk) + '). Precio ahora ≈ ' + fmt(lastPx) + '.\n\n' + URL_ }); } }
+    if (o.exitDue && office) { const id = k + '-out-' + tag(o.sigT); if (!known.has(id)) { const rr = ((lastPx - o.entry) * s - E.FEE * o.entry) / o.risk; events.push({ id, agent: k, type: 'salida', at: new Date(now * 1000).toISOString(), exit: +lastPx.toFixed(1), r: +rr.toFixed(2), real: true, text: 'Cierra a mercado ≈ ' + fmt(lastPx) + ': la tendencia diaria se ha perdido (' + sR(rr) + ')' }); emails.push({ subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · CIERRA BTC ≈ ' + fmt(lastPx) + ' (' + sR(rr) + ')', body: 'La tendencia diaria se ha perdido: cierra la posición ' + SIDE(s) + ' a mercado (≈ ' + fmt(lastPx) + ') y quita el stop.\nResultado aproximado: ' + sR(rr) + '.\n\n' + URL_ }); } }
   }
   for (const tr of r.trades) if (tr.sigT >= GO_LIVE && tr.exitT >= now - 72 * 3600) {
-    const id = k + '-out-' + tag(tr.sigT);
-    if (!known.has(id)) { events.push({ id, agent: k, type: 'salida', at: new Date(now * 1000).toISOString(), exit: +tr.exit.toFixed(1), r: +tr.r.toFixed(2), real: REAL[k], text: (tr.why === 'stop' ? 'Saltó el stop en ' : 'Cerrada en ') + fmt(tr.exit) + ' (' + sR(tr.r) + ')' }); if (REAL[k]) emails.push(tr.why === 'senal' ? { subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · CIERRA BTC (tendencia perdida)', body: 'La tendencia diaria se perdió: si sigues dentro, cierra la posición LARGO desde ' + fmt(tr.entry) + ' a mercado y quita el stop. Resultado del sistema: ' + sR(tr.r) + '.\n\n' + URL_ } : { subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · cerrada por stop ' + fmt(tr.exit) + ' (' + sR(tr.r) + ')', body: 'La posición LARGO desde ' + fmt(tr.entry) + ' ha tocado el stop en ' + fmt(tr.exit) + '. Resultado ' + sR(tr.r) + ' con costes.\n\n' + URL_ }); }
+    const id = k + '-out-' + tag(tr.sigT), s = tr.side;
+    if (known.has(id)) continue;
+    const txt = tr.why === 'stop' ? 'Saltó el stop en ' + fmt(tr.exit) : tr.why === 'tiempo' ? 'Cierre por plazo (' + MAXH[k] + ' h) ≈ ' + fmt(tr.exit) : 'Cerrada en ' + fmt(tr.exit);
+    events.push({ id, agent: k, type: 'salida', at: new Date(now * 1000).toISOString(), exit: +tr.exit.toFixed(1), r: +tr.r.toFixed(2), real: true, text: txt + ' (' + sR(tr.r) + ')' });
+    emails.push(tr.why === 'senal' ? { subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · CIERRA BTC (tendencia perdida)', body: 'La tendencia diaria se perdió: si sigues dentro, cierra la posición ' + SIDE(s) + ' desde ' + fmt(tr.entry) + ' a mercado y quita el stop. Resultado del sistema: ' + sR(tr.r) + '.\n\n' + URL_ }
+      : tr.why === 'tiempo' ? { subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · CIERRA BTC a mercado (plazo cumplido)', body: 'La posición ' + SIDE(s) + ' desde ' + fmt(tr.entry) + ' ha cumplido su plazo máximo de ' + MAXH[k] + ' h: ciérrala a mercado (≈ ' + fmt(lastPx) + ') y quita el stop. Resultado del sistema: ' + sR(tr.r) + '.\n\n' + URL_ }
+      : { subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · cerrada por stop ' + fmt(tr.exit) + ' (' + sR(tr.r) + ')', body: 'La posición ' + SIDE(s) + ' desde ' + fmt(tr.entry) + ' ha tocado el stop en ' + fmt(tr.exit) + '. Resultado ' + sR(tr.r) + ' con costes.\n\n' + URL_ });
   }
 }
 
-// 4) notas de cada agente
-const pos = k => { const o = R[k] && R[k].open; if (!o) return null; return { side: 'long', entry: +o.entry.toFixed(1), stop: +o.stop.toFixed(1), since: new Date(o.entryT * 1000).toISOString(), rNow: +o.rNow.toFixed(2), live: o.sigT >= GO_LIVE }; };
+// 4) sala de emergencias: movimiento brusco en 1-3 h (≥ 3,5 desviaciones de las últimas 720 h; ~1,5 por semana en horario)
+let ss = 0, sn = 0; for (let i = Math.max(1, N - 720); i < N; i++) { const q = Math.log(H.c[i] / H.c[i - 1]); ss += q * q; sn++; }
+const sd1 = Math.sqrt(ss / Math.max(1, sn));
+const win = [1, 2, 3].map(back => { const span = Math.max(1, (now - H.t[N - back]) / 3600), m = Math.log(lastPx / H.o[N - back]); return { h: Math.round(span), move: Math.exp(m) - 1, z: m / (sd1 * Math.sqrt(span)) }; });
+const big = win.reduce((a, b) => Math.abs(b.z) > Math.abs(a.z) ? b : a);
+let emergency = null;
+if (Math.abs(big.z) >= 3.5 && !problems.length) {
+  const dir = big.move > 0 ? 1 : -1, votes = {};
+  for (const k of AGS) {
+    const r = R[k], c = r.ctx;
+    if (r.pending && r.pending.sigT >= GO_LIVE) votes[k] = { vote: r.pending.side === 1 ? 'largo' : 'corto', why: 'Mi sistema da entrada ' + SIDE(r.pending.side) + ' ahora.' };
+    else if (r.open) votes[k] = { vote: 'mantener', why: 'Tengo ' + SIDE(r.open.side) + ' con stop en ' + fmt(r.open.stop) + '; el stop decide, no el susto.' };
+    else if (k === 'vega') votes[k] = { vote: 'nada', why: c.on ? 'Tendencia diaria alcista, pero la entrada fue en el giro: no persigo.' : 'Sin tendencia diaria: no hay nada que comprar.' };
+    else if (k === 'ortega') votes[k] = { vote: 'nada', why: 'Solo opero el cierre de 4 h fuera del rango de 5 días (' + fmt(c.low) + '–' + fmt(c.level) + ') a favor de la SMA50; próxima vela a las ' + hm(c.nextDecision) + '.' };
+    else if (k === 'paz') votes[k] = { vote: 'nada', why: (c.regime === dir ? 'El movimiento va a favor de la SMA50: no es un retroceso, no entro.' : 'Es un retroceso contra la SMA50: espero a que el precio recupere la EMA50 de 1 h (' + fmt(c.ema) + ').') };
+    else votes[k] = { vote: 'nada', why: 'La ruptura sin compresión previa (percentil ' + Math.round(c.rank * 100) + ') no es mi patrón.' };
+  }
+  const entries = AGS.filter(k => votes[k].vote === 'largo' || votes[k].vote === 'corto');
+  const sides = [...new Set(entries.map(k => votes[k].vote))];
+  const verdict = sides.length === 1 ? (sides[0] === 'largo' ? 'ENTRAR LARGO' : 'ENTRAR CORTO') : 'NO HACER NADA';
+  const verdictText = sides.length === 1 ? 'Entrar ' + sides[0].toUpperCase() + ' solo con la señal de ' + entries.map(k => NAMES[k].split(' ·')[0]).join(' y ') + ' y su stop, con el riesgo de siempre.'
+    : (sides.length > 1 ? 'Señales en sentidos opuestos: no se abre nada nuevo. ' : '') + 'Ningún sistema da entrada. Perseguir el movimiento o darle la vuelta perdió en 66 de 72 variantes en 2022–26. Los stops siguen en el exchange; no se toca nada a mano.';
+  const id = 'emerg-' + tag(now);
+  const recent = [...known].some(x => x.startsWith('emerg-') && (now - Date.UTC(+x.slice(6, 10), +x.slice(10, 12) - 1, +x.slice(12, 14), +x.slice(14, 16)) / 1000) < 3 * 3600);
+  emergency = { id, at: new Date(now * 1000).toISOString(), move: +big.move.toFixed(4), hours: big.h, z: +big.z.toFixed(1), dir: dir === 1 ? 'sube' : 'cae', votes, verdict, verdictText };
+  if (!known.has(id) && !recent && office) {
+    events.push({ id, agent: 'calvo', type: 'emergencia', at: emergency.at, real: true, text: 'Sala de emergencias: BTC ' + pct(big.move) + ' en ' + big.h + ' h. ' + verdict + '.' });
+    emails.push({ subject: '🚨 Mesa Radar · Sala de emergencias · BTC ' + pct(big.move) + ' en ' + big.h + ' h · ' + verdict, body: 'Movimiento brusco: BTC ' + (dir === 1 ? 'sube' : 'cae') + ' un ' + pct(Math.abs(big.move)).slice(1) + ' en ' + big.h + ' h (' + Math.abs(big.z).toFixed(1).replace('.', ',') + ' desviaciones). Precio ≈ ' + fmt(lastPx) + '.\n\nLa mesa se ha reunido:\n' + AGS.map(k => '· ' + NAMES[k] + ': ' + votes[k].vote.toUpperCase() + ' — ' + votes[k].why).join('\n') + '\n\nVeredicto de Calvo: ' + verdict + '. ' + verdictText + calWarn() + '\n\n' + URL_ });
+  }
+}
+
+// 5) notas de cada agente
+const pos = k => { const o = R[k] && R[k].open; if (!o) return null; return { side: o.side === 1 ? 'long' : 'short', entry: +o.entry.toFixed(1), stop: +o.stop.toFixed(1), since: new Date(o.entryT * 1000).toISOString(), rNow: +o.rNow.toFixed(2), live: o.sigT >= GO_LIVE }; };
 const st = (k, txt, level) => ({ text: txt, level, pos: pos(k) });
-const V = R.vega.ctx, O = R.ortega.ctx, Ri = R.rios.ctx;
-const posTxt = k => { const p = pos(k); return p ? ' LARGO desde ' + fmt(p.entry) + ', stop ' + fmt(p.stop) + ', va ' + sR(p.rNow) + (p.live ? '.' : ' (abierta antes de empezar en vivo: no la copies a mitad).') : ''; };
+const V = R.vega.ctx, O = R.ortega.ctx, Pz = R.paz.ctx, Ri = R.rios.ctx;
+const posTxt = k => { const p = pos(k); return p ? ' ' + (p.side === 'long' ? 'LARGO' : 'CORTO') + ' desde ' + fmt(p.entry) + ', stop ' + fmt(p.stop) + ', va ' + sR(p.rNow) + (p.live ? '.' : ' (abierta antes de empezar en vivo: no la copies a mitad).') : ''; };
 const evOf = k => events.filter(e => e.agent === k).map(e => e.text).join(' · ');
+const regTxt = g => g === 1 ? 'alcista' : g === -1 ? 'bajista' : 'plana';
 const notes = {
   vega: st('vega', (evOf('vega') ? evOf('vega') + '. ' : '') + 'Cierre diario ' + fmt(V.close) + ' frente a SMA20 ' + fmt(V.sma) + ' (' + pct(V.close / V.sma - 1) + '), momentum 20 d ' + pct(V.mom) + ': ' + (V.on ? 'TENDENCIA ALCISTA.' : 'sin tendencia, fuera.') + (R.vega.open ? posTxt('vega') : V.on ? ' Esperando un nuevo giro para entrar.' : ' Entro con un cierre diario sobre ' + fmt(V.sma) + ' y momentum positivo.'), evOf('vega') ? 'trade' : V.on ? 'idea' : 'ok'),
-  ortega: st('ortega', (evOf('ortega') ? evOf('ortega') + '. ' : '') + 'Máximo de 5 días ' + fmt(O.level) + ' (precio ' + fmt(lastPx) + ', ' + pct(O.level / lastPx - 1) + ' por encima). ' + (R.ortega.open ? posTxt('ortega') : 'Compro si una vela de 4 h cierra sobre él; próxima a las ' + hm(O.nextDecision) + '.'), evOf('ortega') ? 'trade' : O.level / lastPx - 1 < 0.01 ? 'idea' : 'ok'),
-  rios: st('rios', (evOf('rios') ? evOf('rios') + ' (papel). ' : '') + 'Bollinger 1H en el percentil ' + Math.round(Ri.rank * 100) + ' de 30 días (busco ≤ 20), volumen ' + Ri.vol.toFixed(1).replace('.', ',') + '× su media, tendencia SMA50 diaria ' + (Ri.regime === 1 ? 'alcista' : 'bajista') + '. ' + (R.rios.open ? posTxt('rios') : Ri.regime !== 1 ? 'Con SMA50 bajista no compro rupturas.' : Ri.rank <= 0.2 ? 'Mercado comprimido: vigilo la ruptura de ' + fmt(Ri.upper) + '.' : 'Sin compresión todavía.') + ' En papel hasta que demuestre en vivo.', evOf('rios') ? 'trade' : Ri.rank <= 0.2 && Ri.regime === 1 ? 'idea' : 'ok'),
-  paz: st('paz', (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento + (e.impacto ? ' (' + e.impacto + ')' : '')).join(' · ') + '.' : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy aún sin leer.') + (calWarn() ? ' Dato macro en menos de 90 min.' : '') + (cal && cal.titular ? ' ' + cal.titular : ''), calWarn() ? 'alerta' : 'ok'),
+  ortega: st('ortega', (evOf('ortega') ? evOf('ortega') + '. ' : '') + 'Rango de 5 días ' + fmt(O.low) + '–' + fmt(O.level) + ', SMA50 ' + regTxt(O.regime) + '. ' + (R.ortega.open ? posTxt('ortega') : O.regime === 1 ? 'Compro si una vela de 4 h cierra sobre ' + fmt(O.level) + ' (' + pct(O.level / lastPx - 1) + '); próxima a las ' + hm(O.nextDecision) + '.' : O.regime === -1 ? 'Vendo si una vela de 4 h cierra bajo ' + fmt(O.low) + ' (' + pct(O.low / lastPx - 1) + '); próxima a las ' + hm(O.nextDecision) + '.' : 'Sin tendencia de fondo, quieto.'), evOf('ortega') ? 'trade' : Math.min(Math.abs(O.level / lastPx - 1), Math.abs(O.low / lastPx - 1)) < 0.01 ? 'idea' : 'ok'),
+  paz: st('paz', (evOf('paz') ? evOf('paz') + '. ' : '') + 'SMA50 diaria ' + regTxt(Pz.regime) + ', RSI 1 h ' + Pz.rsi.toFixed(0) + ' (mín. 6 h ' + Pz.rsiMin.toFixed(0) + ', máx. ' + Pz.rsiMax.toFixed(0) + '), EMA50 1 h ' + fmt(Pz.ema) + '. ' + (R.paz.open ? posTxt('paz') : Pz.regime === 1 ? (Pz.rsiMin < 45 ? 'Hay retroceso: compro si una vela cierra sobre ' + fmt(Pz.ema) + '.' : 'Espero un retroceso (RSI < 45) para comprar.') : Pz.regime === -1 ? (Pz.rsiMax > 55 ? 'Hay rebote: vendo si una vela cierra bajo ' + fmt(Pz.ema) + '.' : 'Espero un rebote (RSI > 55) para vender.') : 'Sin tendencia de fondo.'), evOf('paz') ? 'trade' : (Pz.regime === 1 && Pz.rsiMin < 45) || (Pz.regime === -1 && Pz.rsiMax > 55) ? 'idea' : 'ok'),
+  rios: st('rios', (evOf('rios') ? evOf('rios') + '. ' : '') + 'Bollinger 1 h en el percentil ' + Math.round(Ri.rank * 100) + ' de 30 días (busco ≤ 20), volumen ' + Ri.vol.toFixed(1).replace('.', ',') + '× su media, SMA50 ' + regTxt(Ri.regime) + '. ' + (R.rios.open ? posTxt('rios') : Ri.rank <= 0.2 ? 'Mercado comprimido: vigilo ' + (Ri.regime === 1 ? 'la ruptura de ' + fmt(Ri.upper) : 'la caída bajo ' + fmt(Ri.lower)) + ' con volumen.' : 'Sin compresión todavía.'), evOf('rios') ? 'trade' : Ri.rank <= 0.2 ? 'idea' : 'ok'),
 };
-// Calvo: marcador en vivo
-const live = [], liveR = { vega: 0, ortega: 0, rios: 0 }, liveN = { vega: 0, ortega: 0, rios: 0 };
-for (const k of ['vega', 'ortega', 'rios']) for (const tr of R[k].trades) if (tr.sigT >= GO_LIVE) { liveR[k] += tr.r; liveN[k]++; live.push(tr); }
-const realN = liveN.vega + liveN.ortega, realR = liveR.vega + liveR.ortega;
-notes.calvo = st('calvo', 'En vivo desde el 9 oct: ' + (realN ? realN + ' cerradas reales, ' + sR(realR) + ' (' + sR(realR / realN) + ' por operación; referencia 2022-26: +0,26R).' : 'aún ninguna operación cerrada.') + ' Ríos en papel: ' + liveN.rios + ' cerradas, ' + sR(liveR.rios) + '.' + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (realN >= 20 && realR / realN < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : ''), problems.length ? 'alerta' : 'ok');
+// Calvo: riesgo, datos, calendario y marcador en vivo
+const score = {}; let nAll = 0, wAll = 0, sumW = 0, sumR = 0;
+for (const k of AGS) { const T = R[k].trades.filter(t => t.sigT >= GO_LIVE); const w = T.filter(t => t.r > 0).length, s = T.reduce((p, t) => p + t.r, 0); score[k] = { n: T.length, win: w, sumR: +s.toFixed(2) }; nAll += T.length; wAll += w; sumR += s; sumW += s * W[k]; }
+const weeks = Math.max(1, (now - GO_LIVE) / 604800);
+score.mesa = { n: nAll, win: wAll, sumR: +sumR.toFixed(2), sumW: +sumW.toFixed(2), perWeek: +(nAll / weeks).toFixed(2), since: new Date(GO_LIVE * 1000).toISOString() };
+const openRisk = AGS.filter(k => R[k].open && R[k].open.sigT >= GO_LIVE).reduce((p, k) => p + RISK[k], 0);
+const soon = calSoon();
+notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergency.move) + ' en ' + emergency.hours + ' h. Veredicto: ' + emergency.verdict + '. ' : '') + (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento).join(' · ') + '.' + (soon.length ? ' Dato macro en menos de 90 min.' : '') : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy sin leer.') + ' Riesgo abierto ' + String(openRisk).replace('.', ',') + '%. En vivo: ' + (nAll ? nAll + ' cerradas, ' + Math.round(wAll / nAll * 100) + '% ganadoras, ' + sR(sumR / nAll) + ' por operación (ref. +0,18R).' : 'aún ninguna cerrada.') + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (nAll >= 30 && sumR / nAll < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : ''), emergency || problems.length || soon.length ? 'alerta' : 'ok');
 
-// 5) salida
+// 6) salida
 fs.mkdirSync(outDir, { recursive: true });
 const id = 'tick-' + new Date(now * 1000).toISOString().slice(0, 16).replace(/[-:T]/g, '');
-const tick = { at: new Date(now * 1000).toISOString(), price: +lastPx.toFixed(1), office, notes, events: events.map(e => e.id), dataOk: !problems.length, lastBar: new Date((lastT + 3600) * 1000).toISOString() };
+const tick = { at: new Date(now * 1000).toISOString(), price: +lastPx.toFixed(1), office, notes, events: events.map(e => e.id), dataOk: !problems.length, lastBar: new Date((lastT + 3600) * 1000).toISOString(), emergency, score, move: win.map(w => ({ h: w.h, move: +w.move.toFixed(4), z: +w.z.toFixed(2) })) };
 fs.writeFileSync(path.join(outDir, id + '.json'), JSON.stringify(tick));
 const writes = [{ op: 'set', collection: 'ticks', doc_id: id, data: tick }];
-for (const e of events) { const f = path.join(outDir, e.id + '.json'); fs.writeFileSync(f, JSON.stringify(e)); writes.push({ op: 'set', collection: 'signals', doc_id: e.id, data: e }); }
+for (const e of events) { fs.writeFileSync(path.join(outDir, e.id + '.json'), JSON.stringify(e)); writes.push({ op: 'set', collection: 'signals', doc_id: e.id, data: e }); }
 console.log('WRITES ' + JSON.stringify(writes));
 for (const m of emails) console.log('EMAIL_JSON ' + JSON.stringify(m));
-console.log('RESUMEN ' + (events.length ? events.map(e => NAMES[e.agent] + ': ' + e.text).join(' | ') : 'Ronda sin novedades') + ' · BTC ' + fmt(lastPx) + (problems.length ? ' · DATOS: ' + problems.join('; ') : ''));
+const NM = Object.assign({ calvo: 'Calvo · sala de emergencias' }, NAMES);
+console.log('RESUMEN ' + (events.length ? events.map(e => NM[e.agent] + ': ' + e.text).join(' | ') : 'Ronda sin novedades') + ' · BTC ' + fmt(lastPx) + (problems.length ? ' · DATOS: ' + problems.join('; ') : ''));
