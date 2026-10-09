@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026, v4: L–V 7–21 y selección por recencia)
+# Mesa Radar · operativa BTC (9 oct 2026, v5: más acierto, más R por operación y por año)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,36 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v5 · stops y objetivos más cortos y el Radar BTC como filtro
+
+`wf2.py` genera un menú de 432 variantes:
+- objetivos fijos de 1, 1,5, 2 y 3R;
+- stops más cortos;
+- break-even;
+- el Radar BTC (señales V20, `panel_trades.json`) como filtro: no entrar si su señal neta de 24 h va en contra. Nunca se usa como disparador.
+
+`wf2_sel.py` compara reglas de selección en walk-forward 2020–26. La elegida es: por agente, el mayor (R medio × acierto) ponderado por recencia, con t ≥ 1. Riesgos: Vega y Ortega 1R, Paz y Ríos 0,75R.
+
+| Walk-forward 2020–26 | v4 | v5 |
+|---|---|---|
+| Acierto | 34% | 41% |
+| R por operación | +0,30 | +0,35 |
+| R al año | +27,4 | +33,7 |
+| Operaciones/semana | 3,0 | 2,3 |
+| Caída máxima | 30,9R | 21,7R |
+
+Lo que se descartó:
+- **Objetivos de 1–1,5R:** dan un 47–49% de acierto, pero el R al año se queda en 11–14 y la mesa baja de 2 operaciones por semana.
+- **Radar BTC:** en 2017–20 (fuera de su ajuste) no mejora a Vega, Ortega ni Ríos. La mejor regla con Radar (44% de acierto, +0,36R por operación) tiene más caída y baja de 2 operaciones por semana en 2021 y 2026.
+
+Selección viva:
+- **Vega:** SMA50, k = 2, break-even.
+- **Ortega:** ruptura de 5 días, k = 2, break-even.
+- **Paz:** RSI < 40 con confluencia.
+- **Ríos:** k = 4.
+
+`parity4.js` da 0 diferencias en 1.075 operaciones.
 
 ## v4 · horario L–V 7:00–21:00, selección ponderada por recencia, más R al año
 

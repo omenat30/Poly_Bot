@@ -55,9 +55,9 @@ const SH = { vega: E.vega(X, false, E.SHADOW.vega), ortega: E.ortega(X, false, E
 const CONF = E.confluence(SH.vega, SH.ortega); R.paz = E.paz(X, office, E.PICK.paz.conf ? CONF : null); R.rios = E.rios(X, office, E.PICK.rios.conf ? CONF : null);
 const confWho = s => SH.vega.open && SH.vega.open.side === s ? 'la tendencia diaria' : SH.ortega.open && SH.ortega.open.side === s ? 'la ruptura de 5 días' : null;
 const confNow = s => !!confWho(s);
-const NAMES = { vega: 'Vega · tendencia diaria', ortega: 'Ortega · ruptura de 3 días', paz: 'Paz · retroceso a favor', rios: 'Ríos · compresión y volumen' };
-const RISK = { vega: 0.5, ortega: 0.5, paz: 0.25, rios: 0.25 };   // % del capital por operación
-const W = { vega: 1, ortega: 1, paz: 0.5, rios: 0.5 };
+const NAMES = { vega: 'Vega · tendencia diaria', ortega: 'Ortega · ruptura de 5 días', paz: 'Paz · retroceso a favor', rios: 'Ríos · compresión y volumen' };
+const RISK = { vega: 0.5, ortega: 0.5, paz: 0.375, rios: 0.375 };   // % del capital por operación
+const W = { vega: 1, ortega: 1, paz: 0.75, rios: 0.75 };
 const MAXH = { paz: 96, rios: 240, ortega: 2880 };
 const SIDE = s => s === 1 ? 'LARGO' : 'CORTO', VERB = s => s === 1 ? 'Compra' : 'Vende';
 const known = new Set(String(knownArg || '').split(/[\s,]+/).filter(Boolean)); const sd = path.join(dbDir, 'signals'); if (fs.existsSync(sd)) for (const f of fs.readdirSync(sd)) known.add(f.replace(/\.json$/, ''));
@@ -69,7 +69,7 @@ const tag = s => new Date(s * 1000).toISOString().slice(0, 13).replace(/[-T]/g, 
 const sizeLine = (k, risk) => 'Tamaño con un ' + String(RISK[k]).replace('.', ',') + '% de riesgo: (capital × ' + (RISK[k] / 100) + ') / ' + fmt(risk) + ' BTC.';
 const calSoon = () => { if (!cal || !cal.events) return []; const loc = new Date(new Date(now * 1000).toLocaleString('en-US', { timeZone: 'Europe/Madrid' })); return cal.events.filter(e => { const [H_, M_] = String(e.hora || '').split(':').map(Number); if (!Number.isFinite(H_)) return false; const diff = (H_ * 60 + (M_ || 0)) - (loc.getHours() * 60 + loc.getMinutes()); return diff >= -15 && diff <= 90; }); };
 const calWarn = () => { const s = calSoon(); return s.length ? '\n⚠ Calvo: ' + s.map(e => e.hora + ' ' + e.evento).join(' · ') + ' (dato macro cerca: la entrada puede saltar).' : ''; };
-const REF = 'Mesa v4 (L-V 7:00-21:00, reglas elegidas ponderando más los años recientes). En walk-forward 2020-26, sin ver nunca el año operado: unas 3 operaciones por semana, 34% de acierto, +0,30R por operación y +27R al año.';
+const REF = 'Mesa v5 (L-V 7:00-21:00, reglas elegidas por R medio × acierto, pesando más los años recientes). En walk-forward 2020-26, sin ver nunca el año operado: 2,3 operaciones por semana, 41% de acierto, +0,35R por operación y +34R al año.';
 const G = E.GEST;
 const plan = (k, s, e, dist) => { const g = G[k] || {}, L = []; if (g.tp) L.push('Pon también una orden límite para cerrar el ' + Math.round(g.f * 100) + '% en ' + fmt(e + s * g.tp * dist) + ' (+' + String(g.tp).replace('.', ',') + 'R).'); if (g.be) L.push('Cuando el precio llegue a ' + fmt(e + s * g.be * dist) + ' (+' + String(g.be).replace('.', ',') + 'R) te avisaré de mover el stop a ' + fmt(e + s * g.beoff * dist) + ' (+' + String(g.beoff).replace('.', ',') + 'R): a partir de ahí la operación ya no puede perder.'); return L.length ? L.join('\n') + '\n' : ''; };
 for (const k of AGS) {
@@ -161,7 +161,7 @@ const weeks = Math.max(1, (now - GO_LIVE) / 604800);
 score.mesa = { n: nAll, win: wAll, sumR: +sumR.toFixed(2), sumW: +sumW.toFixed(2), perWeek: +(nAll / weeks).toFixed(2), since: new Date(GO_LIVE * 1000).toISOString() };
 const openRisk = AGS.filter(k => R[k].open && R[k].open.sigT >= GO_LIVE).reduce((p, k) => p + RISK[k], 0);
 const soon = calSoon();
-notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergency.move) + ' en ' + emergency.hours + ' h. Veredicto: ' + emergency.verdict + '. ' : '') + (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento).join(' · ') + '.' + (soon.length ? ' Dato macro en menos de 90 min.' : '') : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy sin leer.') + ' Riesgo abierto ' + String(openRisk).replace('.', ',') + '%. En vivo: ' + (nAll ? nAll + ' cerradas, ' + Math.round(wAll / nAll * 100) + '% ganadoras, ' + sR(sumR / nAll) + ' por operación (ref. +0,30R, 34% ganadoras).' : 'aún ninguna cerrada.') + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (nAll >= 30 && sumR / nAll < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : ''), emergency || problems.length || soon.length ? 'alerta' : 'ok');
+notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergency.move) + ' en ' + emergency.hours + ' h. Veredicto: ' + emergency.verdict + '. ' : '') + (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento).join(' · ') + '.' + (soon.length ? ' Dato macro en menos de 90 min.' : '') : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy sin leer.') + ' Riesgo abierto ' + String(openRisk).replace('.', ',') + '%. En vivo: ' + (nAll ? nAll + ' cerradas, ' + Math.round(wAll / nAll * 100) + '% ganadoras, ' + sR(sumR / nAll) + ' por operación (ref. +0,35R, 41% ganadoras).' : 'aún ninguna cerrada.') + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (nAll >= 30 && sumR / nAll < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : ''), emergency || problems.length || soon.length ? 'alerta' : 'ok');
 
 // 6) salida
 fs.mkdirSync(outDir, { recursive: true });

@@ -1,6 +1,6 @@
 // Mesa Radar · motor de la oficina (BTC), v4. Idéntico al backtest de research/ (engine.py, strategies.py, mgmt.py, wf.py), horario L-V 7:00-21:00 Madrid.
-// Vega: tendencia diaria (cierre vs SMA50 y momentum 50 d, largos y cortos), stop móvil 2,5 ATR diario, stop a +0,3R al llegar a +1R; sale al perder la tendencia.
-// Ortega: ruptura del máximo (largo) o mínimo (corto) de 3 días en cierre de 4 h, a favor de la SMA50 diaria; stop móvil 2 ATR; stop a +0,3R al llegar a +1R.
+// Vega: tendencia diaria (cierre vs SMA50 y momentum 50 d, largos y cortos), stop móvil 2 ATR diario, stop a +0,3R al llegar a +1R; sale al perder la tendencia.
+// Ortega: ruptura del máximo (largo) o mínimo (corto) de 5 días en cierre de 4 h, a favor de la SMA50 diaria; stop móvil 2 ATR; stop a +0,3R al llegar a +1R.
 // Paz: retroceso intradía a favor de la SMA50 diaria (RSI14 1H < 40 en las 6 h previas y cierre que recupera la EMA50 1H; espejo en corto), solo con confluencia
 //      (la tendencia diaria o la ruptura de 5 días clásicas, en SOMBRA, dentro en el mismo sentido). Stop bajo el mínimo de 6 h (máx. 2 ATR), móvil 5 ATR, 96 h. Medio riesgo.
 // Ríos: compresión de volatilidad (Bollinger 1H en el 20% más estrecho de 30 días) y ruptura con volumen, a favor de SMA50 diaria, en ambos sentidos. Medio riesgo.
@@ -72,12 +72,13 @@
     const iv = []; for (const R of Rs) { for (const x of R.trades) iv.push([x.sigT, x.exitBar, x.side]); if (R.open) iv.push([R.open.sigT, Infinity, R.open.side]); }
     return (ts, side) => iv.some(([a, b, s]) => a <= ts && ts < b && s === side);
   }
-  // v4 (9 oct 2026): parámetros elegidos con todos los datos hasta hoy, ponderando cada trade por recencia (vida media 2 años):
-  // el de más R al año por agente con t ponderada ≥ 1. Validado en walk-forward anual 2020-26. Horario L-V 7:00-21:00 (Madrid).
+  // v5 (9 oct 2026): parámetros elegidos con todos los datos hasta hoy, ponderando cada trade por recencia (vida media 2 años):
+  // por agente, el de mayor (R medio × % de acierto) con t ponderada ≥ 1, entre 432 variantes (objetivos fijos de 1-3R, stops más cortos,
+  // Radar BTC como filtro). Validado en walk-forward anual 2020-26. Horario L-V 7:00-21:00 (Madrid).
   const BE1 = { be: 1, beoff: 0.3 };
   const PICK = {
-    vega: { n: 50, k: 2.5, shorts: 1, G: BE1 },
-    ortega: { N: 3, k: 2, G: BE1 },
+    vega: { n: 50, k: 2, shorts: 1, G: BE1 },
+    ortega: { N: 5, k: 2, G: BE1 },
     paz: { rsiLo: 40, en: 50, k: 2, tk: 5, maxh: 96, lb: 6, G: {}, conf: true },
     rios: { q: 0.2, vm: 1.0, k: 4, G: {}, conf: false }
   };
