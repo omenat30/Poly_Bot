@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (9 oct 2026, v8: vuelve Ríos)
+# Mesa Radar · operativa BTC (10 oct 2026, v9: Duarte y el modelo de calidad)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,14 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v9 · Duarte (ciencia de datos) y el modelo de calidad
+
+- **Modelo.** Regresión logística con L2 (`office/ml.js`, `research/ml.py`) que estima la probabilidad de que una señal acabe en ganancia. Variables: lado, posición frente a la SMA200, SMA50 sobre SMA200, impulso de 24 h y de 7 días (en unidades de volatilidad), volatilidad relativa, RSI, funding de 3 días y frente a su media de 30, posición en el rango de 20 días, racha de las últimas 10 operaciones del agente y de la oficina, y el agente.
+- **Aprendizaje operación a operación.** Antes de cada señal se reentrena solo con operaciones ya cerradas, con vida media de 2 años. En vivo se reentrena en cada ronda con el histórico (`office/ml_hist.json`, 765 señales del walk-forward 2020–26) más cada operación cerrada desde el corte.
+- **Resultado fuera de muestra (705 señales puntuadas, desde jun 2020).** No separa. Por cuartil de la puntuación: Q1 (peor) +0,62R y 43% de acierto, Q2 +0,30R, Q3 −0,06R, Q4 +0,71R. Con el gestor de carteras: base +29,3R/año y caída de 15,5R; filtrar el 10% peor da +26,1R, el 20% +19,8R, el 30% +18,5R y el 40% +9,6R, sin bajar la caída. Con más regularización (λ = 30) o con más historial mínimo (120 o 200 operaciones) el resultado es igual.
+- **Decisión.** Duarte puntúa en sombra y no veta. El filtro se activa solo si, en las últimas 200 operaciones puntuadas fuera de muestra, el cuartil bajo rinde al menos 0,25R menos que el resto con t ≥ 2. Hoy: cuartil bajo +0,28R, resto −0,08R (t = −0,9).
+- **Paridad.** Las variables de mercado de `ml.js` coinciden con Python hasta 5e-6; las de funding difieren en 2 de 765 filas (Python arrastraba un funding viejo tras el fin del histórico; JS pone 0).
 
 ## v8 · vuelve Ríos; Ferrer (funding) y Ríos (liquidez) juntos
 

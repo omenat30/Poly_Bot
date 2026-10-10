@@ -75,6 +75,12 @@ const ddR = pkR - eqR;
 let openR = AGS.filter(k => R[k].open && R[k].open.sigT >= GO_LIVE).reduce((p, k) => p + W[k], 0);
 const sizeFor = k => { let w = W[k] * (ddR > PM.ddR ? PM.ddCut : 1); const room = PM.cap - openR; if (w > room) w = room; return w >= PM.minW ? +w.toFixed(2) : 0; };
 const RISK = {}; for (const k of AGS) RISK[k] = R1 * W[k];
+// Duarte: modelo de calidad (aprende de cada operación cerrada; veta solo si el filtro se ha ganado la activación)
+let DU = null;
+try { const ML = require(path.join(__dirname, 'ml.js')), MH = JSON.parse(fs.readFileSync(path.join(__dirname, 'ml_hist.json'), 'utf8'));
+  const pend = AGS.filter(k => R[k].pending && R[k].pending.sigT >= GO_LIVE).map(k => ({ agent: k, sigT: R[k].pending.sigT, side: R[k].pending.side }));
+  DU = ML.run(MH, H, FUND, R, pend); delete DU.M; delete DU.features; delete DU.fit; } catch (e) { DU = null; }
+const duTxt = k => { const q = DU && DU.scores[k]; return q ? '\nCalidad (Duarte): percentil ' + Math.round(q.q * 100) + ' de su histórico, probabilidad de acierto ' + Math.round(q.p * 100) + '%' + (DU.active ? '' : ' (en sombra: no veta todavía)') + '.' : ''; };
 const SIDE = s => s === 1 ? 'LARGO' : 'CORTO', VERB = s => s === 1 ? 'Compra' : 'Vende';
 const known = new Set(String(knownArg || '').split(/[\s,]+/).filter(Boolean)); const sd = path.join(dbDir, 'signals'); if (fs.existsSync(sd)) for (const f of fs.readdirSync(sd)) known.add(f.replace(/\.json$/, ''));
 let cal = null; const cd = path.join(dbDir, 'calendar'), readCal = f => { try { const d = JSON.parse(fs.readFileSync(f, 'utf8')); cal = d.data || d; } catch (e) {} };
@@ -93,11 +99,13 @@ for (const k of AGS) {
   const r = R[k];
   if (r.pending && r.pending.sigT >= GO_LIVE) {
     const p = r.pending, s = p.side, id = k + '-in-' + tag(p.sigT), e = lastPx, stop = e - s * p.dist, w = sizeFor(k);
+    const dq = DU && DU.scores[k];
+    if (!known.has(id) && dq && dq.veto) { const bid = k + '-ml-' + tag(p.sigT); if (!known.has(bid)) events.push({ id: bid, agent: 'duarte', type: 'bloqueo', at: new Date(now * 1000).toISOString(), real: true, text: 'Duarte veta la señal ' + SIDE(s) + ' de ' + NAMES[k].split(' ·')[0] + ': calidad en el percentil ' + Math.round(dq.q * 100) + ' (cuartil bajo, filtro activo).' }); continue; }
     if (!known.has(id) && !w) { const bid = k + '-pm-' + tag(p.sigT); if (!known.has(bid)) events.push({ id: bid, agent: 'salinas', type: 'bloqueo', at: new Date(now * 1000).toISOString(), real: true, text: 'Salinas no deja entrar a ' + NAMES[k].split(' ·')[0] + ': riesgo abierto al tope (' + String(openR).replace('.', ',') + 'R de ' + PM.cap + ')' }); }
     else if (!known.has(id)) {
       openR += w;
       events.push({ id, agent: k, type: 'entrada', at: new Date(now * 1000).toISOString(), side: s === 1 ? 'long' : 'short', entry: +e.toFixed(1), stop: +stop.toFixed(1), real: true, text: 'Entrada ' + SIDE(s) + ' a mercado ≈ ' + fmt(e) + ', stop ' + fmt(stop) + ' (' + pct((stop - e) / e) + ')' });
-      emails.push({ subject: (s === 1 ? '🟢' : '🔴') + ' Mesa Radar · ' + NAMES[k] + ' · ' + SIDE(s) + ' BTC ≈ ' + fmt(e) + ' · stop ' + fmt(stop), body: 'Nueva entrada de la Mesa (' + NAMES[k] + ').\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop inicial: ' + fmt(stop) + ' (' + pct((stop - e) / e) + '), colócalo en el exchange al entrar.\n' + (MAXH[k] && MAXH[k] < 1000 ? 'Sin objetivo fijo: stop móvil a favor y cierre como mucho a las ' + MAXH[k] + ' h.' : 'Sin objetivo fijo: el stop se mueve solo a favor.') + ' La Mesa te avisa cuando lo tengas que mover y cuando haya que cerrar.\n' + plan(k, s, e, p.dist) + (k === 'paz' && confWho(s) ? 'Confluencia: ' + confWho(s) + ' está a favor.\n' : '') + (k === 'rios' ? 'Ferrer (funding): ' + crowdNow(s) + '.\n' : '') + sizeLine(k, p.dist, w) + calWarn() + '\n\n' + REF + ' Apunta la ejecución en Mesa Radar: ' + URL_ });
+      emails.push({ subject: (s === 1 ? '🟢' : '🔴') + ' Mesa Radar · ' + NAMES[k] + ' · ' + SIDE(s) + ' BTC ≈ ' + fmt(e) + ' · stop ' + fmt(stop), body: 'Nueva entrada de la Mesa (' + NAMES[k] + ').\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop inicial: ' + fmt(stop) + ' (' + pct((stop - e) / e) + '), colócalo en el exchange al entrar.\n' + (MAXH[k] && MAXH[k] < 1000 ? 'Sin objetivo fijo: stop móvil a favor y cierre como mucho a las ' + MAXH[k] + ' h.' : 'Sin objetivo fijo: el stop se mueve solo a favor.') + ' La Mesa te avisa cuando lo tengas que mover y cuando haya que cerrar.\n' + plan(k, s, e, p.dist) + (duTxt(k) ? duTxt(k).slice(1) + '\n' : '') + (k === 'paz' && confWho(s) ? 'Confluencia: ' + confWho(s) + ' está a favor.\n' : '') + (k === 'rios' ? 'Ferrer (funding): ' + crowdNow(s) + '.\n' : '') + sizeLine(k, p.dist, w) + calWarn() + '\n\n' + REF + ' Apunta la ejecución en Mesa Radar: ' + URL_ });
     }
   }
   if (r.open && r.open.sigT >= GO_LIVE) {
@@ -190,6 +198,12 @@ const weeks = Math.max(1, (now - GO_LIVE) / 604800);
 score.mesa = { n: nAll, win: wAll, sumR: +sumR.toFixed(2), sumW: +sumW.toFixed(2), perWeek: +(nAll / weeks).toFixed(2), since: new Date(GO_LIVE * 1000).toISOString() };
 const openRisk = AGS.filter(k => R[k].open && R[k].open.sigT >= GO_LIVE).reduce((p, k) => p + RISK[k], 0);
 notes.salinas = st('salinas', (events.some(e => e.agent === 'salinas') ? events.filter(e => e.agent === 'salinas').map(e => e.text).join(' · ') + '. ' : '') + 'Cartera en vivo: ' + sR(eqR, 1) + ' (caída desde el máximo ' + ddR.toFixed(1).replace('.', ',') + 'R). Riesgo abierto ' + String(+openR.toFixed(2)).replace('.', ',') + 'R de ' + String(PM.cap).replace('.', ',') + 'R. ' + (ddR > PM.ddR ? 'FRENO ACTIVO: riesgo a la mitad hasta recuperar.' : 'Tamaños normales: Vega y Ortega 1R (0,5%), Paz y Ríos 0,75R, Ferrer 0,5R.'), ddR > PM.ddR || openR >= PM.cap ? 'alerta' : 'ok');
+// Duarte: ciencia de datos y modelo de calidad
+const DN = { lado: 'lado', sobreSMA200: 'a favor de la SMA200', 'SMA50>200': 'SMA50 sobre SMA200', ret24h: 'impulso de 24 h', ret7d: 'impulso de 7 días', volrel: 'volatilidad relativa', RSI: 'RSI', funding: 'funding a favor', 'funding-media30d': 'funding frente a su media', pos20d: 'posición en el rango de 20 días', R10agente: 'racha del agente', R10oficina: 'racha de la oficina' };
+const topC = DU ? Object.entries(DU.coef).filter(([n]) => DN[n]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3).map(([n, v]) => DN[n] + ' ' + (v > 0 ? '+' : '−') + Math.abs(v).toFixed(2).replace('.', ',')).join(', ') : '';
+const scTxt = DU ? Object.entries(DU.scores).map(([k, q]) => NAMES[k].split(' ·')[0] + ' percentil ' + Math.round(q.q * 100) + (q.veto ? ' (VETADA)' : '')).join(', ') : '';
+notes.duarte = st('duarte', !DU ? 'El modelo de calidad no ha podido cargar en esta ronda; la oficina opera sin él.' : (events.some(e => e.agent === 'duarte') ? events.filter(e => e.agent === 'duarte').map(e => e.text).join(' · ') + '. ' : '') + 'Modelo de calidad reentrenado con ' + DU.n + ' operaciones cerradas (2020-26' + (DU.live ? ' + ' + DU.live + ' en vivo' : '') + ', más peso a lo reciente). ' + (scTxt ? 'Señales de esta ronda: ' + scTxt + '. ' : '') + 'Filtro ' + (DU.active ? 'ACTIVO: veto las señales del cuartil bajo.' : 'EN SOMBRA: en las últimas 200 operaciones puntuadas fuera de muestra el cuartil bajo rindió ' + sR(DU.lowR) + ' y el resto ' + sR(DU.restR) + '; hasta que el cuartil bajo rinda al menos 0,25R menos con t ≥ 2, puntúo pero no veto.') + (topC ? ' Lo que más pesa ahora: ' + topC + '.' : ''), DU && DU.active ? 'idea' : 'ok');
+notes.duarte.ml = DU ? { n: DU.n, live: DU.live, active: DU.active, diff: DU.diff, t: DU.t, lowR: DU.lowR, restR: DU.restR, scores: DU.scores } : null;
 const soon = calSoon();
 notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergency.move) + ' en ' + emergency.hours + ' h. Veredicto: ' + emergency.verdict + '. ' : '') + (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento).join(' · ') + '.' + (soon.length ? ' Dato macro en menos de 90 min.' : '') : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy sin leer.') + ' Riesgo abierto ' + String(openRisk).replace('.', ',') + '%. En vivo: ' + (nAll ? nAll + ' cerradas, ' + Math.round(wAll / nAll * 100) + '% ganadoras, ' + sR(sumR / nAll) + ' por operación (ref. +0,38R, 40% ganadoras).' : 'aún ninguna cerrada.') + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (nAll >= 30 && sumR / nAll < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : ''), emergency || problems.length || soon.length ? 'alerta' : 'ok');
 
@@ -203,5 +217,5 @@ const writes = [{ op: 'set', collection: 'ticks', doc_id: id, data: tick }];
 for (const e of events) { fs.writeFileSync(path.join(outDir, e.id + '.json'), JSON.stringify(e)); writes.push({ op: 'set', collection: 'signals', doc_id: e.id, data: e }); }
 console.log('WRITES ' + JSON.stringify(writes));
 for (const m of emails) console.log('EMAIL_JSON ' + JSON.stringify(m));
-const NM = Object.assign({ calvo: 'Calvo · sala de emergencias', salinas: 'Salinas · cartera' }, NAMES);
+const NM = Object.assign({ calvo: 'Calvo · sala de emergencias', salinas: 'Salinas · cartera', duarte: 'Duarte · calidad' }, NAMES);
 console.log('RESUMEN ' + (events.length ? events.map(e => NM[e.agent] + ': ' + e.text).join(' | ') : 'Ronda sin novedades') + ' · BTC ' + fmt(lastPx) + (problems.length ? ' · DATOS: ' + problems.join('; ') : ''));

@@ -18,9 +18,10 @@
     ferrer: { name: 'Ferrer', role: 'Funding', color: '#b0479a', real: true, risk: 0.25, job: 'Lee el funding de los futuros de Binance. Cuando una multitud paga caro por estar en un lado (media de 3 días > 0,05% o < −0,005% cada 8 h) y el precio rompe en su contra, opera el squeeze a favor de la rotura: objetivo 3R y stop a +0,3R al llegar a +1R. Opera poco: solo con multitudes atrapadas.' },
     salinas: { name: 'Salinas', role: 'Gestor de carteras', color: '#1f2a3a', real: false, risk: 0, job: 'Decide el tamaño de cada entrada: Vega y Ortega 1R (0,5%), Paz y Ríos 0,75R y Ferrer 0,5R. No deja pasar de 2R de riesgo abierto y, si la cartera cae más de 8R desde su máximo, pone todo a mitad de riesgo hasta recuperar. En 2020–26 eso bajó la caída máxima de 23,7R a 15,5R.' },
     nubarrones: { name: 'Nubarrones', role: 'Bajistas y macro', color: '#3b4a6b', real: false, risk: 0, job: 'Experto en mercados bajistas y macro. Clasifica la fase del mercado (alcista, corrección, posible techo, giro temprano o bajista maduro) y, en bajista maduro, veta los cortos de Paz y Ríos: en 2017–19 y en 2020–26 esos cortos perdían porque los rebotes de bajista los barren. No opera: su propia operativa no pasó la prueba.' },
+    duarte: { name: 'Duarte', role: 'Ciencia de datos', color: '#0e7490', real: false, risk: 0, job: 'Ciencia de datos. Lleva el modelo de calidad: una regresión logística que puntúa cada señal según el contexto (tendencia, impulso, volatilidad, funding, racha) y se reentrena con cada operación cerrada, con más peso a lo reciente. Solo veta el cuartil bajo cuando el filtro demuestra fuera de muestra que ese cuartil rinde peor; hasta entonces puntúa en sombra.' },
     calvo: { name: 'Calvo', role: 'Riesgo y emergencias', color: '#5a6677', real: false, risk: 0, job: 'Cuadra los datos de Bitstamp y Binance, lee el calendario macro, lleva el marcador en vivo y preside la sala de emergencias cuando BTC hace un movimiento brusco.' }
   };
-  const ORDER = ['vega', 'ortega', 'paz', 'rios', 'ferrer', 'nubarrones', 'salinas', 'calvo'], TRADERS = ['vega', 'ortega', 'paz', 'rios', 'ferrer'];
+  const ORDER = ['vega', 'ortega', 'paz', 'rios', 'ferrer', 'nubarrones', 'salinas', 'duarte', 'calvo'], TRADERS = ['vega', 'ortega', 'paz', 'rios', 'ferrer'];
   const SIDE = p => p && p.side === 'short' ? 'corto' : 'largo';
   const S = { ticks: [], signals: [], trades: [], sel: null, db: null };
   window.MESA = { AG, ORDER, TRADERS, S, listeners: [], emergency: () => activeEmergency() };
@@ -29,7 +30,7 @@
 
   // ---------- office status ----------
   const madridDow = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short' }).format(new Date());
-  const OPEN_EXTRA_UNTIL = 1791577014000;   // apertura extra de 5 minutos pedida el 9 oct 2026; después, horario normal
+  const OPEN_EXTRA_UNTIL = 1791650497591;   // apertura extra de 10 minutos pedida el 10 oct 2026 (presentación de Duarte); después, horario normal
   function officeOpen() { if (Date.now() < OPEN_EXTRA_UNTIL) return true; const m = madridNow(), d = madridDow(); return d !== 'Sat' && d !== 'Sun' && m >= 7 * 60 && m < 21 * 60; }
   window.MESA_OPEN = officeOpen;
   function renderTop() {
@@ -54,7 +55,7 @@
       b.addEventListener('click', () => { S.sel = S.sel === k ? null : k; renderRound(); emit(); });
       box.append(b);
     }
-    if (!t) box.append(el('p', { class: 'empty', text: 'La primera ronda llega en cuanto abra la oficina: cada 15 minutos de lunes a viernes entre las 7:00 y las 21:00, los ocho agentes dejan aquí lo que han leído.' }));
+    if (!t) box.append(el('p', { class: 'empty', text: 'La primera ronda llega en cuanto abra la oficina: cada 15 minutos de lunes a viernes entre las 7:00 y las 21:00, los nueve agentes dejan aquí lo que han leído.' }));
   }
   // ---------- book ----------
   function renderBook() {
