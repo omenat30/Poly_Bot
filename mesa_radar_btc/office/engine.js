@@ -118,7 +118,9 @@
   // Salinas (gestor de carteras, v7): riesgo base por agente (R), tope de 2R de riesgo abierto y riesgo a la mitad si la cartera cae más de 8R desde su máximo.
   // v10 (11 oct 2026, auditoría externa): Ferrer y Ríos pasan a sombra (su señal se registra, no se opera); Paz baja a 0,5R por concentración
   // (aporta ~75% del R) y Vega a 0,75R; Ortega se queda en 1R. Parámetros congelados: no se cambian hasta terminar la validación prospectiva.
-  const PM = { base: { vega: 0.75, ortega: 1, paz: 0.5, rios: 0, ferrer: 0 }, cap: 2.0, ddR: 8, ddCut: 0.5, minW: 0.2 };
+  // v11 (11 oct 2026): el modelo del Radar BTC 15m entra en la cabeza de los agentes (mesa del Radar, 1R por señal, en radar_desk.js).
+  // Sus estrategias propias quedan así: Ortega 0,5R y Vega 0,375R (diversifican); Paz, Ríos y Ferrer propios en sombra (Paz sigue calculando para vetar).
+  const PM = { base: { vega: 0.375, ortega: 0.5, paz: 0, rios: 0, ferrer: 0 }, cap: 2.0, ddR: 8, ddCut: 0.5, minW: 0.2 };
   // sombras para la confluencia de Paz: la tendencia diaria y la ruptura de 5 días clásicas (v3)
   const SHADOW = { vega: { n: 20, k: 3.5, shorts: 0, G: {} }, ortega: { N: 5, k: 2, G: { tp: 1.5, f: 0.33, be: 0.75, beoff: 0.3 } } };
   const GEST = { vega: BE1, ortega: BE1, paz: {}, rios: {} };

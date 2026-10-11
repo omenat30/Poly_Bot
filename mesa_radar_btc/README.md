@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (11 oct 2026, v10: respuesta a la auditoría externa)
+# Mesa Radar · operativa BTC (11 oct 2026, v11: el Radar en la cabeza de los agentes)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,24 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v11 · el modelo del Radar BTC 15m en la cabeza de los agentes (11 oct 2026)
+
+Protocolo: reglas elegidas con 2018–21; 2022–26 es la prueba. Costes de la Mesa (0,14% + 0,03% en stops) y funding también para el Radar. Comparación en el mismo horario que el escáner real del Radar (L–V 7:00–22:00).
+
+| | Acierto | R/op | R/año | Sharpe | Caída |
+| --- | --- | --- | --- | --- | --- |
+| Oficina v11 · 2022–26 | 54,3% | +0,369 | +41,5 | 2,71 | 9,0R |
+| Radar horario real · 2022–26 | 55,7% | +0,328 | +36,2 | 2,51 | 8,9R |
+| Oficina v11 · 2018–21 | 49,1% | +0,246 | +23,5 | 1,98 | 12,4R |
+| Radar horario real · 2018–21 | 50,5% | +0,215 | +17,8 | 1,58 | 13,4R |
+| Radar 24 h (papel) · 2022–26 | 56,0% | +0,331 | +51,9 | 3,05 | 9,3R |
+
+- **Qué es:** `office/radar_engine.js` es el motor del Radar (idéntico a `strat.js` y al de `radar_alert.js`; parámetros V20). `office/radar_desk.js` monta las velas de 15 min como el escáner (Bitstamp + Binance). Rupturas → Ortega, reversiones → Paz, barridos → Ríos, 1R por señal. Paz veta las señales contra su propia posición abierta (2017–21 −0,21R, 2022–26 −0,39R por operación). Ortega (0,5R) y Vega (0,375R) mantienen sus tendencias propias. Paz, Ríos y Ferrer propios en sombra.
+- **Descartado:** (1) Duarte filtrando al Radar: la mejora aparente venía de una fuga de datos mía (variables de la vela de 1 h aún abierta; hasta 45 min de futuro). Corregido (`rl_data.py`), no aporta. (2) El modelo del Radar en 5, 30 y 60 min (`mtf.js`, `mtf_eval.py`): solo funciona en 15 min. (3) Salidas alternativas (`rx.js`, `rx_eval.py`): stop a +0,3R tras +1R, objetivos 1,2R y 2R, todas peores que 1,65R. (4) Duarte con las variables internas del Radar: no aporta fuera de muestra. (5) Objetivo fijo en las tendencias de Ortega y Vega: no sube su acierto.
+- **Retraso** (`rl_delay.py`, velas de 1 min): con 1, 5 o 15 min de demora, la mesa del Radar mantiene ~60% de acierto y +0,41 a +0,50R por operación en 2022–26.
+- **Límites:** el acierto queda 1,4 puntos por debajo del Radar (las tendencias aciertan menos); el núcleo solo (Radar + veto de Paz) supera al Radar en acierto y R/op pero empata en R/año y Sharpe. El Deflated Sharpe del Radar está pendiente (sus pruebas no están inventariadas). Las variantes propias de Ortega y Vega se eligieron con datos hasta 2026.
+- **Horario:** la mesa del Radar opera hasta la vela que cierra a las 21:45 (rutinas 7–21 h); las tendencias propias siguen entrando de 7:00 a 21:00.
 
 ## v10 · respuesta a la auditoría externa (11 oct 2026)
 
