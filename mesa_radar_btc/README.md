@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (10 oct 2026, v9: Duarte y el modelo de calidad)
+# Mesa Radar · operativa BTC (11 oct 2026, v10: respuesta a la auditoría externa)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -49,6 +49,21 @@ Más frecuencia supone menos R por operación y más sensibilidad a los costes.
 La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operaciones.
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
+
+## v10 · respuesta a la auditoría externa (11 oct 2026)
+
+**Conclusión:** tras corregir por las ~2.700 variantes probadas, la ventaja no es estadísticamente significativa (Deflated Sharpe 0,035 semanal con N = 500; SPA de Hansen p = 0,12). La v10 opera con menos riesgo y la versión queda congelada (`audit/manifest_v10.json`).
+
+- **Reconciliación** (`research/audit1.py`, `audit/a1.json`): +0,41R por operación es R en el riesgo de cada agente; +29R al año es R de cartera (1R = 0,5% del capital). 765 señales → 748 operaciones (17 rechazadas por el tope, 34 recortadas, 288 con el freno). Pesos: +308 → +248R; tope: +236R; freno: +199R; funding: +186R (+27,5R al año).
+- **Robustez** (`audit2.py`): ablación, regímenes, dependencia de las 10 mejores operaciones, correlaciones, solapes, Nubarrones con y sin veto (y en 2017–19), rejilla de Salinas.
+- **Estadística y ejecución** (`audit3.py`): funding de los perpetuos, costes extra, retraso de 15/30/60 min con velas de 15 min, Newey-West, bootstrap estacionario, Deflated Sharpe y Reality Check / SPA sobre 1.269 variantes distintas.
+- **Paradas y selección** (`audit4.py`): −3R/7 días y −10R; regla de selección con actividad mínima; cortos vetados por Nubarrones fuera de su periodo de diseño.
+- **Cartera v10** (`audit5.py`, `export_v10.py`): Ortega 1R, Vega 0,75R, Paz 0,5R; Ríos y Ferrer en sombra. +20,2R al año, 12,4R de caída, 1,97 operaciones por semana; 2025 +0,7R, 2026 +0,3R.
+- **Anticipación** (`audit/causal.js`): 30 cortes, 12.985 operaciones, 0 diferencias.
+- **Reproducibilidad** (`regen.py`): 22 de 24 variantes elegidas idénticas; las dos de Ríos con filtro de funding difieren.
+- **Fallo encontrado en la selección:** una variante sin operaciones recientes conserva sus estadísticas antiguas (Ríos). Se exige ya 6 operaciones en los 2 años previos.
+- **Motor en vivo:** agentes en sombra (registran la señal sin operar), parada operativa si fallan los datos, paradas por rendimiento y freno con lo abierto, −10R exige revisión humana (`MESA_REANUDAR`), marcador neto de funding, registro de decisiones en cada tick, Duarte sin veto, Iturbe (validación) compara lo real con lo esperado.
+- **Pendiente:** validación por una persona independiente sobre la versión congelada; inventario de pruebas manuales incompleto; verificación de stops en el exchange.
 
 ## v9 · Duarte (ciencia de datos) y el modelo de calidad
 

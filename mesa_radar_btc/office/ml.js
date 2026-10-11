@@ -1,8 +1,7 @@
 // Duarte · modelo de calidad (meta-etiquetado). Regresión logística con L2 que estima la probabilidad de que una señal acabe en ganancia.
 // Aprende operación a operación: se reentrena en cada ronda con el histórico 2020-26 (ml_hist.json) más cada operación cerrada en vivo,
 // pesando más lo reciente (vida media de 2 años) y usando solo operaciones ya cerradas antes de la señal (sin mirar el futuro).
-// El filtro solo se activa si se lo gana: en las últimas 200 operaciones puntuadas fuera de muestra, las del cuartil bajo deben rendir
-// al menos 0,25R menos que el resto con t ≥ 2. Mientras no, Duarte puntúa en sombra y no veta nada.
+// v10 (auditoría 11 oct 2026): Duarte no veta en producción. Puntúa en sombra y compara la cartera sin ML con la cartera que vetaría el cuartil bajo.
 (function (root) {
   const AGS = ['vega', 'ortega', 'paz', 'rios', 'ferrer'];
   const ema = (x, n) => { const a = 2 / (n + 1), o = new Array(x.length); let s = x[0]; for (let i = 0; i < x.length; i++) { s = i ? a * x[i] + (1 - a) * s : x[i]; o[i] = s; } return o; };
@@ -55,11 +54,13 @@
     for (const x of fresh) { const [ha, hall] = histOf(x.t0, x.a); x.x = features(M, x.t0, x.a, x.s, ha, hall, true); if (!x.x) continue; const m = train(T, x.t0); x.q = m ? m.q(m.pred(x.x)) : null; T.push(x); }
     const scored = T.filter(x => x.q != null).slice(-200), lo = scored.filter(x => x.q < 0.25).map(x => x.r), hi = scored.filter(x => x.q >= 0.25).map(x => x.r);
     const v = a => { const m = mean(a); return a.reduce((p, x) => p + (x - m) ** 2, 0) / (a.length - 1); };
-    const diff = mean(hi) - mean(lo), tt = diff / Math.sqrt(v(hi) / hi.length + v(lo) / lo.length), active = lo.length >= 30 && diff >= 0.25 && tt >= 2;
+    // v10 (auditoría): Duarte nunca veta en producción. Se informa si el criterio se cumpliría y la comparación en sombra sin ML / con veto.
+    const diff = mean(hi) - mean(lo), tt = diff / Math.sqrt(v(hi) / hi.length + v(lo) / lo.length), cumpliria = lo.length >= 30 && diff >= 0.25 && tt >= 2, active = false;
+    const armBase = mean(scored.map(x => x.r)), armVeto = mean(hi);
     const now = Math.max(...H.t) + 3600, m = train(T, now), out = {};
-    for (const p of pend || []) { const [ha, hall] = histOf(p.sigT, p.agent), x = features(M, p.sigT, p.agent, p.side, ha, hall, true); if (!x || !m) continue; const pr = m.pred(x), q = m.q(pr); out[p.agent] = { p: +pr.toFixed(3), q: +q.toFixed(2), veto: active && q < 0.25 }; }
+    for (const p of pend || []) { const [ha, hall] = histOf(p.sigT, p.agent), x = features(M, p.sigT, p.agent, p.side, ha, hall, true); if (!x || !m) continue; const pr = m.pred(x), q = m.q(pr); out[p.agent] = { p: +pr.toFixed(3), q: +q.toFixed(2), veto: false }; }
     const coef = m ? Object.fromEntries(hist.names.map((n, j) => [n, +m.b[j + 1].toFixed(2)])) : {};
-    return { n: m ? m.n : 0, live: fresh.length, active, diff: +diff.toFixed(2), t: +tt.toFixed(2), lowR: +mean(lo).toFixed(2), restR: +mean(hi).toFixed(2), scores: out, coef, M, features, fit };
+    return { n: m ? m.n : 0, live: fresh.length, active, cumpliria, armBase: +armBase.toFixed(3), armVeto: +armVeto.toFixed(3), diff: +diff.toFixed(2), t: +tt.toFixed(2), lowR: +mean(lo).toFixed(2), restR: +mean(hi).toFixed(2), scores: out, coef, M, features, fit };
   }
   const api = { run, features, market, fit, AGS };
   if (typeof module !== 'undefined') module.exports = api; else root.MesaML = api;

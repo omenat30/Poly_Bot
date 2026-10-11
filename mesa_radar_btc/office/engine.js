@@ -116,7 +116,9 @@
     ferrer: { lo: -0.00005, hi: 0.0005, N: 12, k: 2, T: 3, G: BE1 }
   };
   // Salinas (gestor de carteras, v7): riesgo base por agente (R), tope de 2R de riesgo abierto y riesgo a la mitad si la cartera cae más de 8R desde su máximo.
-  const PM = { base: { vega: 1, ortega: 1, paz: 0.75, rios: 0.75, ferrer: 0.5 }, cap: 2.0, ddR: 8, ddCut: 0.5, minW: 0.2 };
+  // v10 (11 oct 2026, auditoría externa): Ferrer y Ríos pasan a sombra (su señal se registra, no se opera); Paz baja a 0,5R por concentración
+  // (aporta ~75% del R) y Vega a 0,75R; Ortega se queda en 1R. Parámetros congelados: no se cambian hasta terminar la validación prospectiva.
+  const PM = { base: { vega: 0.75, ortega: 1, paz: 0.5, rios: 0, ferrer: 0 }, cap: 2.0, ddR: 8, ddCut: 0.5, minW: 0.2 };
   // sombras para la confluencia de Paz: la tendencia diaria y la ruptura de 5 días clásicas (v3)
   const SHADOW = { vega: { n: 20, k: 3.5, shorts: 0, G: {} }, ortega: { N: 5, k: 2, G: { tp: 1.5, f: 0.33, be: 0.75, beoff: 0.3 } } };
   const GEST = { vega: BE1, ortega: BE1, paz: {}, rios: {} };

@@ -172,7 +172,8 @@
     calvo: { x: 5.0, z: 2.3, face: -1, seat: [6.0, 2.3], visit: [6.0, 1.35] },
     nubarrones: { x: -3.6, z: 7.4, face: 0, seat: [-3.6, 6.45], visit: [-2.35, 6.9] },
     salinas: { x: 12.6, z: -3.3, face: 0, seat: [12.6, -4.25], visit: [11.0, -3.0] },
-    duarte: { x: 17.1, z: 3.2, face: 0, seat: [17.1, 2.25], visit: [18.45, 2.7] }
+    duarte: { x: 17.1, z: 3.2, face: 0, seat: [17.1, 2.25], visit: [18.45, 2.7] },
+    iturbe: { x: 17.1, z: -3.2, face: 0, seat: [17.1, -4.15], visit: [15.6, -3.2] }
   };
   const CORR = 0.55; // pasillo central (z)
   for (const k of M.ORDER) {
@@ -215,7 +216,7 @@
   cloud.position.set(DESKS.nubarrones.x, 2.35, DESKS.nubarrones.z); scene.add(cloud);
   const bolt = new T3.Mesh(new T3.ConeGeometry(0.05, 0.4, 4), new T3.MeshBasicMaterial({ color: 0xffd23f })); bolt.position.set(0.05, -0.3, 0); bolt.rotation.z = 0.35; bolt.visible = false; cloud.add(bolt);
   let bearPhase = 'bull';
-  const SPOTS = { coffee: [7.2, 4.35], board: [-3.6, -5.0], table: a => [Math.cos(a) * 1.6, 3.6 - Math.abs(Math.sin(a)) * 1.6], lab: [16.2, 4.2], sofa: [-12.3, 4.6], er: { vega: [4.1, 7.35], ortega: [5.4, 7.3], paz: [6.7, 7.35], ferrer: [3.5, 8.6], rios: [2.4, 7.8], calvo: [7.3, 8.3], nubarrones: [8.1, 9.3], salinas: [2.5, 9.3], duarte: [5.4, 9.45] } };
+  const SPOTS = { coffee: [7.2, 4.35], board: [-3.6, -5.0], table: a => [Math.cos(a) * 1.6, 3.6 - Math.abs(Math.sin(a)) * 1.6], lab: [16.2, 4.2], sofa: [-12.3, 4.6], er: { vega: [4.1, 7.35], ortega: [5.4, 7.3], paz: [6.7, 7.35], ferrer: [3.5, 8.6], rios: [2.4, 7.8], calvo: [7.3, 8.3], nubarrones: [8.1, 9.3], salinas: [2.5, 9.3], duarte: [5.4, 9.45], iturbe: [3.9, 9.45] } };
 
   // ---- people (monigotes) ----
   const skin = mat('skin', '#e2b999'), pants = mat('pants', '#2e3640');
@@ -224,7 +225,7 @@
     vega: { hair: 'short', hc: '#2a2420', skin: '#e2b999' }, rios: { hair: 'curly', hc: '#7a4a24', skin: '#d8a982' }, ortega: { hair: 'curly', hc: '#3b2a1e', skin: '#c99a73' },
     paz: { hair: 'pony', hc: '#5a3a22', skin: '#efc6a6' }, ferrer: { hair: 'short', hc: '#151515', skin: '#a8754f', glasses: true },
     nubarrones: { hair: 'grey', hc: '#c4c4c4', skin: '#e8c3a3', beard: true, glasses: true, pants: '#3a3f47' },
-    salinas: { hair: 'slick', hc: '#222', skin: '#dcb08c', suit: true, glasses: true, pants: '#1f2530' }, duarte: { hair: 'bob', hc: '#231d2b', skin: '#c58c66', phones: true, pants: '#2b3a44' }, calvo: { hair: 'bald', hc: '#e0b493', skin: '#e0b493' }
+    salinas: { hair: 'slick', hc: '#222', skin: '#dcb08c', suit: true, glasses: true, pants: '#1f2530' }, duarte: { hair: 'bob', hc: '#231d2b', skin: '#c58c66', phones: true, pants: '#2b3a44' }, iturbe: { hair: 'short', hc: '#6b4a2b', skin: '#e8b996', glasses: true, pants: '#3b3226' }, calvo: { hair: 'bald', hc: '#e0b493', skin: '#e0b493' }
   };
   function person(color, k) {
     const L = LOOK[k] || { hair: 'short', hc: '#2a2420', skin: '#e2b999' };
@@ -271,7 +272,7 @@
   // ---- behaviour ----
   const now = () => performance.now() / 1000;
   const corr = ([x, z]) => [x, CORR];
-  const door = q => (q[1] < -3.3 && Math.abs(q[0]) < 1.6) ? [1.45, q[1]] : (q[0] > PMO.x0 && q[1] < PMO.z1) ? [PMO.door, q[1]] : q;
+  const door = q => (q[1] < -3.3 && Math.abs(q[0]) < 1.6) ? [1.45, q[1]] : (q[0] > LAB.x0 && q[1] < -0.7) ? [15.6, q[1]] : (q[0] > PMO.x0 && q[1] < PMO.z1) ? [PMO.door, q[1]] : q;
   const inER = q => q[1] > ER.z0 - 0.05 && q[0] > ER.x0;
   const LANE = ER.z0 + 0.65, erIn = q => [[ER.door[0], ER.z0 - 0.9], [ER.door[0], LANE], [q[0], LANE]], erOut = q => erIn(q).reverse();
   function route(from, to) {
@@ -305,6 +306,7 @@
   }
   // a new round: everyone back, reading data, then the ones with news present them at the table
   let lastTickAt = null, meeting = false;
+  const AUDIT_MEET = Date.now() < Date.UTC(2026, 9, 18) && !reduce;   // la primera vez que se abre la oficina esta semana, reunión de la auditoría
   function newRound(t) {
     if (!officeOn) return;
     for (const k of M.ORDER) { if (P[k].state !== 'sit') backToDesk(k); P[k].reading = now() + 9; }
@@ -313,7 +315,7 @@
       const hot = M.ORDER.filter(k => t.notes && t.notes[k] && (t.notes[k].level === 'trade' || t.notes[k].level === 'alerta'));
       if (hot.length && !reduce && !erActive) {
         meeting = true; let i = 0;
-        for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 8); const spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), 19000 + i * 400); }
+        for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 9); const spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), 19000 + i * 400); }
         setTimeout(() => { hot.forEach((k, j) => setTimeout(() => say(k, short(t.notes[k].text, 130), t.notes[k].level, 8), j * 8500)); }, 27000);
         setTimeout(() => { meeting = false; M.ORDER.forEach(k => backToDesk(k)); }, 27000 + hot.length * 8500 + 4000);
       }
@@ -349,7 +351,7 @@
     const t = S.ticks[0];
     { const nn = noteOf('nubarrones'); bearPhase = nn && nn.phase || 'bull'; cloudMat.color.copy(lin(bearPhase === 'mature' ? 0x4a5160 : bearPhase === 'early' || bearPhase === 'top' ? 0x7d8796 : 0xc9d1dc)); }
     checkER();
-    if (t && t.at !== lastTickAt && !erActive) { const first = lastTickAt == null; lastTickAt = t.at; if (!first || (Date.now() - new Date(t.at)) < 20 * 60e3) newRound(t); else M.ORDER.forEach((k, i) => { if (t.notes && t.notes[k]) setTimeout(() => say(k, short(t.notes[k].text, 110), t.notes[k].level, 6), 800 + i * 3800); }); }
+    if (t && t.at !== lastTickAt && !erActive) { const first = lastTickAt == null; lastTickAt = t.at; if (!first || (Date.now() - new Date(t.at)) < 20 * 60e3) { if (!(first && AUDIT_MEET)) newRound(t); } else if (!AUDIT_MEET) M.ORDER.forEach((k, i) => { if (t.notes && t.notes[k]) setTimeout(() => say(k, short(t.notes[k].text, 110), t.notes[k].level, 6), 800 + i * 3800); }); }
     drawBoard(S); drawWall(S); drawER(); drawPM(S); drawLF(S); drawML(S); for (const k of M.ORDER) drawDesk(k, S);
     if (S.sel) { const n = noteOf(S.sel); say(S.sel, n ? short(n.text, 160) : M.AG[S.sel].job, n && n.level, 10); }
   }
@@ -383,13 +385,13 @@
     const { g, c, tx } = pmScr, t = S.ticks[0], sc = t && t.score && t.score.mesa;
     g.fillStyle = '#0d141c'; g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = '#e8eef5'; g.font = '700 24px monospace'; g.fillText('CARTERA · SALINAS', 18, 36);
-    let open = 0; for (const k of M.TRADERS) { const n = t && t.notes && t.notes[k]; if (n && n.pos && n.pos.live) open += ({ vega: 1, ortega: 1, paz: 0.75, rios: 0.75, ferrer: 0.5 })[k] || 0; }
+    let open = 0; for (const k of M.TRADERS) { const n = t && t.notes && t.notes[k]; if (n && n.pos && n.pos.live) open += ({ vega: 0.75, ortega: 1, paz: 0.5 })[k] || 0; }
     g.font = '18px monospace'; g.fillStyle = '#93a3b4'; g.fillText('Riesgo abierto', 18, 76);
     g.fillStyle = '#1f2a37'; g.fillRect(18, 86, 476, 26); g.fillStyle = open >= 2 ? '#f07466' : '#3cc49d'; g.fillRect(18, 86, 476 * Math.min(1, open / 2), 26);
     g.fillStyle = '#e8eef5'; g.fillText(open.toFixed(2).replace('.', ',') + 'R de 2R', 24, 106);
     g.fillStyle = '#93a3b4'; g.fillText('En vivo: ' + (sc && sc.n ? sc.n + ' cerradas · ' + (sc.sumW >= 0 ? '+' : '') + sc.sumW.toFixed(1).replace('.', ',') + 'R' : 'sin cerradas todavía'), 18, 146);
     g.fillText('Freno: riesgo a la mitad si cae > 8R', 18, 176);
-    [['Vega', 1], ['Ortega', 1], ['Paz', 0.75], ['Ríos', 0.75], ['Ferrer', 0.5]].forEach(([n, w], i) => { g.fillStyle = '#7d9dff'; g.fillRect(18 + i * 98, 236 - w * 40, 76, w * 40); g.fillStyle = '#e8eef5'; g.font = '13px monospace'; g.fillText(n + ' ' + String(w).replace('.', ','), 18 + i * 98, 252); });
+    [['Ortega', 1], ['Vega', 0.75], ['Paz', 0.5], ['Ríos', 0], ['Ferrer', 0]].forEach(([n, w], i) => { g.fillStyle = '#7d9dff'; g.fillRect(18 + i * 98, 236 - w * 40, 76, w * 40); g.fillStyle = '#e8eef5'; g.font = '13px monospace'; g.fillText(n + ' ' + String(w).replace('.', ','), 18 + i * 98, 252); });
     tx.needsUpdate = true;
   }
   function drawML(S) {
@@ -413,7 +415,7 @@
     g.fillStyle = '#1e3a8a'; g.font = '700 30px sans-serif'; g.fillText('OPERATIVA BTC', 20, 42);
     g.font = '20px sans-serif'; const lines = [];
     for (const k of M.TRADERS) { const n = t && t.notes && t.notes[k], p = n && n.pos; lines.push([M.AG[k].name + ': ' + (p ? (p.side === 'short' ? 'CORTO ' : 'LARGO ') + Math.round(p.entry).toLocaleString('es-ES') + ' · stop ' + Math.round(p.stop).toLocaleString('es-ES') : 'fuera'), p ? (p.side === 'short' ? '#b5382d' : '#0b7a57') : '#334155']); }
-    lines.push(['Riesgo (Salinas): tope 2R abierto', '#7c2d12']); lines.push(['Stops en el exchange, solo a favor', '#7c2d12']);
+    lines.push(['Ríos y Ferrer: en sombra', '#7c2d12']); lines.push(['Riesgo (Salinas): tope 2R abierto', '#7c2d12']); lines.push(['Stops en el exchange, solo a favor', '#7c2d12']);
     lines.forEach(([s, col], i) => { g.fillStyle = col; g.fillText(s, 20, 84 + i * 37); });
     tx.needsUpdate = true;
   }
@@ -424,6 +426,7 @@
     g.fillStyle = '#e8eef5'; g.font = '600 18px monospace'; g.fillText(M.AG[k].role, 10, 32);
     const pts = S.ticks.slice(0, 40).reverse().map(t => t.price);
     if (pts.length > 1) { const lo = Math.min(...pts), hi = Math.max(...pts); g.strokeStyle = col; g.lineWidth = 2.5; g.beginPath(); pts.forEach((v, i) => { const x = 10 + i / (pts.length - 1) * 236, y = 140 - (v - lo) / (hi - lo || 1) * 80; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); }
+    if (k === 'rios' || k === 'ferrer') { g.fillStyle = '#e2b44a'; g.font = '600 15px monospace'; g.fillText('EN SOMBRA · NO OPERA', 10, 154); tx.needsUpdate = true; return; }
     g.fillStyle = n && n.level === 'trade' ? '#3cc49d' : n && n.level === 'idea' ? '#7d9dff' : '#93a3b4'; g.font = '14px monospace'; g.fillText(n ? (n.level === 'trade' ? 'OPERANDO' : n.level === 'idea' ? 'VIGILANDO' : 'LEYENDO DATOS') : 'ESPERANDO RONDA', 10, 54);
     tx.needsUpdate = true;
   }
@@ -534,17 +537,24 @@
   function frame(ts) { requestAnimationFrame(frame); if (!visible) return; const dt = Math.min(0.05, (ts - last) / 1000); last = ts; step(dt); renderer.render(scene, cam); overlayPos(); }
   const seen = new Set(); scene.traverse(o => { const ms = o.material ? [].concat(o.material) : []; for (const m of ms) { if (seen.has(m) || [ledOn, ledAmber, ledOff].includes(m)) continue; seen.add(m); if (m.color && !m.map) m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear(); if (m.isMeshBasicMaterial && m.map) m.toneMapped = false; } });
   applyTheme(); onData(M.S); requestAnimationFrame(frame);
-  // llegada de Duarte (semana del 10 de octubre de 2026): Salinas presenta a Duarte a la mesa y Duarte explica su modelo
+  // reunión de la auditoría externa (semana del 11 de octubre de 2026): todos a la mesa central
   setTimeout(() => {
-    if (Date.now() > Date.UTC(2026, 9, 17) || !officeOn || reduce) return;
-    const dd = DESKS.duarte, spot = [16.3, 1.6];
-    goTo(P.salinas, spot, () => { P.salinas.state = 'talk'; P.salinas.yaw = yawTo(spot, dd.seat);
-      say('salinas', 'Equipo: Duarte, ciencia de datos. Va a puntuar la calidad de cada señal y aprende de cada operación que cerremos.', 'ok', 8);
-      setTimeout(() => say('duarte', 'Con el histórico 2020–26 el modelo todavía no separa las buenas de las malas. Así que puntúo en sombra: no veto nada hasta que lo demuestre.', 'idea', 9), 8300);
-      setTimeout(() => say('calvo', 'Te damos la bienvenida al laboratorio. Los servidores ya parpadean.', 'ok', 5), 17500);
-      setTimeout(() => say('ferrer', 'Te paso el funding cada ronda.', 'ok', 4), 19000);
-      setTimeout(() => backToDesk('salinas'), 20000); });
-  }, 6000);
+    if (!AUDIT_MEET || !officeOn) return;
+    meeting = true; let i = 0;
+    for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 9), spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), i * 500); }
+    const L = [['calvo', 'Ha llegado la auditoría externa. Va en serio: nuestra ventaja no está demostrada.', 'alerta'],
+      ['iturbe', 'Soy Iturbe, validación. Con 2.700 variantes probadas, el Deflated Sharpe es 0,035: los +29R pueden ser suerte.', 'alerta'],
+      ['calvo', 'Y el backtest no cobraba el funding: −1,9R al año. Ya se descuenta.', 'idea'],
+      ['salinas', 'Desde hoy: Ortega 1R, Vega 0,75R, Paz 0,5R. −3R en 7 días, una semana fuera; −10R, todo parado hasta revisión.', 'idea'],
+      ['paz', 'Lo acepto: sin mis 10 mejores operaciones, pierdo. Y 2026 va en −0,25R por operación.', 'ok'],
+      ['rios', 'Paso a sombra. Mi variante ganaba, pero se eligió viendo los datos.', 'ok'],
+      ['ferrer', 'Sin ventaja demostrada: a sombra yo también.', 'ok'],
+      ['duarte', 'Sin veto. Puntúo y comparo en sombra: hoy vetar empeoraría.', 'ok'],
+      ['nubarrones', 'Mi veto a los cortos de Ríos aguanta en los dos periodos; el de Paz, a validar.', 'ok'],
+      ['calvo', 'Riesgo mínimo hasta 100 operaciones reales. Cada aviso se apunta en el registro.', 'idea']];
+    L.forEach(([k, txt, lv], j) => setTimeout(() => say(k, txt, lv, 8), 19000 + j * 8200));
+    setTimeout(() => { meeting = false; M.ORDER.forEach(k => backToDesk(k)); }, 19000 + L.length * 8200 + 3000);
+  }, 5000);
   // demo-free idle: if there is no round yet, each agent introduces their job once
   setTimeout(() => { if (!M.S.ticks.length) M.ORDER.forEach((k, i) => setTimeout(() => say(k, M.AG[k].job, 'ok', 7), i * 2500)); }, 1500);
 })();

@@ -1,0 +1,165 @@
+{
+ "dist_stop_mediana_%": {
+  "vega": 6.29,
+  "ortega": 6.45,
+  "paz": 1.06,
+  "rios": 2.52,
+  "funding": 8.5
+ },
+ "sin_distancia": 0,
+ "funding_R_medio": 0.0265,
+ "funding_R_total_sin_ponderar": 20.3,
+ "funding_por_agente": {
+  "vega": 0.0098,
+  "ortega": 0.0342,
+  "paz": 0.0332,
+  "rios": 0.036,
+  "funding": -0.0296
+ },
+ "con_funding": {
+  "n": 748,
+  "nw": 2.12,
+  "win": 0.4,
+  "exp": 0.39,
+  "wexp": 0.25,
+  "Ry": 27.45,
+  "tot": 185.9,
+  "dd": 15.42,
+  "RyDD": 1.78
+ },
+ "coste_extra_0.04%": {
+  "n": 748,
+  "nw": 2.12,
+  "win": 0.39,
+  "exp": 0.35,
+  "wexp": 0.22,
+  "Ry": 24.54,
+  "tot": 166.14,
+  "dd": 16.75,
+  "RyDD": 1.46
+ },
+ "coste_extra_0.10%": {
+  "n": 751,
+  "nw": 2.13,
+  "win": 0.37,
+  "exp": 0.3,
+  "wexp": 0.19,
+  "Ry": 20.85,
+  "tot": 141.17,
+  "dd": 19.44,
+  "RyDD": 1.07
+ },
+ "coste_extra_0.20%": {
+  "n": 753,
+  "nw": 2.13,
+  "win": 0.32,
+  "exp": 0.22,
+  "wexp": 0.16,
+  "Ry": 17.33,
+  "tot": 117.37,
+  "dd": 29.02,
+  "RyDD": 0.6
+ },
+ "retraso_15min_R_medio": -0.0087,
+ "retraso_15min_cartera": {
+  "n": 748,
+  "nw": 2.12,
+  "win": 0.37,
+  "exp": 0.39,
+  "wexp": 0.25,
+  "Ry": 27.72,
+  "tot": 187.71,
+  "dd": 13.64,
+  "RyDD": 2.03
+ },
+ "retraso_30min_R_medio": 0.0042,
+ "retraso_30min_cartera": {
+  "n": 748,
+  "nw": 2.12,
+  "win": 0.36,
+  "exp": 0.38,
+  "wexp": 0.23,
+  "Ry": 25.76,
+  "tot": 174.45,
+  "dd": 15.29,
+  "RyDD": 1.69
+ },
+ "retraso_60min_R_medio": 0.0168,
+ "retraso_60min_cartera": {
+  "n": 748,
+  "nw": 2.12,
+  "win": 0.34,
+  "exp": 0.37,
+  "wexp": 0.23,
+  "Ry": 25.58,
+  "tot": 173.21,
+  "dd": 15.15,
+  "RyDD": 1.69
+ },
+ "t_iid_diaria": 2.41,
+ "t_newey_west_10": 2.26,
+ "bootstrap_Ry": {
+  "p5": 10.4,
+  "p50": 27.8,
+  "p95": 52.3,
+  "prob_neg": 0.0
+ },
+ "bootstrap_Ry_2024_26": {
+  "media": 6.4,
+  "p5": -6.0,
+  "p95": 22.2,
+  "prob_neg": 0.253
+ },
+ "variantes_guardadas": 1770,
+ "variantes_distintas": 1269,
+ "SR_diario_variantes": {
+  "media": 0.0155,
+  "sd": 0.021,
+  "max": 0.0636
+ },
+ "DSR": {
+  "500": {
+   "SR0_diario": 0.064,
+   "DSR": 0.057
+  },
+  "2500": {
+   "SR0_diario": 0.0735,
+   "DSR": 0.005
+  },
+  "10000": {
+   "SR0_diario": 0.0809,
+   "DSR": 0.0
+  }
+ },
+ "SR_cartera_diario": 0.0484,
+ "SR_cartera_anual": 0.92,
+ "asimetria": 29.56,
+ "curtosis": 1147.3,
+ "RC_estadistico": 3.16,
+ "RC_p": 0.206,
+ "SPA_p": 0.206,
+ "p_cartera_wf": 0.025,
+ "semanal": {
+  "SR_cartera": 0.124,
+  "SR_anual": 0.89,
+  "asim": 11.15,
+  "SR_variantes_sd": 0.056,
+  "SR_max": 0.18,
+  "DSR": {
+   "100": {
+    "SR0": 0.142,
+    "DSR": 0.242
+   },
+   "500": {
+    "SR0": 0.171,
+    "DSR": 0.035
+   },
+   "2500": {
+    "SR0": 0.197,
+    "DSR": 0.003
+   }
+  },
+  "RC_p": 0.12,
+  "SPA_p": 0.118
+ }
+}
