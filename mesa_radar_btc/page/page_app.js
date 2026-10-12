@@ -115,6 +115,37 @@
     box.append(ul);
   }
 
+
+  // ---------- histórico de operaciones (entradas avisadas con su salida, y oportunidades que no entraron) ----------
+  function renderHist() {
+    const tb = $('#histTbl'), kp = $('#histKpis'); if (!tb) return; tb.textContent = ''; kp.textContent = '';
+    const fdt = iso => new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+    const sig = S.signals.filter(g => g.real && !g.test), byId = new Map(sig.map(g => [g.id, g]));
+    const rows = [];
+    for (const g of sig) {
+      if (g.type === 'entrada') {
+        const out = byId.get(g.id.replace('-in-', '-out-')), ap = g.desk === 'radar';
+        rows.push({ at: g.at, agent: g.agent, kind: ap ? 'Aprendiz del Radar' : 'Estrategia propia', side: g.side, entry: g.entry, stop: g.stop, target: g.target, r: out ? out.r : null, estado: out ? (out.r > 0 ? 'Ganada' : 'Perdida') : 'Abierta', closeAt: out ? out.at : null, exit: out ? out.exit : null });
+      } else if (g.type === 'bloqueo') rows.push({ at: g.at, agent: g.agent, kind: 'No entró', estado: 'No entró', note: g.text });
+    }
+    rows.sort((x, y) => new Date(y.at) - new Date(x.at));
+    const cl = rows.filter(x => x.r != null), w = cl.filter(x => x.r > 0).length, s = cl.reduce((p, x) => p + x.r, 0);
+    const k = (v, l, c) => el('div', { class: 'kpi' }, [el('b', { class: c || '', text: v }), el('span', { text: l })]);
+    kp.append(k(String(rows.filter(x => x.entry != null).length), 'operaciones avisadas'), k(String(rows.filter(x => x.estado === 'Abierta').length), 'abiertas'),
+      k(cl.length ? Math.round(w / cl.length * 100) + '%' : '–', 'acierto (cerradas)'), k(cl.length ? sR(s) : '–', 'R total (cerradas)', cl.length ? (s >= 0 ? 'pos' : 'neg') : ''), k(cl.length ? sR(s / cl.length) : '–', 'R por operación'));
+    const head = el('tr', {}, ['Fecha', 'Agente', 'Tipo', 'Lado', 'Entrada', 'Stop', 'Objetivo', 'Salida', 'Resultado'].map((h, i) => el('th', { scope: 'col', class: i < 3 ? 'txt' : '', text: h })));
+    tb.append(el('thead', {}, [head])); const body = el('tbody'); tb.append(body);
+    if (!rows.length) { body.append(el('tr', {}, [el('td', { class: 'txt', colspan: '9', text: 'Todavía no hay operaciones en vivo. Cada entrada que te llegue por correo aparecerá aquí con su resultado.' })])); return; }
+    for (const x of rows.slice(0, 60)) {
+      const name = (AG[x.agent] && AG[x.agent].name) || x.agent;
+      if (x.estado === 'No entró') { body.append(el('tr', { class: 'muted' }, [el('td', { class: 'txt', text: fdt(x.at) }), el('td', { class: 'txt', text: name }), el('td', { class: 'txt', text: 'No entró' }), el('td', { class: 'txt', colspan: '6', text: x.note || '' })])); continue; }
+      const res = x.r != null ? sR(x.r) : 'Abierta';
+      body.append(el('tr', {}, [el('td', { class: 'txt', text: fdt(x.at) }), el('td', { class: 'txt', text: name }), el('td', { class: 'txt', text: x.kind }),
+        el('td', { class: x.side === 'long' ? 'pos' : 'neg', text: x.side === 'long' ? 'Largo' : 'Corto' }), el('td', { text: fmt(x.entry) }), el('td', { text: fmt(x.stop) }), el('td', { text: x.target ? fmt(x.target) : '–' }),
+        el('td', { text: x.exit != null ? fmt(x.exit) + ' · ' + fdt(x.closeAt) : '–' }), el('td', { class: x.r == null ? '' : x.r > 0 ? 'pos' : 'neg', text: res })]));
+    }
+  }
+
   // ---------- research ----------
   (function research() {
     const T = RD.tr, KS = TRADERS, wt = (k, x) => x[3] != null ? x[3] : RD.w[k], all = KS.flatMap(k => T[k].filter(x => x[3] !== 0).map(x => [x[0], x[1] * wt(k, x), x[1]])).sort((a, b) => a[0] - b[0]);
@@ -205,7 +236,7 @@
     if (!db) { $('#roundAt').textContent = 'sin conexión con la oficina en esta vista'; return; }
     S.db = db;
     db.collection('ticks').orderBy('at', 'desc').limit(96).onSnapshot(s => { S.ticks = s.docs.map(d => d.data()); all(); }, e => { $('#roundAt').textContent = 'sin conexión (' + e.code + ')'; });
-    db.collection('signals').orderBy('at', 'desc').limit(80).onSnapshot(s => { S.signals = s.docs.map(d => d.data()); renderBook(); emit(); }, () => {});
+    db.collection('signals').orderBy('at', 'desc').limit(400).onSnapshot(s => { S.signals = s.docs.map(d => d.data()); renderBook(); renderHist(); emit(); }, () => {});
     db.collection('trades').onSnapshot(s => { J.rows = s.docs.map(d => Object.assign({ id: d.id }, d.data())); renderJournal(); }, () => {});
   })();
 })();
