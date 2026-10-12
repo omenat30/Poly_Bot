@@ -31,6 +31,7 @@ Antes de adoptar cualquier cosa que cambie qué operaciones hace la mesa: estrat
    - **DUDOSO o DESCARTAR:** se documenta en `mesa_radar_btc/README.md` y no se toca la oficina.
 
 ## Reglas
+- **Lo reciente pesa más:** el veredicto usa el Sharpe y el R/año ponderados por recencia (vida media de 2 años, `--vida-media`), tanto en la elección como en la prueba. También descarta mejoras que dependen de un solo año.
 - La base es `mesa_radar_btc/research/v12g_trades.json`, la cartera en vivo. Si cambia la versión en vivo, se regenera con `research/export_v12g_trades.py`.
 - El inventario de pruebas está en `research/inventory.json` y el script lo suma solo. No lo bajes nunca.
 - Nada de reajustar después de ver 2022-26. Si se reajusta, es otra prueba más y cuenta en el inventario.

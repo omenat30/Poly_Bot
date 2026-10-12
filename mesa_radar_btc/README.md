@@ -68,6 +68,7 @@ Se pasa por `validar-estrategia` la alternativa v12a frente a la v12 en vivo. La
 - Año a año en 2022–26 mejora 2 de 5: 2022 (+3,9R) y 2025 (+13,8R). Empeora 2023, 2024 y 2026.
 - La mejora de Sharpe en 2022–26 se apoya casi entera en 2025.
 - La ventaja de la candidata sola no está demostrada (DSR 0,42).
+- Con ponderación por recencia (vida media de 2 años), en 2022–26 la v12a gana: Sharpe 0,76 frente a 0,65 y R/año +15,2 frente a +13,2. Pero es justo por 2025. En 2018–21 ponderado sigue perdiendo: Sharpe 1,57 frente a 1,68.
 - Veredicto del juez: **DESCARTAR**. Se mantiene la v12.
 
 ## Velas con machine learning (12 oct 2026, descartado)
