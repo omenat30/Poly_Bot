@@ -50,6 +50,26 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## Revisión de la v12a con el juez (12 oct 2026, descartada)
+
+Se pasa por `validar-estrategia` la alternativa v12a frente a la v12 en vivo. La v12a mantiene la tendencia propia de Vega a 0,75R y lleva los aprendices a 0,5R en lugar de 1R. No es una prueba limpia: sus cifras de 2022–26 ya se habían visto al elegir la v12. Cuenta como una prueba más en el inventario (3.071).
+
+| 2022–26 | v12 | v12a |
+|---|---|---|
+| Ops/semana | 2,28 | 2,65 |
+| Acierto | 44,1% | 45,7% |
+| R/op propio | +0,279 | +0,286 |
+| R/op cartera | +0,161 | +0,150 |
+| R/año | +19,1 | +20,8 |
+| Sharpe | 0,77 | 0,85 |
+| Caída | 14,3R | 12,5R |
+
+- En 2018–21 (elección) la v12a es peor: Sharpe 1,38 frente a 1,47 y R/año +20,0 frente a +21,8.
+- Año a año en 2022–26 mejora 2 de 5: 2022 (+3,9R) y 2025 (+13,8R). Empeora 2023, 2024 y 2026.
+- La mejora de Sharpe en 2022–26 se apoya casi entera en 2025.
+- La ventaja de la candidata sola no está demostrada (DSR 0,42).
+- Veredicto del juez: **DESCARTAR**. Se mantiene la v12.
+
 ## Velas con machine learning (12 oct 2026, descartado)
 
 Se buscó si la forma de las velas (cuerpo, mechas, rango, cierre en el rango y volumen de las últimas 6 velas, más patrones clásicos) da ventaja. Marcos de 15 min, 1 h y 4 h. Operación fija: stop de 1 ATR, objetivo de 1,5R. Costes de la Mesa y horario de oficina. Walk-forward anual con LightGBM (`cv_data.py`, `cv_wf.py`). Elección con 2018–21 y prueba en 2022–26.

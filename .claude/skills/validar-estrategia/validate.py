@@ -16,7 +16,7 @@ ap.add_argument('--pruebas', type=int, default=1); ap.add_argument('--no-registr
 A = ap.parse_args()
 base = json.load(open(os.path.join(RES, 'v12g_trades.json'))); END = base['end']; B = base['trades']
 C = json.load(open(A.cand)); C = C['trades'] if isinstance(C, dict) else C
-for x in C: x.setdefault('src', 'candidata'); x['w'] = A.peso
+for x in C: x.setdefault('src', 'candidata'); x.setdefault('w', A.peso)
 P1, P2 = (ts(2018), ts(2022)), (ts(2022), END)
 
 def port(items, a, b):
