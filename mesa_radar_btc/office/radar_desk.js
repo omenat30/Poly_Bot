@@ -1,8 +1,8 @@
-// Mesa de Radar de la oficina (v11): el modelo del Radar BTC 15m (motor y parámetros V20 idénticos a los del panel, extraídos sin tocarlo)
-// en la cabeza de los agentes. Velas de 15 min: 75 días de Bitstamp para calentar + Binance futuros en vivo (mismo empalme que el escáner del Radar).
+// Conocimiento del Radar en la oficina (v12): el motor del Radar BTC 15m (idéntico al del panel, que no se toca) corre dentro de la oficina
+// para saber qué posición llevaría el Radar y qué oportunidades de su modelo se queda sin tomar. Velas de 15 min: 75 días de Bitstamp para calentar + Binance futuros en vivo (mismo empalme que el escáner del Radar).
 // Uso como módulo: run(minPath, livePath, nowS) -> { R, B, problems, lastT }.  CLI: node radar_desk.js need <minutos.csv>  -> LOOKBACK=<h>h
 const fs = require('fs'), path = require('path');
-const S = require(path.join(__dirname, 'radar_engine.js'));
+const S = require(path.join(__dirname, 'radar_multi.js'));
 const V20 = { rr: 1.65, beAt: 0, fee: 0.0008, longPdhZone: [-0.5, 1], shortExtPdl: -4, longRsi4Max: 62, skipHourUTC: 21, trendMin: -1, poolZone: [0.7, 1.2], oppPool: { lo: 0.5, hi: 1, w: 2, lo2: 1, hi2: 1.5, w2: 3.5 }, sweep: { lb: 96, macdLo: 1.5, macdHi: 3 }, mr: { dev: 3, back: 1, win: 16, adxMax: 22, swLb: 32, swLo: 0.8, swHi: 3.5, pB1Max: 0.3 }, mrBB: { dev: 3.5, back: 1, win: 16, adxMax: 26, swLb: 32, swLo: 1, swHi: 3, pB1Max: 0.3 }, bw1Max: 0.97, volRegime: { spike: 1.75, calm: 0.8, calmTouchTol: 0.08, calmShortVolMin: 1.2 }, ichiCloudMax: 2.75, momo: { emaRoc: 1.4, adx4Rsi: 14 }, longAdx4Max: 32, skipHourUTC: null, quality: { min: -1 }, shortVolMin: 1.65, rangeAtrMax: 999, swp: { adxMax: 22, eq: 3, vr: 1.2, dropMax: 12 }, grade: { a: 6, b: 3 } };   // idénticos al escáner del Radar (V8 en radar_alert.js)
 const HIST_DAYS = 75;
 function loadMinutes(p, nowS) {
@@ -40,7 +40,7 @@ function run(minPath, livePath, nowS) {
   for (const t of keys) { const v = M.bars.get(t); B.t.push(t); B.o.push(v[0]); B.h.push(v[1]); B.l.push(v[2]); B.c.push(v[3]); B.v.push(v[4]); }
   let gaps = 0; for (let i = 1; i < B.t.length; i++) if (B.t[i] - B.t[i - 1] > 900) gaps += (B.t[i] - B.t[i - 1]) / 900 - 1;
   const lastT = B.t[B.t.length - 1]; if (lastT + 900 < Math.floor(nowS / 900) * 900) problems.push('la última vela de 15 min es antigua'); if (gaps > 4) problems.push(gaps + ' velas de 15 min sin datos');
-  const R = S.run(B, V20);
+  const R = S.run(B, Object.assign({}, V20, { multi: { max: 3 } }));
   return { R, B, problems, lastT };
 }
 module.exports = { run, V20 };

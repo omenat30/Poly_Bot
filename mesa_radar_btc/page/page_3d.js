@@ -130,7 +130,7 @@
   // butacas de trabajo y un pequeño archivo
   box(0.9, 0.45, 0.6, mat('sofaLab', '#0e5566'), 18.3, 0.23, 8.4); box(0.9, 0.5, 0.15, mat('sofaLab'), 18.3, 0.55, 8.72); box(0.5, 0.75, 0.55, mat('cab', '#9aa4ae'), 15.6, 0.38, 9.4);
 
-  // ---- puerta de la calle (pared izquierda): entran a las 7:00 y se van a casa a las 22:00, de lunes a viernes ----
+  // ---- puerta de la calle (pared izquierda): entran a las 7:00 y se van a casa a las 21:00, de lunes a viernes ----
   const DOOR = { x: -W / 2 + 0.11, z: 8.0, w: 1.1, in: [-W / 2 + 0.55, 8.0] };
   box(0.12, 2.35, 0.1, mat('frame'), DOOR.x + 0.02, 1.17, DOOR.z - DOOR.w / 2 - 0.05); box(0.12, 2.35, 0.1, mat('frame'), DOOR.x + 0.02, 1.17, DOOR.z + DOOR.w / 2 + 0.05); box(0.12, 0.1, DOOR.w + 0.2, mat('frame'), DOOR.x + 0.02, 2.36, DOOR.z);
   const hinge = new T3.Group(); hinge.position.set(DOOR.x + 0.06, 0, DOOR.z - DOOR.w / 2); scene.add(hinge);
@@ -385,13 +385,14 @@
     const { g, c, tx } = pmScr, t = S.ticks[0], sc = t && t.score && t.score.mesa;
     g.fillStyle = '#0d141c'; g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = '#e8eef5'; g.font = '700 24px monospace'; g.fillText('CARTERA · SALINAS', 18, 36);
-    let open = 0; for (const k of M.TRADERS) { const n = t && t.notes && t.notes[k]; if (n && n.pos && n.pos.live) open += ({ vega: 0.375, ortega: 0.5 })[k] || 0; }
-    open += ((t && t.radar && t.radar.open) || []).length; g.font = '18px monospace'; g.fillStyle = '#93a3b4'; g.fillText('Riesgo abierto', 18, 76);
+    let open = 0; for (const k of M.TRADERS) { const n = t && t.notes && t.notes[k]; if (n && n.pos && n.pos.live) open += ({ ortega: 1, paz: 0.5 })[k] || 0; }
+    for (const o of (t && t.radar && t.radar.open) || []) open += o.w || 1;
+    g.font = '18px monospace'; g.fillStyle = '#93a3b4'; g.fillText('Riesgo abierto', 18, 76);
     g.fillStyle = '#1f2a37'; g.fillRect(18, 86, 476, 26); g.fillStyle = open >= 2 ? '#f07466' : '#3cc49d'; g.fillRect(18, 86, 476 * Math.min(1, open / 2), 26);
     g.fillStyle = '#e8eef5'; g.fillText(open.toFixed(2).replace('.', ',') + 'R de 2R', 24, 106);
     g.fillStyle = '#93a3b4'; g.fillText('En vivo: ' + (sc && sc.n ? sc.n + ' cerradas · ' + (sc.sumW >= 0 ? '+' : '') + sc.sumW.toFixed(1).replace('.', ',') + 'R' : 'sin cerradas todavía'), 18, 146);
     g.fillText('Freno: riesgo a la mitad si cae > 8R', 18, 176);
-    [['Radar', 1], ['Ortega', 0.5], ['Vega', 0.375], ['Paz', 0], ['Ferrer', 0]].forEach(([n, w], i) => { g.fillStyle = '#7d9dff'; g.fillRect(18 + i * 98, 236 - w * 40, 76, w * 40); g.fillStyle = '#e8eef5'; g.font = '13px monospace'; g.fillText(n + ' ' + String(w).replace('.', ','), 18 + i * 98, 252); });
+    [['Ortega', 1], ['Paz', 0.5], ['Aprend.', 1], ['Vega pr.', 0], ['Ferrer', 0]].forEach(([n, w], i) => { g.fillStyle = '#7d9dff'; g.fillRect(18 + i * 98, 236 - w * 40, 76, w * 40); g.fillStyle = '#e8eef5'; g.font = '13px monospace'; g.fillText(n + ' ' + String(w).replace('.', ','), 18 + i * 98, 252); });
     tx.needsUpdate = true;
   }
   function drawML(S) {
@@ -415,7 +416,8 @@
     g.fillStyle = '#1e3a8a'; g.font = '700 30px sans-serif'; g.fillText('OPERATIVA BTC', 20, 42);
     g.font = '20px sans-serif'; const lines = [];
     for (const k of M.TRADERS) { const n = t && t.notes && t.notes[k], p = n && n.pos; lines.push([M.AG[k].name + ': ' + (p ? (p.side === 'short' ? 'CORTO ' : 'LARGO ') + Math.round(p.entry).toLocaleString('es-ES') + ' · stop ' + Math.round(p.stop).toLocaleString('es-ES') : 'fuera'), p ? (p.side === 'short' ? '#b5382d' : '#0b7a57') : '#334155']); }
-    lines.push(['Mesa del Radar 15m: 1R por señal', '#7c2d12']); lines.push(['Riesgo (Salinas): tope 2R abierto', '#7c2d12']); lines.push(['Stops en el exchange, solo a favor', '#7c2d12']);
+    for (const o of (t && t.radar && t.radar.open) || []) lines.push([M.AG[o.agent].name + ' (aprendiz): ' + (o.side < 0 ? 'CORTO ' : 'LARGO ') + Math.round(o.entry).toLocaleString('es-ES') + ' · obj. ' + Math.round(o.target).toLocaleString('es-ES'), o.side < 0 ? '#b5382d' : '#0b7a57']);
+    lines.push(['Aprendices del Radar: 1R, solo a su favor', '#7c2d12']); lines.push(['Riesgo (Salinas): tope 2R abierto', '#7c2d12']); lines.push(['Stops en el exchange, solo a favor', '#7c2d12']);
     lines.forEach(([s, col], i) => { g.fillStyle = col; g.fillText(s, 20, 84 + i * 37); });
     tx.needsUpdate = true;
   }
@@ -426,6 +428,8 @@
     g.fillStyle = '#e8eef5'; g.font = '600 18px monospace'; g.fillText(M.AG[k].role, 10, 32);
     const pts = S.ticks.slice(0, 40).reverse().map(t => t.price);
     if (pts.length > 1) { const lo = Math.min(...pts), hi = Math.max(...pts); g.strokeStyle = col; g.lineWidth = 2.5; g.beginPath(); pts.forEach((v, i) => { const x = 10 + i / (pts.length - 1) * 236, y = 140 - (v - lo) / (hi - lo || 1) * 80; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); }
+    const ap = ((S.ticks[0] && S.ticks[0].radar && S.ticks[0].radar.open) || []).find(o => o.agent === k);
+    if (ap) { g.fillStyle = '#3cc49d'; g.font = '14px monospace'; g.fillText('APRENDIZ · ' + (ap.side < 0 ? 'CORTO' : 'LARGO') + ' ' + Math.round(ap.entry).toLocaleString('es-ES'), 10, 54); tx.needsUpdate = true; return; }
     if (k === 'ferrer') { g.fillStyle = '#e2b44a'; g.font = '600 15px monospace'; g.fillText('EN SOMBRA · NO OPERA', 10, 154); tx.needsUpdate = true; return; }
     g.fillStyle = n && n.level === 'trade' ? '#3cc49d' : n && n.level === 'idea' ? '#7d9dff' : '#93a3b4'; g.font = '14px monospace'; g.fillText(n ? (n.level === 'trade' ? 'OPERANDO' : n.level === 'idea' ? 'VIGILANDO' : 'LEYENDO DATOS') : 'ESPERANDO RONDA', 10, 54);
     tx.needsUpdate = true;
@@ -473,7 +477,7 @@
     if (open !== officeOn || firstTheme) { officeOn = open; M.ORDER.forEach((k, i) => open ? setTimeout(() => comeBack(k), firstTheme ? 0 : i * 2500) : sendHome(k, firstTheme)); }
     firstTheme = false; updateNight();
     hemi.intensity = open ? 0.95 : 0.4; sun.intensity = open ? 0.85 : 0.18;
-    document.getElementById('capR').textContent = open ? 'Rondas cada 15 min · L–V 7:00–22:00' : 'Fuera de horario · en casa';
+    document.getElementById('capR').textContent = open ? 'Rondas cada 15 min · L–V 7:00–21:00' : 'Fuera de horario · en casa';
   }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
   new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -537,20 +541,20 @@
   function frame(ts) { requestAnimationFrame(frame); if (!visible) return; const dt = Math.min(0.05, (ts - last) / 1000); last = ts; step(dt); renderer.render(scene, cam); overlayPos(); }
   const seen = new Set(); scene.traverse(o => { const ms = o.material ? [].concat(o.material) : []; for (const m of ms) { if (seen.has(m) || [ledOn, ledAmber, ledOff].includes(m)) continue; seen.add(m); if (m.color && !m.map) m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear(); if (m.isMeshBasicMaterial && m.map) m.toneMapped = false; } });
   applyTheme(); onData(M.S); requestAnimationFrame(frame);
-  // reunión de la auditoría externa (semana del 11 de octubre de 2026): todos a la mesa central
+  // reunión de la v12 (semana del 12 de octubre de 2026): presentación de los aprendices del Radar
   setTimeout(() => {
     if (!AUDIT_MEET || !officeOn) return;
     meeting = true; let i = 0;
     for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 9), spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), i * 500); }
-    const L = [['calvo', 'Dos noticias. La auditoría: nuestra ventaja propia no estaba demostrada. Y hoy cambiamos de cabeza.', 'alerta'],
-      ['iturbe', 'Instalamos el modelo del Radar BTC 15m. Mismo código, sin tocar su panel. En 2022–26 la oficina hace +41,5R al año frente a +36,2R del Radar en su horario.', 'idea'],
-      ['ortega', 'Yo opero sus rupturas de 15 min, con stop y objetivo de 1,65R fijos. Y mantengo mi ruptura de 5 días a medio tamaño.', 'trade'],
-      ['paz', 'Yo, sus reversiones. Y si una señal va contra mi posición, la veto: ahí pierde −0,39R por operación.', 'trade'],
-      ['rios', 'Yo, sus barridos de liquidez. Vuelvo a operar.', 'trade'],
-      ['vega', 'Mi tendencia diaria queda a 0,375R: diversifica, que es lo que sube el Sharpe a 2,71.', 'ok'],
-      ['duarte', 'Probé a filtrar al Radar con mi modelo: parecía mejorar, pero miraba 45 minutos de futuro. Corregido, no aporta. Sigo en sombra.', 'ok'],
-      ['salinas', 'Cada señal del Radar 1R. Tope 2R y las paradas de siempre. Abrimos hasta las 22:00, como su escáner.', 'idea'],
-      ['calvo', 'En acierto aún no le ganamos al Radar: 54% frente a 56%. En todo lo demás, sí. Ahora a demostrarlo en real.', 'idea']];
+    const L = [['calvo', 'Reunión corta. Desde mañana hay tres aprendices del Radar BTC 15m en la mesa.', 'idea'],
+      ['iturbe', 'No copiamos al Radar. Cuando él está dentro, su modelo sigue viendo oportunidades que no puede operar: esas son las nuestras.', 'idea'],
+      ['vega', 'Yo, las rupturas. Solo a favor de la operación del Radar y antes de que haya hecho +0,8R. Mi tendencia propia pasa a sombra.', 'trade'],
+      ['paz', 'Yo, las reversiones. Y sigo con mi retroceso de 1 h a 0,5R.', 'trade'],
+      ['rios', 'Yo, los barridos de liquidez. Pocos, pero vuelvo a operar.', 'trade'],
+      ['ortega', 'Yo sigo con mi ruptura de 5 días: diversifico, opero días y no minutos.', 'ok'],
+      ['salinas', 'Cada oportunidad de aprendiz, 1R con stop y objetivo fijos. Tope 2R y las paradas de siempre.', 'idea'],
+      ['iturbe', 'Elegido con 2018–21. En 2022–26: 44% de acierto, +19R al año y Sharpe 0,77, frente a 43%, +14R y 0,59.', 'ok'],
+      ['calvo', 'Ojo: la caída sube a 14R y 2025 sale peor. Se valida en real con 100 operaciones.', 'alerta']];
     L.forEach(([k, txt, lv], j) => setTimeout(() => say(k, txt, lv, 8), 19000 + j * 8200));
     setTimeout(() => { meeting = false; M.ORDER.forEach(k => backToDesk(k)); }, 19000 + L.length * 8200 + 3000);
   }, 5000);

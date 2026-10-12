@@ -1,6 +1,8 @@
 // Motor de la estrategia (idéntico al del panel)
 // "Ruptura de momentum" — the single validated strategy, run causally over 15m candles.
 // Shared by the Node verification harness and the artifact. Higher timeframes are built from the 15m bars.
+// Conocimiento del Radar para la oficina (v12): motor del Radar BTC 15m (idéntico, parámetros V20) que además registra
+// las señales de su propio modelo que el Radar no puede tomar por tener ya una operación abierta (extra: true).
 (function (root) {
   'use strict';
   // v5 (6 oct 2026): v4 + longs only while the 4H trend is not mature (ADX(14) on 4H below 30).
@@ -222,7 +224,7 @@
     }
     const MR = P.mr, mrA = makeMr(P.mr, i => (B.c[i] - e20[i]) / A15[i]), mrB = makeMr(P.mrBB, i => (B.c[i] - sm20[i]) / sd20[i]);
     const e20 = ema(B.c, 20);
-    const trades = []; let open = null, pendC = null, pendLive = null; const swpSeen = [null, null, null];
+    const trades = []; let open = null, pendC = null, pendLive = null, pendCX = null, extras = []; const swpSeen = [null, null, null];
     const warm = Math.max(P.rangeBars + 2, 60);
     for (let i = warm; i < n; i++) {
       // manage the open trade on this bar (entry happened at the open of a later bar than its signal)
@@ -239,8 +241,19 @@
           if (P.beAt > 0 && !open.beOn && (open.best - open.entry) * side / open.risk >= P.beAt) { open.beOn = true; open.beIdx = i; open.sl = open.entry + side * P.fee * open.entry; }
         }
       }
+      // aprendices: gestionan las operaciones que el Radar no pudo tomar por estar ocupado
+      for (const x of extras) if (x.exitIdx == null && i >= x.entryIdx) {
+        const side = x.side, adverse = side === 1 ? B.l[i] : B.h[i], fav = side === 1 ? B.h[i] : B.l[i];
+        if ((adverse - x.sl) * side <= 0) close(x, i, x.sl, 'stop');
+        else if ((fav - x.tp) * side >= 0) close(x, i, x.tp, 'target');
+        else if (i - x.sigIdx >= P.maxBars) close(x, i, B.c[i], 'tiempo');
+      }
+      extras = extras.filter(x => x.exitIdx == null);
       const cx = ctxAt(i), mrSide = mrA.step(i, cx), mrSideB = mrB.step(i, cx);
-      if (open) continue;
+      const busy = !!open;
+      if (busy && !P.multi) continue;
+      const swpBak = busy ? swpSeen.slice() : null;
+      if (busy) { const q = pendC; pendC = pendCX; pendCX = q; }
       let s = null;
       if (pendC) { const c = pendC; pendC = null; if ((B.c[i] - c.ref) * c.s.side > 0) s = Object.assign({}, c.s, { confirmed: c.i }); }
       else {
@@ -253,6 +266,11 @@
       // v18: half-hour confirmation — a signal on a bar that does not close a 30m candle waits one bar and is taken only if that bar closes beyond the signal close
       if (s && P.confirm30 && (P.confirm30.all || (B.t[i] + F) % 1800 !== 0) && (!P.confirm30.kinds || P.confirm30.kinds.includes(s.kind || 'bo'))) { if (i + 1 < n) pendC = { s, i, ref: P.confirm30.ref === 'level' ? s.level : B.c[i] }; else pendLive = { s, i }; s = null; }
       }
+      if (busy) { const q = pendC; pendC = pendCX; pendCX = q; for (let k = 0; k < 3; k++) swpSeen[k] = swpBak[k];
+        if (s && i + 1 < n && extras.length < (P.multi.max || 99)) { const entry = B.o[i + 1], risk = P.stopAtr * s.h1atr;
+          const x = { extra: true, radarSide: open.side, ru: (B.c[i] - open.entry) * open.side / open.risk, side: s.side, sigIdx: i, sigT: B.t[i] + F, entryIdx: i + 1, entryT: B.t[i + 1], entry, risk, sl: entry - s.side * risk, sl0: entry - s.side * risk, tp: entry + s.side * P.rr * risk, level: s.level, kind: s.kind || 'bo', rvol: s.rvol, trend: s.trend };
+          if (P.grade) Object.assign(x, gradeAt(i, x.side)); extras.push(x); trades.push(x); }
+        continue; }
       if (s && i + 1 < n) {
         const entry = B.o[i + 1], risk = P.stopAtr * s.h1atr;
         open = { side: s.side, sigIdx: i, sigT: B.t[i] + F, entryIdx: i + 1, entryT: B.t[i + 1], entry, risk, best: entry, beOn: false,
@@ -426,6 +444,6 @@
              avgWin: w ? gp / w : 0, avgLoss: n - w ? gl / (n - w) : 0, avgBars: done.reduce((a, t) => a + t.bars, 0) / n };
   }
 
-  root.BTCStrategy = { run, stats, aggregate, DEF };
+  root.BTCStrategyMulti = { run, stats, aggregate, DEF };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
-module.exports = globalThis.BTCStrategy;
+module.exports = globalThis.BTCStrategyMulti;

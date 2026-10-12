@@ -1,4 +1,4 @@
-# Mesa Radar · operativa BTC (11 oct 2026, v11: el Radar en la cabeza de los agentes)
+# Mesa Radar · operativa BTC (12 oct 2026, v12: los aprendices del Radar)
 
 Esta carpeta contiene la investigación y el motor en vivo de la oficina de agentes Mesa Radar.
 
@@ -50,7 +50,52 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
-## v11 · el modelo del Radar BTC 15m en la cabeza de los agentes (11 oct 2026)
+## v12 · los aprendices del Radar (12 oct 2026)
+
+La v11 (los agentes copiaban las señales del Radar) se retiró: no se trataba de repetir al Radar sino de aprender de él y buscar **otras** oportunidades. El Radar BTC 15m solo lleva una operación a la vez. Mientras está dentro, su propio modelo sigue viendo señales que él ignora. Esas son las oportunidades de los aprendices. Nunca se reenvía una señal propia del Radar, y su panel no se toca.
+
+- **Motor.** `office/radar_multi.js` es el motor del Radar (`strat.js`, parámetros V20) con un modo `multi`. Sus operaciones propias quedan idénticas: 1.513 de 1.513 frente a `panel_trades`. Añade aparte las señales que el modelo ve estando dentro (`extra: true`), cada una con su stop, objetivo de 1,65R y cierre a las 72 h. Cada extra lleva `radarSide`, el sentido del Radar, y `ru`, lo que este lleva recorrido en R. `office/radar_desk.js` monta las velas de 15 min como el escáner (Bitstamp + Binance).
+- **La regla** (`mx_eval*.py`):
+  - Solo se toman las extras en el mismo sentido que la operación abierta del Radar y con `ru < 0,8`, y solo si la vela de señal cierra en horario de oficina (L–V 7–21 Madrid). Rupturas → Vega, reversiones → Paz, barridos → Ríos. Riesgo 1R.
+  - Contra el Radar pierden en los dos periodos. Con `ru ≥ 0,8` el movimiento ya está gastado.
+  - Solas: +0,12R por operación en 2018–21 y +0,27R en 2022–26, con un 54% de acierto.
+  - Con 1, 5 o 15 min de retraso (`mx_delay.py`), el acierto es del 54% y el resultado de +0,25 a +0,27R.
+- **La cartera** (`v12_eval*.py`, tope 2R y freno de 8R de Salinas). Entre cinco combinaciones, la elegida (v12g) es la de mejor Sharpe en 2018–21:
+  - Vega propia a sombra.
+  - Ortega 1R.
+  - Paz propia 0,5R.
+  - Aprendices 1R.
+
+| | Acierto | R/op (riesgo propio) | R/op (cartera) | R/año | Sharpe | Caída | Ops/sem |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| v12 · 2022–26 (prueba) | 44,1% | +0,279 | +0,161 | +19,1 | 0,77 | 14,3R | 2,3 |
+| v10 · 2022–26 | 42,5% | +0,286 | +0,137 | +13,6 | 0,59 | 12,4R | 1,9 |
+| v12 · 2018–21 (elección) | 40,2% | +0,547 | +0,315 | +21,8 | 1,47 | 9,7R | 1,3 |
+| v10 · 2018–21 | 35,1% | +0,610 | +0,324 | +18,0 | 1,28 | 8,8R | 1,1 |
+| v12 · 2020–26 | 42,9% | +0,385 | +0,223 | +26,3 | 1,12 | 14,3R | 2,3 |
+| v10 · 2020–26 | 40,2% | +0,389 | +0,196 | +20,2 | 0,91 | 12,4R | 2,0 |
+
+- **Por año (2020–26, R de cartera):**
+  - v12: +45,0, +41,6, +2,4, +65,7, +23,0, **−7,3**, +7,5.
+  - v10: +40,0, +32,1, −0,4, +56,3, +8,0, +0,7, +0,3.
+- **Lo que no mejora:**
+  - El R por operación en el riesgo de cada agente no sube.
+  - La caída máxima pasa de 12,4R a 14,3R.
+  - 2025 empeora.
+- **Alternativa más prudente (no elegida por la regla):** v12a, la v10 más los aprendices a 0,5R. Mejora a la v10 en los 7 años y en 2022–26 da Sharpe 0,85 y +20,8R/año. Pero en 2018–21 tuvo peor Sharpe (1,38).
+- **Descartado:**
+  - Un aprendiz genérico con aprendizaje automático sobre 47.667 situaciones del Radar (`rs_data.py`, `rs_model.py`): pierde fuera de muestra.
+  - El modelo del Radar en otras temporalidades.
+  - Otras salidas.
+  - El estado del Radar como filtro de las estrategias propias.
+- **En vivo** (`office/mesa_tick.js`, `rutina_mesa.txt`):
+  - Ronda cada 15 min, L–V de 7 a 21 h.
+  - Una extra entra si su vela de señal cerró hace menos de 20 min. Correo de entrada y de salida.
+  - Salinas cuenta lo abierto (propio y aprendices) contra el tope de 2R.
+  - Las decisiones de días anteriores se leen de la base de datos (`signals`). Si no constan, se repite la regla del tope.
+  - Probado con `page/replay12.sh` sobre septiembre de 2026.
+
+## v11 · el modelo del Radar BTC 15m en la cabeza de los agentes (11 oct 2026, retirada)
 
 Protocolo: reglas elegidas con 2018–21; 2022–26 es la prueba. Costes de la Mesa (0,14% + 0,03% en stops) y funding también para el Radar. Comparación en el mismo horario que el escáner real del Radar (L–V 7:00–22:00).
 
@@ -247,5 +292,5 @@ Hay un límite: las combinaciones que llegan a un 45% de acierto en 2022–26 se
 - `office/engine.js` porta las estrategias a JavaScript (Vega, Ortega, Paz y Ríos). `parity2.js` comprueba que reproduce el backtest operación por operación.
 - `page/` contiene las piezas de la página del artefacto; `build_mesa.sh` las monta.
 - `office/mesa_tick.js` hace una ronda completa. Une el histórico de Bitstamp con 167 h de Binance futuros (OpenMarket) y escribe la nota de cada agente, las señales y los correos.
-- `replay.sh` reproduce rondas cada 15 minutos sobre el histórico para probar los avisos.
+- `replay.sh` reproduce rondas cada 15 minutos sobre el histórico para probar los avisos; `page/replay12.sh` lo hace con la v12 (incluye las velas de 15 min de los aprendices).
 - Cuatro rutinas en Haiku, a :01, :16, :31 y :46 entre las 7:00 y las 19:59, ejecutan el script y escriben en la base de datos del artefacto Mesa Radar.
