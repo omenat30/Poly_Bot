@@ -2,7 +2,7 @@
 // ninguna ronda falla, ningún cierre sin su entrada registrada, ninguna decisión duplicada o saltada en horario de oficina, y que no hay correos.
 // Uso: node ala2/replay_ala2.js <bitstamp.csv> <dir_trabajo> <día1> [día2 ...]   (días AAAA-MM-DD, laborables)
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
-const [, , CSV, W, ...DAYS] = process.argv, OFF = process.env.ALA2_OFFICE || path.join(__dirname, '..', 'office');
+const [, , CSV, W, ...DAYS] = process.argv, OFF = process.env.ALA2_OFFICE || path.join(__dirname, 'office');
 fs.rmSync(W, { recursive: true, force: true }); fs.mkdirSync(W, { recursive: true });
 const txt = fs.readFileSync(CSV, 'utf8').trim().split('\n').slice(1).map(l => l.split(',').map(Number));
 const bars = (now, sec, hours, k) => { const M = new Map(); for (const a of txt) { if (a[0] + 60 > now || a[0] < now - hours * 3600) continue; const t = Math.floor(a[0] / sec) * sec, b = M.get(t); if (!b) M.set(t, [a[1], a[2], a[3], a[4], a[5]]); else { b[1] = Math.max(b[1], a[2]); b[2] = Math.min(b[2], a[3]); b[3] = a[4]; b[4] += a[5]; } } return [...M].sort((a, b) => a[0] - b[0]).map(([t, v]) => [new Date(t * 1000).toISOString().replace('.000', ''), v[0], v[1], v[2], v[3], +(v[4] * k).toFixed(3)]); };

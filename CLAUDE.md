@@ -4,7 +4,7 @@ Repositorio de Alberto. Contiene:
 - `fastloop_trader.py`, `config.json` y el `README.md` de la raíz: plantilla de Polymarket. Ya no se usa; no tocar salvo que lo pida.
 - `mesa_radar_audit/`: el **Radar BTC 15m** (motor `strat.js`, backtests y auditoría). Es otro producto con su propio panel. **No se toca el panel del Radar**: solo se lee su código.
 - `mesa_radar_btc/`: la **Mesa Radar**, la oficina de agentes que opera **solo BTC**. Es donde se trabaja casi siempre.
-- **Segunda ala (ML, simulación):** `office/ala2_*.js` y `office/ala2_models.json`, investigación y ensayo en `mesa_radar_btc/ala2/`. Independiente del ala 1: no lee `signals`, `ticks`, `calendar` ni `trades`; escribe solo en la colección `ala2`. Sin correos. Rutina horaria «Mesa Radar · Ala 2 ML» (instrucción en `ala2/rutina_ala2.txt`). Backtest sin ventaja (README): nada pasa a dinero real sin 100 operaciones simuladas positivas y aprobación del usuario.
+- **Segunda ala (ML): cerrada y descartada el 12 oct 2026.** Archivada en `mesa_radar_btc/ala2/` (código, investigación y ensayo). Su rutina está desactivada. No reabrir sin una razón nueva (datos de liquidez real o costes más bajos).
 
 Idioma: español, directo, honesto. Si una idea no funciona, se dice y se documenta como descartada.
 
@@ -23,8 +23,7 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 - `README.md` de `mesa_radar_btc`: historial de versiones con resultados. Se añade una sección por cada versión o estudio.
 
 ## Producción
-- Panel y base de datos: artefacto `https://claude.ai/artifact/MxNVeAAFhmbBYRg4qi6LJy`. Colecciones `ticks`, `signals`, `calendar` y `trades` (ala 1) y `ala2` (segunda ala); `trades` es del usuario y nunca se escribe.
-- El panel se monta con `page/build_mesa.sh`, que también añade `page_ala2.js` y `ala2_backtest.json`.
+- Panel y base de datos: artefacto `https://claude.ai/artifact/MxNVeAAFhmbBYRg4qi6LJy`. Colecciones `ticks`, `signals`, `calendar` y `trades`; `trades` es del usuario y nunca se escribe.
 - Se publica el HTML con `files` `office/*.js`. Las rutinas leen esos archivos del artefacto en cada ronda.
 - Correos: solo a albertomenat@gmail.com y solo los que produce el script (`EMAIL_JSON`).
 - OpenMarket: solo lectura (`points`).
@@ -58,7 +57,7 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 ## Estado tras la auditoría externa (12 oct 2026)
 - v12 congelada: un cambio cada vez, solo con veredicto ADOPTAR del juez y aprobación explícita del usuario.
 - Aspirantes en sombra (lo mide Iturbe en cada ronda, `notes.iturbe.val.retadores`): sin la estrategia propia de Paz y v12a. Promoción con 20+ operaciones cerradas, más R y aprobación del usuario.
-- Ya probado y descartado (no repetir sin una razón nueva): ML de 10 min con liquidez estimada y técnico (segunda ala, sin ventaja tras costes), ML sobre todas las extras del Radar, despido automático por racha, pesos adaptativos por resultado reciente, señales de fin de semana, velas/patrones, v12a.
+- Ya probado y descartado (no repetir sin una razón nueva): segunda ala de ML cada 10 min (a piñón y con aprendizaje error a error: sin ventaja tras costes), ML sobre todas las extras del Radar, despido automático por racha, pesos adaptativos por resultado reciente, señales de fin de semana, velas/patrones, v12a.
 
 ## Errores ya cometidos (no repetir)
 - La ronda envió un correo «placeholder». La instrucción de las rutinas prohíbe enviar nada que no salga de `EMAIL_JSON`.

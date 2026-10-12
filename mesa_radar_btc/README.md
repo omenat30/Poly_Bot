@@ -50,7 +50,14 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
-## Segunda ala · machine learning (12 oct 2026, fase 2: simulación)
+## Segunda ala · machine learning (12 oct 2026) · CERRADA Y DESCARTADA
+
+**Cerrada el 12 oct 2026 por decisión del usuario, antes de su primera ronda en vivo.** No hay ventaja fuera de muestra y aprender error a error no la crea.
+- La rutina está desactivada y el panel ya no tiene su sección.
+- El código queda archivado en `ala2/` (`ala2/office`, `ala2/page`) por si algún día hay datos de liquidez real o costes más bajos que justifiquen reabrirla.
+- No repetir sin una razón nueva.
+
+Lo que sigue es el registro de lo que se probó.
 
 Es un ala independiente de la primera: no ve sus señales, posiciones ni decisiones. Decide cada 10 minutos (L–V 7:00–20:50 Madrid) y registra todas las decisiones, también las de «sin operación». No envía correos y no opera con dinero.
 
