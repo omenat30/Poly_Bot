@@ -62,12 +62,14 @@ El dictamen de diez auditores externos dice que la mesa no ha demostrado una ven
 | Oportunidades del modelo en fin de semana | `au_finde.py` | 0,05 ops/semana | Descartada |
 | Mesa sin Paz propia | juez | 2022–26: Sharpe 1,12, acierto 48%, caída 8,9R; pero −63R en 2020–21, −33R en 2023, 1,0 ops/semana | Aspirante en sombra |
 
+Pesos de los aprendices (juez): (a) aprendices a 1,5R → 2022–26 Sharpe 0,71 frente a 0,77, caída 16,9R: descartada; (b) aprendices a 1,5R y Paz propia a 0,25R → 2022–26 Sharpe 1,00 y acierto 45,5%, pero 2018–21 Sharpe 0,74 frente a 1,47: descartada. Inventario: 3.083.
+
 Decisiones:
 - La v12 queda congelada.
 - Iturbe compara en cada ronda la versión vigente con el aspirante sin Paz propia (`notes.iturbe.val.aspirante`); se decide con 20 operaciones cerradas.
 - Cada cambio, uno a uno y aprobado por la auditoría.
 
-La visita está en la escena 3D: diez auditores y una reunión de unos 31 minutos durante la semana del 12 oct. El dictamen por agente está en la sección «Auditoría externa de la v12» del panel.
+La visita está en la escena 3D: diez auditores y una reunión de unos 31 minutos, una sola vez (12 oct, una vez por navegador). El dictamen por agente está en la sección «Auditoría externa de la v12» del panel.
 
 ## Revisión de la v12a con el juez (12 oct 2026, descartada)
 

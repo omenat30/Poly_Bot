@@ -306,7 +306,7 @@
   }
   // a new round: everyone back, reading data, then the ones with news present them at the table
   let lastTickAt = null, meeting = false;
-  const AUDIT_MEET = Date.now() < Date.UTC(2026, 9, 19) && !reduce;   // semana del 12 oct: los diez auditores externos visitan la oficina (reunión de 30 min)
+  const AUDIT_MEET = (() => { if (reduce || Date.now() >= Date.UTC(2026, 9, 13, 0, 0)) return false; try { return !localStorage.getItem('mesa-audit-v12'); } catch (e) { return true; } })();   // visita única de la auditoría externa (12 oct, una sola vez por navegador)
   let auditOn = false;
   function newRound(t) {
     if (!officeOn || auditOn) return;
@@ -630,7 +630,7 @@
     ['A1', 'Gracias. Se levanta la sesión.', 'ok']];
   const AUDIT_GAP = 38000, AUDIT_START = 26000;
   function auditMeeting() {
-    if (auditOn) return; auditOn = true; meeting = true; let i = 0;
+    if (auditOn) return; auditOn = true; meeting = true; let i = 0; try { localStorage.setItem('mesa-audit-v12', '1'); } catch (e) {}
     for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 9), spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), i * 500); }
     VIS.forEach((v, j) => { const a = (j + 0.5) / VIS.length * Math.PI, spot = [Math.cos(a) * 2.35, 3.6 + Math.sin(a) * 2.35];
       setTimeout(() => { v.g.visible = true; v.pos.set(DOOR.in[0], DOOR.in[1]); goV(v, spot, () => { v.state = 'talk'; v.yaw = yawTo(spot, [0, 3.6]); }); }, j * 1300); });
