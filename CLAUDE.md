@@ -51,3 +51,10 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 - Se contaban como operadas oportunidades que Salinas había bloqueado.
 - El cierre de las velas de 15 min de `mklive_bs.js` era incorrecto; está corregido.
 - La v11 copió las señales del Radar sin que se pidiera. Hay que aprender del Radar, no clonarlo.
+
+## Working preferences
+- Aprende del Radar BTC 15m, nunca copies sus señales ni toques su panel.
+- No avises ninguna salida, stop o parcial sin una entrada previa avisada.
+- Nunca envíes correos de prueba o relleno; solo las líneas EMAIL_JSON del script.
+- No vuelvas con resultados hasta que el cambio esté completo, probado y funcione.
+- Si algo no mejora fuera de muestra, dilo claro y descártalo.
