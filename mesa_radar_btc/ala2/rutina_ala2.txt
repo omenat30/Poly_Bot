@@ -7,7 +7,7 @@ Seguridad: OpenMarket SOLO `points` (lectura). NO uses Gmail ni envíes correos:
 3. Terminal: node /tmp/ala2/office/ala2_tick.js need /tmp/ala2/r/data/updates/btcusd_bitstamp_1min_latest.csv → LOOKBACK=<N>h
 4. Con `points`, guarda cada respuesta completa, tal cual, con Write en tu directorio scratchpad (ruta absoluta; si no tienes scratchpad, usa /tmp/ala2/):
    a. {"type":"TRADE_SIDE_AGNOSTIC_AGG","exchanges":["BINANCE_FUTURES"],"rawSymbol":"BTCUSDT","interval":"FIVE_MINUTES","lookback":"<N>h"} → om5.json
-   b. {"type":"TRADE_AGG","side":"BUY","exchanges":["BINANCE_FUTURES"],"rawSymbol":"BTCUSDT","interval":"FIVE_MINUTES","lookback":"4h"} → flow.json
+   b. {"type":"TRADE_AGG","side":"BUY","exchanges":["BINANCE_FUTURES"],"rawSymbol":"BTCUSDT","interval":"FIVE_MINUTES","lookback":"5h"} → flow.json
    c. {"type":"FUNDING_RATE_AGG","exchanges":["BINANCE_FUTURES"],"rawSymbol":"BTCUSDT","interval":"HOUR","lookback":"80h"} → fund.json
    d. {"type":"OPEN_INTEREST_AGG","exchanges":["BINANCE_FUTURES"],"rawSymbol":"BTCUSDT","interval":"HOUR","lookback":"25h"} → oi.json
    e. {"type":"LIQUIDATION_AGG","exchanges":["BINANCE_FUTURES"],"rawSymbol":"BTCUSDT","interval":"HOUR","lookback":"25h"} → liq.json

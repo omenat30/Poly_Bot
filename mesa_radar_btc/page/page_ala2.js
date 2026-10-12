@@ -29,24 +29,42 @@
     out.sort((a, b) => a.t - b.t); return { list: out, since: first };
   }
   // ---------- render ----------
+  const bookM = B => B && B.n ? { n: B.n, win: B.win / B.n, rop: B.sumR / B.n, payoff: B.win && B.n - B.win && B.gL ? (B.gW / B.win) / (B.gL / (B.n - B.win)) : null, pf: B.gL ? B.gW / B.gL : null, sum: B.sumR, dd: B.dd } : { n: 0 };
   function renderTop() {
     const e = A2.estado, d = A2.decisions[0], k = $('#a2Kpis'); if (!k) return; k.textContent = '';
     const kp = (v, l, c) => el('div', { class: 'kpi' }, [el('b', { class: c || '', text: v }), el('span', { text: l })]);
-    const ch = e && e.books && e.books.campeon, ex = e && e.books && e.books.retador;
-    k.append(kp(String(A2.decisions.length >= 300 ? '300+' : A2.decisions.length), 'decisiones registradas'), kp(ch ? String(ch.n) : '0', 'operaciones del campeón'), kp(ch ? sR(ch.sumR) : '–', 'R del campeón', ch && ch.sumR < 0 ? 'neg' : ch && ch.sumR > 0 ? 'pos' : ''),
-      kp(ex ? String(ex.n) : '0', 'señales del explorador'), kp(ex ? sR(ex.sumR) : '–', 'R del explorador', ex && ex.sumR < 0 ? 'neg' : ex && ex.sumR > 0 ? 'pos' : ''), kp(e ? (e.champion && e.champion.ver) || '–' : '–', 'versión del modelo'));
-    $('#a2Lagos').textContent = e ? e.lagos : 'Esperando la primera ronda del ala 2 (cada 10 minutos, L–V 7:00–20:50).';
+    const A = bookM(e && e.books && e.books.aprendiz), C = bookM(e && e.books && e.books.control);
+    k.append(kp(String(A2.decisions.length >= 300 ? '300+' : A2.decisions.length), 'decisiones (y operaciones)'), kp(String(A.n || 0), 'cerradas del aprendiz'), kp(A.n ? pc(A.win) : '–', 'acierto del aprendiz'),
+      kp(A.n ? sR(A.rop) : '–', 'R por operación (aprendiz)', A.rop > 0 ? 'pos' : A.rop < 0 ? 'neg' : ''), kp(C.n ? sR(C.rop) : '–', 'R por operación (control)', C.rop > 0 ? 'pos' : C.rop < 0 ? 'neg' : ''),
+      kp(e ? String(e.nLearn || 0) : '0', 'errores aprendidos'), kp(e ? String(e.abiertas || 0) : '0', 'operaciones abiertas'));
+    $('#a2Lagos').textContent = e ? e.lagos : 'Esperando la primera ronda del ala 2 (decisiones cada 10 minutos, L–V 7:00–20:50).';
     if (e && e.problems && e.problems.length) $('#a2Lagos').textContent += ' Aviso de datos: ' + e.problems.join('; ') + '.';
     const c = $('#a2Last'); c.textContent = '';
     if (!d) { c.append(el('p', { class: 'muted', text: 'Todavía no hay decisiones.' })); return; }
     const side = d.dir === 'largo' ? 'pos' : d.dir === 'corto' ? 'neg' : 'muted';
     c.append(el('div', { class: 'a2-dec' }, [el('span', { class: 'eyebrow', text: 'Decisión de las ' + d.hora + ' · ' + fdt(d.t).split(',')[0] }), el('b', { class: side, text: d.dir === 'ninguna' ? 'Sin operación' : (d.dir === 'largo' ? 'Largo' : 'Corto') + ' ' + fmt(d.entry) }),
-      el('span', { class: 'muted', text: 'Lado preferido: ' + (d.lado || '–') + ' · EV neto ' + sR(d.ev) + ' · probabilidad de acierto ' + pc(d.pw) + ' · confianza ' + (d.conf || '–') })]));
-    if (d.entry) { if (d.dir === 'ninguna') c.append(el('span', { class: 'eyebrow', text: 'Si hubiera entrado por el lado preferido' }));
-      c.append(el('div', { class: 'a2-grid' }, [['Entrada', fmt(d.entry)], ['Stop', fmt(d.sl)], ['Objetivo', fmt(d.tp)], ['R:R', '1:' + dec(d.rr, 1)], ['Riesgo', (d.riesgoPct != null ? String(d.riesgoPct).replace('.', ',') + '% · ' : '') + fmt(d.riesgoEUR) + ' €'], ['Costes', sR(d.costesR ? -d.costesR : null)]].map(([a, b]) => el('div', {}, [el('span', { class: 'muted', text: a }), el('b', { text: b })]))));
-      c.append(el('span', { class: 'muted', style: 'font-size:.78rem', text: 'Riesgo en euros sobre un capital teórico de 10.000 €.' })); }
-    c.append(el('p', { text: d.motivo || '' }), el('p', { class: d.dir === 'ninguna' ? 'a2-veto' : 'a2-ok', text: 'Beltrán · ' + (d.beltran || '–') }));
-    if (d.retador) c.append(el('p', { class: 'muted', text: 'Explorador de Lagos: ' + (d.retador.dir === 'ninguna' ? 'sin señal' + (d.retador.veto ? ' (' + d.retador.veto + ')' : '') : d.retador.dir + ' (EV ' + sR(d.retador.ev) + ', solo para aprender)') }));
+      el('span', { class: 'muted', text: 'Previsión del aprendiz ' + sR(d.ev) + ' · probabilidad de acierto ' + pc(d.pw) + ' · confianza ' + (d.conf || '–') + (d.aprendidos != null ? ' · ' + d.aprendidos + ' errores aprendidos' : '') })]));
+    if (d.entry) { c.append(el('div', { class: 'a2-grid' }, [['Entrada', fmt(d.entry)], ['Stop', fmt(d.sl)], ['Objetivo', fmt(d.tp)], ['R:R', '1:' + dec(d.rr, 1)], ['Riesgo', (d.riesgoPct != null ? String(d.riesgoPct).replace('.', ',') + '% · ' : '') + fmt(d.riesgoEUR) + ' €'], ['Costes', sR(d.costesR ? -d.costesR : null)]].map(([a, b]) => el('div', {}, [el('span', { class: 'muted', text: a }), el('b', { text: b })]))));
+      c.append(el('span', { class: 'muted', style: 'font-size:.78rem', text: 'Operación simulada. Riesgo en euros sobre un capital teórico de 10.000 €.' })); }
+    c.append(el('p', { text: d.motivo || '' }));
+    if (d.control) c.append(el('p', { class: 'muted', text: 'Control (sin aprender): ' + d.control.lado + ' (' + sR(d.control.ev) + ').' + (d.campeon ? ' Campeón: ' + (d.campeon.dir === 'ninguna' ? 'no entra' : d.campeon.dir) + '.' : '') }));
+    c.append(el('p', { class: d.campeon && d.campeon.dir !== 'ninguna' ? 'a2-ok' : 'a2-veto', text: 'Beltrán · ' + (d.beltran || '–') }));
+    if (d.cierre) c.append(el('p', { class: d.cierre.r > 0 ? 'pos' : 'neg', text: 'Cerrada: ' + d.cierre.motivo + ' ' + sR(d.cierre.r) }));
+  }
+  function renderLearnChart() {   // ¿aprende? R medio por día del aprendiz frente al control
+    const box = $('#a2Learn'); if (!box) return; box.textContent = ''; const e = A2.estado;
+    const A = (e && e.books && e.books.aprendiz && e.books.aprendiz.dias) || {}, C = (e && e.books && e.books.control && e.books.control.dias) || {};
+    const days = [...new Set(Object.keys(A).concat(Object.keys(C)))].sort();
+    if (!days.length) { box.append(el('p', { class: 'muted', text: 'Aún no hay operaciones cerradas. Cada día aparecerá aquí el R medio por operación del aprendiz y del control: si el aprendiz aprende, su línea irá por encima.' })); return; }
+    const cum = (D) => { let n = 0, s_ = 0; return days.map(d => { const x = D[d]; if (x) { n += x[0]; s_ += x[2]; } return n ? s_ / n : 0; }); };
+    const a = cum(A), c = cum(C), all = a.concat(c, [0]), lo = Math.min(...all), hi = Math.max(...all), W = 640, H = 200, px = i => 40 + (days.length < 2 ? 0 : i * (W - 60) / (days.length - 1)), py = v => 15 + (hi - v) * (H - 40) / Math.max(1e-9, hi - lo);
+    const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'R medio acumulado por operación, aprendiz frente a control');
+    const ln = (pts, col, dash) => { const p_ = document.createElementNS(ns, 'polyline'); p_.setAttribute('points', pts.map((v, i) => px(i) + ',' + py(v)).join(' ')); p_.setAttribute('fill', 'none'); p_.setAttribute('stroke', col); p_.setAttribute('stroke-width', '2.5'); if (dash) p_.setAttribute('stroke-dasharray', '5 4'); svg.append(p_); };
+    const z = document.createElementNS(ns, 'line'); z.setAttribute('x1', 40); z.setAttribute('x2', W - 20); z.setAttribute('y1', py(0)); z.setAttribute('y2', py(0)); z.setAttribute('stroke', 'currentColor'); z.setAttribute('opacity', '.3'); svg.append(z);
+    const tx = (x, y, t, anchor) => { const q = document.createElementNS(ns, 'text'); q.setAttribute('x', x); q.setAttribute('y', y); if (anchor) q.setAttribute('text-anchor', anchor); q.textContent = t; svg.append(q); };
+    tx(36, py(hi) + 4, sR(hi), 'end'); tx(36, py(lo) + 4, sR(lo), 'end'); tx(36, py(0) + 4, '0', 'end'); tx(px(0), H - 4, days[0].slice(5)); tx(px(days.length - 1), H - 4, days[days.length - 1].slice(5), 'end');
+    ln(c, 'var(--muted)', true); ln(a, 'var(--accent)');
+    box.append(svg, el('p', { class: 'muted', style: 'font-size:.85rem', text: 'Línea continua: aprendiz (aprende de cada error). Discontinua: control (mismos modelos, sin aprender). R medio acumulado por operación.' }));
   }
   function renderLog() {
     const tb = $('#a2Log'); if (!tb) return; tb.textContent = '';
@@ -62,42 +80,37 @@
     }
   }
   function renderTrades() {
-    const tb = $('#a2Trades'); if (!tb) return; tb.textContent = ''; const e = A2.estado;
-    tb.append(el('thead', {}, [el('tr', {}, ['Abierta', 'Cartera', 'Lado', 'Entrada', 'Stop', 'Objetivo', 'MFE / MAE', 'Previsto', 'Resultado', 'Cierre'].map((h, i) => el('th', { scope: 'col', class: i < 2 ? 'txt' : '', text: h })))]));
-    const body = el('tbody'), rows = []; tb.append(body);
-    for (const d of A2.decisions) if (d.dir !== 'ninguna') rows.push({ t: d.t, who: 'Campeón', side: d.dir, entry: d.entry, sl: d.sl, tp: d.tp, ev: d.ev, c: d.cierre, open: d.estado === 'abierta' });
-    if (e && e.books && e.books.retador) { const B = e.books.retador; for (const h of B.hist.slice(-30)) rows.push({ t: h[0], who: 'Explorador', side: h[1] === 1 ? 'largo' : 'corto', c: { r: h[2], at: h[4] } }); if (B.open) rows.push({ t: B.open.t, who: 'Explorador', side: B.open.side === 1 ? 'largo' : 'corto', entry: B.open.entry, sl: B.open.sl, tp: B.open.tp, ev: B.open.ev, open: true, mfe: B.open.mfe, mae: B.open.mae, rNow: B.open.rNow }); }
-    if (e && e.books && e.books.campeon && e.books.campeon.open) { const o = e.books.campeon.open, r = rows.find(x => x.who === 'Campeón' && x.t === o.t); if (r) Object.assign(r, { mfe: o.mfe, mae: o.mae, rNow: o.rNow }); }
-    rows.sort((a, b) => b.t - a.t);
-    if (!rows.length) { body.append(el('tr', {}, [el('td', { class: 'txt', colspan: '10', text: 'Ninguna operación simulada todavía. Beltrán solo aprueba si el EV neto calibrado supera +0,05R.' })])); return; }
-    for (const x of rows.slice(0, 40)) {
-      const mm = x.c && x.c.mfe != null ? dec(x.c.mfe) + ' / ' + dec(x.c.mae) : x.mfe != null ? dec(x.mfe) + ' / ' + dec(x.mae) : '–';
-      body.append(el('tr', {}, [el('td', { class: 'txt', text: fdt(x.t) }), el('td', { class: 'txt', text: x.who }), el('td', { class: x.side === 'largo' ? 'pos' : 'neg', text: x.side }), el('td', { text: fmt(x.entry) }), el('td', { text: fmt(x.sl) }), el('td', { text: fmt(x.tp) }), el('td', { text: mm }), el('td', { text: sR(x.ev) }),
-        el('td', { class: x.c ? (x.c.r > 0 ? 'pos' : 'neg') : '', text: x.c ? sR(x.c.r) : x.open ? 'abierta ' + sR(x.rNow) : '–' }), el('td', { text: x.c ? (x.c.motivo ? x.c.motivo + ' · ' : '') + fdt(typeof x.c.at === 'number' ? x.c.at : x.c.at) : '–' })]));
-    }
+    const tb = $('#a2Trades'); if (!tb) return; tb.textContent = '';
+    tb.append(el('thead', {}, [el('tr', {}, ['Abierta', 'Lado', 'Entrada', 'Stop', 'Objetivo', 'Previsto', 'Resultado', 'MFE / MAE', 'Control', 'Campeón', 'Cierre'].map((h, i) => el('th', { scope: 'col', class: i < 1 ? 'txt' : '', text: h })))]));
+    const body = el('tbody'), rows = A2.decisions.filter(d => d.entry && d.dir !== 'ninguna'); tb.append(body);
+    if (!rows.length) { body.append(el('tr', {}, [el('td', { class: 'txt', colspan: '11', text: 'Ninguna operación simulada todavía.' })])); return; }
+    for (const d of rows.slice(0, 40)) { const x = d.cierre;
+      body.append(el('tr', {}, [el('td', { class: 'txt', text: fdt(d.t) }), el('td', { class: d.dir === 'largo' ? 'pos' : 'neg', text: d.dir }), el('td', { text: fmt(d.entry) }), el('td', { text: fmt(d.sl) }), el('td', { text: fmt(d.tp) }), el('td', { text: sR(d.ev) }),
+        el('td', { class: x ? (x.r > 0 ? 'pos' : 'neg') : '', text: x ? sR(x.r) : 'abierta' }), el('td', { text: x ? dec(x.mfe) + ' / ' + dec(x.mae) : '–' }), el('td', { text: x ? sR(x.controlR) : '–' }), el('td', { text: x && x.campeonR != null ? sR(x.campeonR) : d.campeon && d.campeon.dir !== 'ninguna' ? 'abierta' : '–' }),
+        el('td', { text: x ? x.motivo + ' · ' + fdt(x.at) : '–' })])); }
   }
   function renderComp() {
     const tb = $('#a2Comp'); if (!tb) return; tb.textContent = ''; const e = A2.estado, nowS = Date.now() / 1000;
     const H = ['', 'Ops', 'Ops/sem', 'Acierto', 'Payoff', 'R/op neto', 'R/op antes de costes', 'PF', 'R total o R/año', 'Caída máx.', 'Sharpe'];
     tb.append(el('thead', {}, [el('tr', {}, H.map((h, i) => el('th', { scope: 'col', class: i ? '' : 'txt', text: h })))]));
     const body = el('tbody'); tb.append(body);
-    const row = (name, m, extra = {}) => body.append(el('tr', { class: extra.cls || '' }, [el('td', { class: 'txt', text: name }), el('td', { text: m.n != null ? String(m.n) : '–' }), el('td', { text: dec(m.sem) }), el('td', { text: pc(m.win) }), el('td', { text: dec(m.payoff) }),
+    const row = (name, m, extra = {}) => body.append(el('tr', { class: extra.cls || '' }, [el('td', { class: 'txt', text: name }), el('td', { text: m.n != null ? String(m.n) : '–' }), el('td', { text: dec(m.sem, 1) }), el('td', { text: pc(m.win) }), el('td', { text: dec(m.payoff) }),
       el('td', { class: m.rop > 0 ? 'pos' : m.rop < 0 ? 'neg' : '', text: sR(m.rop) }), el('td', { text: sR(m.ropBruto) }), el('td', { text: dec(m.pf) }), el('td', { text: m.ry != null ? sR(m.ry) + '/año' : sR(m.sum) }), el('td', { text: m.dd != null ? dec(m.dd, 1) + 'R' : '–' }), el('td', { text: m.sh != null ? dec(m.sh) : m.n >= 20 ? '–' : 'pocas ops' })]));
     const a1 = ala1Live(); if (a1) row('Ala 1 · v12 en vivo', metrics(a1.list, a1.since < Infinity ? (nowS - a1.since) / 604800 : 0));
-    const wk = e && e.goLive ? (nowS - e.goLive) / 604800 : 0, live = B => (B ? B.hist : []).map(h => ({ r: h[2] * h[3], t: h[4] }));
-    row('Ala 2 · campeón en simulación', metrics(live(e && e.books && e.books.campeon), wk)); row('Ala 2 · explorador en simulación', metrics(live(e && e.books && e.books.retador), wk));
+    const wk = e && e.goLive ? Math.max((nowS - e.goLive) / 604800, 1 / 7) : 0, live = k => { const m = bookM(e && e.books && e.books[k]); if (m.n) m.sem = m.n / wk; return m; };
+    row('Ala 2 · aprendiz (vivo, simulado)', live('aprendiz')); row('Ala 2 · control sin aprender (vivo, simulado)', live('control')); row('Ala 2 · campeón de Beltrán (vivo, simulado)', live('campeon'));
     row('Ala 1 · v12 backtest 2022–26', { n: null, sem: 2.3, win: 0.441, rop: 0.279, ry: 19.1, dd: 14.3, sh: 0.77 }, { cls: 'a2-bt' });
-    if (BT) { row('Ala 2 · campeón backtest 2022–26', BT.campeon.p2226, { cls: 'a2-bt' }); row('Ala 2 · explorador backtest 2022–26', BT.retador.p2226, { cls: 'a2-bt' }); }
-    // estabilidad fuera de muestra y régimen
+    if (BT && BT.pinon) { row('Ala 2 · aprendiz backtest 2022–26', BT.pinon.aprendiz, { cls: 'a2-bt' }); row('Ala 2 · control backtest 2022–26', BT.pinon.control, { cls: 'a2-bt' }); }
+    if (BT) row('Ala 2 · campeón backtest 2022–26', BT.campeon.p2226, { cls: 'a2-bt' });
     const y = $('#a2Years'); if (y && BT) { y.textContent = ''; const yrs = Object.keys(BT.campeon['años']);
       y.append(el('thead', {}, [el('tr', {}, [el('th', { class: 'txt', text: 'Campeón (walk-forward)' })].concat(yrs.map(k => el('th', { text: k }))))]));
       const b = el('tbody'); y.append(b);
-      for (const [lab, f] of [['Ops', s => s ? String(s.n) : '0'], ['Acierto', s => s ? pc(s.win) : '–'], ['R/op', s => s ? sR(s.rop) : '–'], ['R/año', s => s ? sR(s.ry) : '–']]) b.append(el('tr', {}, [el('td', { class: 'txt', text: lab })].concat(yrs.map(k => el('td', { text: f(BT.campeon['años'][k]) })))));
+      for (const [lab, f] of [['Ops', s_ => s_ ? String(s_.n) : '0'], ['Acierto', s_ => s_ ? pc(s_.win) : '–'], ['R/op', s_ => s_ ? sR(s_.rop) : '–'], ['R/año', s_ => s_ ? sR(s_.ry) : '–']]) b.append(el('tr', {}, [el('td', { class: 'txt', text: lab })].concat(yrs.map(k => el('td', { text: f(BT.campeon['años'][k]) })))));
     }
-    const rg = $('#a2Reg'); if (rg && BT) { rg.textContent = ''; rg.append(el('thead', {}, [el('tr', {}, ['Régimen (2022–26)', 'Campeón ops', 'Acierto', 'R/op', 'Explorador ops', 'Acierto', 'R/op'].map((h, i) => el('th', { class: i ? '' : 'txt', text: h })))]));
-      const b = el('tbody'); rg.append(b); for (const k of Object.keys(BT.campeon.regimen)) { const c = BT.campeon.regimen[k], x = BT.retador.regimen[k]; b.append(el('tr', {}, [el('td', { class: 'txt', text: k }), el('td', { text: String(c.n) }), el('td', { text: pc(c.win) }), el('td', { text: sR(c.rop) }), el('td', { text: String(x.n) }), el('td', { text: pc(x.win) }), el('td', { text: sR(x.rop) })])); } }
+    const rg = $('#a2Reg'); if (rg && BT) { rg.textContent = ''; rg.append(el('thead', {}, [el('tr', {}, ['Régimen (2022–26)', 'Campeón ops', 'Acierto', 'R/op'].map((h, i) => el('th', { class: i ? '' : 'txt', text: h })))]));
+      const b = el('tbody'); rg.append(b); for (const k of Object.keys(BT.campeon.regimen)) { const c = BT.campeon.regimen[k]; b.append(el('tr', {}, [el('td', { class: 'txt', text: k }), el('td', { text: String(c.n) }), el('td', { text: pc(c.win) }), el('td', { text: sR(c.rop) })])); } }
   }
-  function renderAll() { renderTop(); renderLog(); renderTrades(); renderComp(); scene3d.update(); }
+  function renderAll() { renderTop(); renderLearnChart(); renderLog(); renderTrades(); renderComp(); scene3d.update(); }
 
   // ---------- la sala del ala 2 en 3D ----------
   const scene3d = (() => {
@@ -153,20 +166,20 @@
       return {
         montes: d.liq ? 'Flujo 1 h ' + n2(d.liq.imb60) + (d.liq.real && d.liq.real.compra1h != null ? ' · compra real ' + pc(d.liq.real.compra1h) : '') + ' · largo ' + n2(d.montes && d.montes.L) + ' / corto ' + n2(d.montes && d.montes.S) : 'Sin datos de liquidez.',
         aranda: d.tec ? 'RSI 1 h ' + dec(d.tec.rsi1h, 0) + ' · rango 24 h ' + pc(d.tec.pos24h) + ' · largo ' + n2(d.aranda && d.aranda.L) + ' / corto ' + n2(d.aranda && d.aranda.S) : 'Sin datos técnicos.',
-        beltran: (d.beltran || 'Sin decisión').replace(/^Veto: /, 'Veto: '), lagos: d.hora + ': ' + (d.dir === 'ninguna' ? 'sin operación' : d.dir + ' en ' + fmt(d.entry)) + ' · EV ' + sR(d.ev) + ' · ' + (d.ver || '')
+        beltran: (d.beltran || 'Sin decisión').split('. La operación')[0], lagos: d.hora + ': ' + (d.dir === 'ninguna' ? 'sin operación' : d.dir + ' en ' + fmt(d.entry)) + ' · previsto ' + sR(d.ev) + ' · ' + (d.aprendidos || 0) + ' errores aprendidos'
       };
     }
     function drawWall() {
       const g = wall.g, W = 1024, H = 400; g.fillStyle = '#0b1220'; g.fillRect(0, 0, W, H); g.fillStyle = '#7dd3fc'; g.font = '600 26px monospace'; g.fillText('DECISIONES CADA 10 MIN · ' + (A2.estado && A2.estado.champion ? A2.estado.champion.ver : ''), 24, 40);
       const rows = A2.decisions.slice(0, 9); g.font = '22px monospace';
-      rows.forEach((d, i) => { const y = 82 + i * 34; g.fillStyle = '#94a3b8'; g.fillText(d.hora || '', 24, y); g.fillStyle = d.dir === 'largo' ? '#3cc49d' : d.dir === 'corto' ? '#f07466' : '#cbd5e1'; g.fillText((d.dir || '').padEnd(8), 120, y); g.fillStyle = '#e2e8f0'; g.fillText('EV ' + sR(d.ev).padStart(7) + '  p ' + pc(d.pw).padStart(4) + '  ' + (d.reg ? d.reg.nombre : '').slice(0, 34), 260, y); });
+      rows.forEach((d, i) => { const y = 82 + i * 34; g.fillStyle = '#94a3b8'; g.fillText(d.hora || '', 24, y); g.fillStyle = d.dir === 'largo' ? '#3cc49d' : d.dir === 'corto' ? '#f07466' : '#cbd5e1'; g.fillText((d.dir || '').padEnd(8), 120, y); g.fillStyle = '#e2e8f0'; g.fillText('prev ' + sR(d.ev).padStart(7) + '  p ' + pc(d.pw).padStart(4) + '  ' + (d.reg ? d.reg.nombre : '').slice(0, 34), 260, y); });
       if (!rows.length) { g.fillStyle = '#cbd5e1'; g.fillText('Esperando la primera ronda…', 24, 100); }
       wall.tx.needsUpdate = true;
       const b = rb.g; b.fillStyle = '#f8f9f6'; b.fillRect(0, 0, 512, 320); b.fillStyle = '#b45309'; b.font = '700 28px sans-serif'; b.fillText('BELTRÁN · LÍMITES', 20, 42); b.fillStyle = '#334155'; b.font = '21px sans-serif';
-      const ch = A2.estado && A2.estado.books && A2.estado.books.campeon;
-      ['1 posición a la vez · 1R = 0,5%', 'EV neto calibrado > +0,05R', 'Parada diaria −2R', 'Mitad de riesgo si cae > 8R', 'Suspensión si cae 12R', 'Cartera: ' + (ch ? sR(ch.eq) + ' · máx ' + sR(ch.peak) : '–')].forEach((t, i) => b.fillText(t, 22, 86 + i * 37)); rb.tx.needsUpdate = true;
+      const ch = A2.estado && A2.estado.books && A2.estado.books.campeon, ap = A2.estado && A2.estado.books && A2.estado.books.aprendiz;
+      ['Aprendiz: 1 operación cada 10 min', 'Campeón: EV calibrado > +0,05R', 'Campeón: 1 posición, parada −2R/día', 'Mitad de riesgo si cae > 8R', 'Aprendiz: ' + (ap && ap.n ? ap.n + ' ops, ' + sR(ap.sumR / ap.n) + '/op' : '–'), 'Campeón: ' + (ch ? sR(ch.eq) + ' · máx ' + sR(ch.peak) : '–')].forEach((t, i) => b.fillText(t, 22, 86 + i * 37)); rb.tx.needsUpdate = true;
       for (const k of Object.keys(scr)) { const c = scr[k].g; c.fillStyle = '#0b1220'; c.fillRect(0, 0, 256, 160); c.fillStyle = AGENTS[k].color === '#1f2937' ? '#7dd3fc' : AGENTS[k].color; c.font = '600 18px sans-serif'; c.fillText(AGENTS[k].role, 12, 26); c.strokeStyle = '#3cc49d'; c.lineWidth = 2; c.beginPath();
-        const xs = A2.decisions.slice(0, 24).reverse(); xs.forEach((d, i) => { const v = k === 'montes' ? (d.montes ? d.montes.L - d.montes.S : 0) : k === 'aranda' ? (d.aranda ? d.aranda.L - d.aranda.S : 0) : k === 'beltran' ? (d.ev || 0) : (d.lagos ? d.lagos.L - d.lagos.S : 0); const x = 12 + i * 10, y = 100 - v * 60; i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); scr[k].tx.needsUpdate = true; }
+        const xs = A2.decisions.slice(0, 24).reverse(); xs.forEach((d, i) => { const v = k === 'montes' ? (d.montes ? d.montes.L - d.montes.S : 0) : k === 'aranda' ? (d.aranda ? d.aranda.L - d.aranda.S : 0) : k === 'beltran' ? (d.campeon ? d.campeon.ev : 0) : (d.lagos ? d.lagos.L - d.lagos.S : 0); const x = 12 + i * 10, y = 100 - v * 60; i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); scr[k].tx.needsUpdate = true; }
     }
     const open = () => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' }).formatToParts(new Date()), o = {}; p.forEach(x => o[x.type] = x.value); const h = +o.hour; return !['Sat', 'Sun'].includes(o.weekday) && h >= 7 && h < 21; };
     function update() { latest = A2.decisions[0] || null; drawWall(); const L = lines(); if (L) for (const k of Object.keys(L)) { people[k].say = L[k]; } $('#a2Night').hidden = open(); for (const p of Object.values(people)) p.g.visible = open(); }

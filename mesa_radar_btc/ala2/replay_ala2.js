@@ -11,7 +11,7 @@ const DB = new Map(); let est = {}, runs = 0, fails = [], emails = 0;
 for (const D of DAYS) for (let h = 5; h <= 19; h++) for (const m of [7, 17, 27, 37, 47, 57]) {
   const now = Date.parse(`${D}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`) / 1000;
   const o5 = bars(now, 300, 22, 110); wr('om5.json', ['t', 'open', 'high', 'low', 'close', 'volume'], o5);
-  wr('flow.json', ['t', 'open', 'high', 'low', 'close', 'volume'], o5.slice(-48).map(r => [r[0], r[1], r[2], r[3], r[4], +(r[5] * 0.5).toFixed(3)]));
+  wr('flow.json', ['t', 'open', 'high', 'low', 'close', 'volume'], o5.slice(-60).map(r => [r[0], r[1], r[2], r[3], r[4], +(r[5] * 0.5).toFixed(3)]));
   const fr = []; for (let t = Math.floor(now / 3600) * 3600 - 80 * 3600; t < now - 3600; t += 3600) fr.push([new Date(t * 1000).toISOString().replace('.000', ''), 0.0100, 0.0100, 0.0100, 0.0100]);
   wr('fund.json', ['t', 'rateOpen', 'rateHigh', 'rateLow', 'rateClose'], fr); wr('oi.json', ['t', 'open', 'high', 'low', 'close'], []); wr('liq.json', ['t', 'liquidations'], []);
   fs.writeFileSync(path.join(W, 'estado.json'), JSON.stringify(est));
@@ -30,7 +30,7 @@ const docs = [...DB].filter(([k]) => k !== 'estado').map(([, d]) => d).sort((a, 
 for (let i = 1; i < docs.length; i++) { const g = docs[i].t - docs[i - 1].t; if (g !== 600 && new Date(docs[i].t * 1000).toISOString().slice(0, 10) === new Date(docs[i - 1].t * 1000).toISOString().slice(0, 10)) fails.push('hueco de decisiones antes de ' + docs[i].at); }
 const op = docs.filter(d => d.dir !== 'ninguna'), cl = docs.filter(d => d.cierre);
 console.log(`rondas ${runs} · decisiones ${docs.length} · entradas ${op.length} · cierres ${cl.length} · correos ${emails}`);
-for (const d of op) console.log(' ', d.at, d.dir, d.entry, 'sl', d.sl, 'tp', d.tp, 'EV', d.ev, 'p', d.pw, '→', d.estado, d.cierre ? d.cierre.r + 'R ' + d.cierre.motivo : '');
-const rt = est.books.retador; console.log('retador', rt.n, 'ops', rt.sumR.toFixed(2) + 'R', JSON.stringify(rt.hist.slice(-5)), 'abierta', !!rt.open);
+for (const d of op.slice(-6)) console.log(' ', d.at, d.dir, d.entry, 'sl', d.sl, 'tp', d.tp, 'EV', d.ev, 'p', d.pw, '→', d.estado, d.cierre ? d.cierre.r + 'R ' + d.cierre.motivo : '');
+for (const k of ['aprendiz', 'control', 'campeon']) { const b = est.books[k]; console.log(k, b.n, 'cerradas', b.n ? (b.win / b.n * 100).toFixed(1) + '% acierto' : '', b.n ? (b.sumR / b.n).toFixed(3) + 'R/op' : '', 'caída', b.dd.toFixed(1)); } console.log('lecciones', est.nLearn, 'abiertas', est.pend.length, 'tamaño del estado', JSON.stringify(est).length, 'bytes');
 console.log(fails.length ? '‼️ ' + fails.length + ' fallos:\n' + [...new Set(fails)].slice(0, 15).join('\n') : '✅ sin fallos');
 fs.writeFileSync(path.join(W, 'db.json'), JSON.stringify(Object.fromEntries(DB)));

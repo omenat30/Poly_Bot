@@ -89,7 +89,7 @@ Es un ala independiente de la primera: no ve sus señales, posiciones ni decisio
 - **Por debajo del objetivo:** el payoff realizado (1,1–1,24) no llega al 1,5 pedido, por los cierres por tiempo.
 - **Dato llamativo sin validar:** a favor de la SMA50 diaria el campeón dio +0,26R (34 operaciones). Se vio después de la prueba, así que no se usa.
 
-Inventario: +17 pruebas (16 variantes y el explorador), 3.103 en total.
+Inventario: +17 pruebas (16 variantes y el explorador) y +3 del modo a piñón: 3.106 en total.
 
 **Fase 2 · simulación en vivo** (desde el 13 oct 2026):
 - **Ronda:** `office/ala2_tick.js` (rutina «Mesa Radar · Ala 2 ML»; instrucción en `ala2/rutina_ala2.txt`).
@@ -107,6 +107,25 @@ Inventario: +17 pruebas (16 variantes y el explorador), 3.103 en total.
   - 7, 8 y 9 oct y viernes 2 → lunes 5 oct: ✅ (510 rondas, ninguna salida sin entrada, 0 correos).
   - Con umbral abierto en una copia de prueba: 10 entradas y 10 cierres del campeón, parada diaria correcta.
 - **Paridad de modelos:** Python y JS dan la misma predicción (diferencia máxima 0 en 300 decisiones).
+
+**Modo «a piñón» con aprendizaje (12 oct, petición del usuario).**
+- **Qué hace:** cada decisión de 10 min abre una operación simulada por el lado preferido, unas 84 al día, y cada operación cerrada enseña al aprendiz.
+- **Cómo aprende:** corrección en línea (NLMS) sobre la media de Montes y Aranda, con variables estandarizadas. Aprende del lado operado y también del no operado, que se resuelve como sombra.
+- **Qué corre en paralelo:**
+  - el **control**: los mismos modelos, sin aprender;
+  - el **campeón** de Beltrán.
+- **Backtest 2022–26** (`ala2/a2_online.py`, 3 variantes de η, elección con 2018–21 → η = 0):
+
+| 2022–26 | ops/sem | acierto | R/op neto | R/op antes de costes | payoff | PF |
+|---|---|---|---|---|---|---|
+| Control (sin aprender) | 420 | 41,1% | −0,159 | +0,017 | 1,10 | 0,76 |
+| Aprendiz (η 0,05, lo que corre en vivo) | 420 | 39,8% | −0,190 | −0,015 | 1,09 | 0,72 |
+
+- **Veredicto:** aprender error a error no mejora fuera de muestra. Cada operación es casi todo ruido y el corrector aprende ruido.
+- **Por qué se monta igualmente:** a petición del usuario, en simulación, para medir en vivo si aprender ayuda; el panel enseña la curva del aprendiz frente al control.
+- **Ojo con el R total:** las operaciones se solapan (decenas abiertas a la vez, casi siempre del mismo lado), así que su suma no es una cartera. Se juzga por acierto y R por operación.
+- **Estado:** el documento `estado` guarda las operaciones abiertas en compacto, los pesos del aprendiz y los marcadores. El ensayo de 3 días da unos 4 KB.
+- **Ensayo** (7–9 oct): 270 rondas, 252 decisiones y operaciones, 212 cierres, 424 lecciones, 0 fallos, 0 correos.
 
 ## Auditoría externa de la v12 (12 oct 2026)
 

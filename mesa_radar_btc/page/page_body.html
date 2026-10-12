@@ -29,7 +29,7 @@
   </section>
 
   <section class="sec" aria-labelledby="a2Title">
-    <div class="sec-head"><h2 id="a2Title">Segunda ala · ML en simulación</h2><p>Un ala independiente: no ve las señales, posiciones ni decisiones del ala 1. Cada 10 minutos (L–V 7:00–20:50) Montes lee la liquidez, Aranda el técnico, Lagos integra sus modelos de machine learning y Beltrán calibra el EV y puede vetar. Todas las decisiones quedan registradas, también las de «sin operación». Está en fase 2: simulación, sin dinero y sin correos.</p></div>
+    <div class="sec-head"><h2 id="a2Title">Segunda ala · ML en simulación</h2><p>Un ala independiente: no ve las señales, posiciones ni decisiones del ala 1. Opera a piñón: cada 10 minutos (L–V 7:00–20:50) abre una operación simulada por el lado que prefiere y aprende de cada error. Montes lee la liquidez, Aranda el técnico, Lagos integra los modelos y aprende, y Beltrán lleva aparte un campeón con reglas de riesgo. Simulación: sin dinero y sin correos.</p></div>
     <div class="floor a2floor">
       <div class="stage" id="stage2">
         <div class="fallback" id="fallback2">Cargando la sala del ala 2…</div>
@@ -40,14 +40,15 @@
       <aside class="round a2side"><div class="round-head"><h2>Última decisión</h2></div><div id="a2Last"></div></aside>
     </div>
     <div class="kpis" id="a2Kpis"></div>
-    <div class="card a2note"><b>Lo que dice el backtest, sin adornos</b><p id="a2Honest">Fase 1 (backtest walk-forward 2018–2026, 106 versiones mensuales del modelo, elegido con 2018–21 y probado en 2022–26 sin tocar): <b>no hay ventaja demostrada</b>. El campeón (media de Montes y Aranda, EV calibrado &gt; +0,05R) dio en 2022–26 0,49 operaciones por semana, 45% de acierto y +0,01R por operación (+0,12R antes de costes). Con stops de 1,5 ATR de 1 h, los costes (0,14% + funding) se comen 0,11–0,18R por operación. Por eso Beltrán veta casi todo y el explorador de Lagos opera sin filtro solo para aprender: su backtest es −0,18R por operación. No se opera con dinero real: hace falta que la simulación acumule 100 operaciones con R medio positivo y tu aprobación.</p><p class="muted" id="a2Lagos"></p></div>
+    <div class="card"><h3>¿Aprende de sus errores?</h3><div id="a2Learn"></div></div>
+    <div class="card a2note"><b>Lo que dice el backtest, sin adornos</b><p id="a2Honest">Backtest walk-forward 2018–2026 (106 versiones mensuales, elegido con 2018–21 y probado en 2022–26 sin tocar): <b>no hay ventaja demostrada</b>. Operar en cada decisión de 10 min (unas 420 operaciones por semana) dio en 2022–26 un 41% de acierto y −0,16R por operación: antes de costes es +0,02R, y los costes (0,14% + funding con stops de 1,5 ATR de 1 h) se comen 0,18R. Aprender de cada error con una corrección en línea no lo mejoró: −0,19R. Por eso corren dos mesas a la vez, el aprendiz y el control, para medir en vivo si aprender ayuda. El campeón de Beltrán (EV calibrado &gt; +0,05R) apenas opera: 0,49 operaciones por semana y +0,01R. Las operaciones del ala 2 se solapan (puede haber decenas abiertas a la vez), así que su R total no es una cartera: hay que mirar el acierto y el R por operación. Nada pasa a dinero real sin resultados positivos y tu aprobación.</p><p class="muted" id="a2Lagos"></p></div>
     <div class="card"><h3>Informe de competición</h3><div class="tbl"><table class="t" id="a2Comp"></table></div>
       <p class="muted" style="font-size:.85rem">En vivo, el R del ala 2 es simulado: entrada al cierre de la vela de 5 min tras la decisión, stop y objetivo sobre velas de 5 min (si tocan los dos en la misma vela, cuenta el stop), costes 0,14% + 0,03% en stops + funding. Antes de 20 operaciones no hay Sharpe que valga.</p></div>
     <div class="a2two">
       <div class="card"><h3>Estabilidad fuera de muestra</h3><div class="tbl"><table class="t" id="a2Years"></table></div></div>
       <div class="card"><h3>Por régimen</h3><div class="tbl"><table class="t" id="a2Reg"></table></div><p class="muted" style="font-size:.85rem">Mirado después de la prueba: no se usa para elegir nada.</p></div>
     </div>
-    <div class="card"><h3>Operaciones simuladas</h3><div class="tbl"><table class="t" id="a2Trades"></table></div></div>
+    <div class="card"><h3>Operaciones simuladas (aprendiz)</h3><div class="tbl"><table class="t" id="a2Trades"></table></div></div>
     <div class="card"><h3>Registro de decisiones (cada 10 min)</h3><div class="tbl"><table class="t" id="a2Log"></table></div>
       <p class="muted" style="font-size:.85rem">Montes, Aranda y Lagos dan el R neto previsto de un largo y de un corto. El EV neto es el de Beltrán: la previsión calibrada con los últimos 24 meses fuera de muestra. Cada decisión guarda también la liquidez real de Binance (flujo comprador agresor, interés abierto y liquidaciones) para reentrenar a Montes con datos de verdad.</p></div>
   </section>
