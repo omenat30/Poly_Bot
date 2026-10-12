@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node /tmp/mesa/office/*)",
+      "Bash(node mesa_radar_btc/office/*)",
+      "Bash(cp * /tmp/mesa/office/)",
+      "Bash(mkdir -p /tmp/mesa/office)",
+      "Bash(git -C r sparse-checkout set data/updates)",
+      "mcp__Openmarkets_-_Lectura_data__points"
+    ]
+  }
+}
