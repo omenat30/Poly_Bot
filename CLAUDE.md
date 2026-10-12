@@ -36,6 +36,14 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 6. Sumar las variantes probadas al inventario (más de 2.900 hasta hoy) y recordar el Deflated Sharpe.
 7. Adoptar solo si mejora fuera de muestra; si no, documentarlo en el README como descartado.
 
+## Skills del proyecto (`.claude/skills/`)
+- `mesa-radar`: flujos generales (probar, publicar, auditar).
+- `validar-estrategia`: juez único de cualquier idea (script `validate.py`, inventario en `research/inventory.json`).
+- `simular-ronda`: ensayo obligatorio antes de publicar `office/*.js` (script `simulate.py`).
+- `informe-semanal`: rendimiento real frente al backtest (script `report.py`; rutina los viernes 21:37).
+- `post-mortem`: investigar incidentes y dejar prueba de regresión.
+- `buscador-de-ideas`: ideas nuevas con disciplina anti-sobreajuste.
+
 ## Antes de publicar un cambio en la oficina
 - `node --check` de cada archivo tocado.
 - Repetir rondas con `page/replay12.sh` (como mínimo un día con operaciones). Comprobar:
