@@ -304,11 +304,18 @@ const EXP_R = 0.16, EXP_SD = 1.60;   // v12: R de cartera por operación y su de
 { const T = AGS.flatMap(k => R[k].trades.filter(t => t.sigT >= V11 && W[k] > 0).map(t => netR(t) * W[k])).concat(radarClosed.map(t => radarNet(t) * t.w)), n = T.length, m = n ? T.reduce((p, x) => p + x, 0) / n : 0, z = n ? (m - EXP_R) / (EXP_SD / Math.sqrt(n)) : 0;
   notes.iturbe = st('iturbe', 'Validación v12: los aprendices del Radar operan oportunidades que el Radar no toma. Elegido con 2018-21; en 2022-26 la oficina mejora a la v10 en acierto (45% frente a 43%), R de cartera por operación (+0,16 frente a +0,14), R al año (+19 frente a +14) y Sharpe (0,77 frente a 0,59). Prueba en real desde el ' + new Date(V11 * 1000).getUTCDate() + ' ' + ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][new Date(V11 * 1000).getUTCMonth()] + ': ' + n + ' operaciones cerradas' + (n ? ', ' + sR(m) + ' de cartera por operación frente a +0,16R esperado (z = ' + z.toFixed(1).replace('.', ',') + ')' : '') + '. Para escalar: 100 operaciones, 12 meses y deslizamiento real medido.', n >= 20 && z < -2 ? 'alerta' : 'ok');
   notes.iturbe.val = { n, mR: +m.toFixed(3), z: +z.toFixed(2) };
-  // auditoría externa (12 oct): aspirante en sombra = la mesa sin la estrategia propia de Paz, frente a la vigente, con las mismas operaciones reales
-  const T2 = AGS.filter(k => k !== 'paz').flatMap(k => R[k].trades.filter(t => t.sigT >= V11 && W[k] > 0).map(t => netR(t) * W[k])).concat(radarClosed.map(t => radarNet(t) * t.w)),
-    n2 = T2.length, s1 = T.reduce((p, x) => p + x, 0), s2 = T2.reduce((p, x) => p + x, 0);
-  notes.iturbe.text += ' Auditoría: vigente ' + n + ' ops y ' + sR(s1) + ' frente al aspirante sin Paz propia, ' + n2 + ' ops y ' + sR(s2) + (n >= 20 ? (s2 > s1 ? ': gana el aspirante.' : ': gana la vigente.') : ' (se decide con 20 operaciones cerradas).');
-  notes.iturbe.val.aspirante = { n: n2, sumR: +s2.toFixed(2), vigenteR: +s1.toFixed(2) }; }
+  // aprendizaje diario sin riesgo (auditoría, fase 4): la vigente opera; las aspirantes compiten en sombra con las mismas operaciones reales.
+  // Una aspirante solo se promociona con 20 o más operaciones cerradas, más R que la vigente y aprobación del usuario.
+  const own = (k, w) => R[k].trades.filter(t => t.sigT >= V11).map(t => netR(t) * w), apr = w => radarClosed.map(t => radarNet(t) * Math.min(w, t.w));
+  const RET = [{ id: 'sin_paz', name: 'sin la estrategia propia de Paz', T: own('ortega', W.ortega).concat(apr(1)) },
+    { id: 'v12a', name: 'v12a (Vega propia 0,75R, aprendices 0,5R)', T: own('ortega', W.ortega).concat(own('paz', W.paz), own('vega', 0.75), apr(0.5)) }];
+  const s1 = T.reduce((p, x) => p + x, 0), sum = L => L.reduce((p, x) => p + x, 0);
+  notes.iturbe.val.vigente = { n, sumR: +s1.toFixed(2) };
+  notes.iturbe.val.retadores = RET.map(r => ({ id: r.id, name: r.name, n: r.T.length, win: r.T.filter(x => x > 0).length, sumR: +sum(r.T).toFixed(2) }));
+  const lider = notes.iturbe.val.retadores.reduce((b, r) => r.sumR > b.sumR ? r : b, { id: 'vigente', name: 'la vigente', sumR: s1, n });
+  notes.iturbe.text += ' Aprendizaje en sombra: vigente ' + n + ' ops y ' + sR(s1) + '; ' + notes.iturbe.val.retadores.map(r => r.name + ' ' + r.n + ' ops y ' + sR(r.sumR)).join('; ') + '. ' +
+    (n >= 20 ? (lider.id === 'vigente' ? 'Gana la vigente.' : 'Va ganando ' + lider.name + ': propongo su promoción al dueño.') : 'Se decide con 20 operaciones cerradas.');
+  notes.iturbe.val.aspirante = notes.iturbe.val.retadores[0]; }
 const soon = calSoon();
 notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergency.move) + ' en ' + emergency.hours + ' h. Veredicto: ' + emergency.verdict + '. ' : '') + (cal && cal.events && cal.events.length ? 'Hoy: ' + cal.events.map(e => e.hora + ' ' + e.evento).join(' · ') + '.' + (soon.length ? ' Dato macro en menos de 90 min.' : '') : cal ? 'Sin datos macro de impacto alto hoy.' : 'Calendario de hoy sin leer.') + ' Riesgo abierto ' + String(openRisk).replace('.', ',') + '%. En vivo: ' + (nAll ? nAll + ' cerradas, ' + Math.round(wAll / nAll * 100) + '% ganadoras, ' + sR(sumR / nAll) + ' por operación (ref. +0,38R, 40% ganadoras).' : 'aún ninguna cerrada.') + (problems.length ? ' Datos: ' + problems.join('; ') + '.' : ' Datos verificados (' + pairs.length + ' h de solape).') + (nAll >= 30 && sumR / nAll < -0.1 ? ' AVISO: la mesa se desvía del backtest.' : '') + ' El calendario macro es informativo: no cambia ninguna decisión.' + (problems.length ? ' PARADA OPERATIVA: ' + problems.join('; ') + '; no entra nada nuevo.' : ''), emergency || problems.length || soon.length ? 'alerta' : 'ok');
 

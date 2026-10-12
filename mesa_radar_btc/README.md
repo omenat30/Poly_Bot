@@ -64,9 +64,11 @@ El dictamen de diez auditores externos dice que la mesa no ha demostrado una ven
 
 Pesos de los aprendices (juez): (a) aprendices a 1,5R → 2022–26 Sharpe 0,71 frente a 0,77, caída 16,9R: descartada; (b) aprendices a 1,5R y Paz propia a 0,25R → 2022–26 Sharpe 1,00 y acierto 45,5%, pero 2018–21 Sharpe 0,74 frente a 1,47: descartada. Inventario: 3.083.
 
+«Aprender cada día» ajustando el peso de cada agente por su resultado reciente (`au_adapt.py`, vida media 90/180/365 días): 2022–26 Sharpe 0,62–0,65 frente a 0,77 y caída de unos 18R. Descartado: el resultado reciente de un agente no predice el siguiente. Inventario: 3.086.
+
 Decisiones:
 - La v12 queda congelada.
-- Iturbe compara en cada ronda la versión vigente con el aspirante sin Paz propia (`notes.iturbe.val.aspirante`); se decide con 20 operaciones cerradas.
+- Aprendizaje diario sin riesgo: Iturbe compara en cada ronda la vigente con las aspirantes en sombra (sin Paz propia y v12a) en `notes.iturbe.val.retadores`; sección «Aprendizaje diario» del panel. Promoción con 20 o más operaciones cerradas, más R y aprobación del usuario.
 - Cada cambio, uno a uno y aprobado por la auditoría.
 
 La visita está en la escena 3D: diez auditores y una reunión de unos 31 minutos, una sola vez (12 oct, una vez por navegador). El dictamen por agente está en la sección «Auditoría externa de la v12» del panel.

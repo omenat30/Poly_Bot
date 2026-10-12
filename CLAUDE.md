@@ -55,8 +55,8 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 
 ## Estado tras la auditoría externa (12 oct 2026)
 - v12 congelada: un cambio cada vez, solo con veredicto ADOPTAR del juez y aprobación explícita del usuario.
-- Aspirante en sombra: mesa sin la estrategia propia de Paz (lo mide Iturbe en cada ronda). Se decide con 20 operaciones cerradas en real.
-- Ya probado y descartado (no repetir sin una razón nueva): ML sobre todas las extras del Radar, despido automático por racha, señales de fin de semana, velas/patrones, v12a.
+- Aspirantes en sombra (lo mide Iturbe en cada ronda, `notes.iturbe.val.retadores`): sin la estrategia propia de Paz y v12a. Promoción con 20+ operaciones cerradas, más R y aprobación del usuario.
+- Ya probado y descartado (no repetir sin una razón nueva): ML sobre todas las extras del Radar, despido automático por racha, pesos adaptativos por resultado reciente, señales de fin de semana, velas/patrones, v12a.
 
 ## Errores ya cometidos (no repetir)
 - La ronda envió un correo «placeholder». La instrucción de las rutinas prohíbe enviar nada que no salga de `EMAIL_JSON`.

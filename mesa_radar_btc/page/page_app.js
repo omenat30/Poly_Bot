@@ -116,6 +116,16 @@
   }
 
 
+  // ---------- aprendizaje diario sin riesgo: vigente frente a aspirantes en sombra (Iturbe) ----------
+  function renderLearn() {
+    const box = $('#learnTbl'); if (!box) return; box.textContent = '';
+    const v = S.ticks[0] && S.ticks[0].notes && S.ticks[0].notes.iturbe && S.ticks[0].notes.iturbe.val;
+    const head = el('tr', {}, ['Versión', 'Estado', 'Operaciones cerradas', 'Ganadoras', 'R de cartera'].map((h, i) => el('th', { scope: 'col', class: i < 2 ? 'txt' : '', text: h })));
+    box.append(el('thead', {}, [head])); const body = el('tbody'); box.append(body);
+    if (!v || !v.retadores) { body.append(el('tr', {}, [el('td', { class: 'txt', colspan: '5', text: 'La primera ronda con la comparación llega en cuanto abra la oficina.' })])); return; }
+    const rows = [{ name: 'v12 vigente', st: 'Opera', n: v.vigente.n, win: null, sumR: v.vigente.sumR }].concat(v.retadores.map(r => ({ name: r.name, st: 'En sombra', n: r.n, win: r.win, sumR: r.sumR })));
+    for (const r of rows) body.append(el('tr', {}, [el('td', { class: 'txt', text: r.name }), el('td', { class: 'txt', text: r.st }), el('td', { text: String(r.n) }), el('td', { text: r.win == null ? '–' : String(r.win) }), el('td', { class: r.sumR > 0 ? 'pos' : r.sumR < 0 ? 'neg' : '', text: sR(r.sumR) })]));
+  }
   // ---------- histórico de operaciones (entradas avisadas con su salida, y oportunidades que no entraron) ----------
   function renderHist() {
     const tb = $('#histTbl'), kp = $('#histKpis'); if (!tb) return; tb.textContent = ''; kp.textContent = '';
@@ -229,7 +239,7 @@
     $('#jSave').disabled = false;
   });
 
-  const all = () => { renderTop(); renderRound(); renderBook(); renderPerf(); renderEmergency(); emit(); };
+  const all = () => { renderTop(); renderRound(); renderBook(); renderPerf(); renderEmergency(); renderLearn(); emit(); };
   all(); renderJournal(); setInterval(() => { renderTop(); renderEmergency(); }, 30000);
   (async () => {
     const db = window.claude && claude.use ? await claude.use('db') : null;
