@@ -1,0 +1,166 @@
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <span class="eyebrow">Oficina de agentes · solo BTC · Binance futuros vía OpenMarket</span>
+      <h1>Mesa Radar</h1>
+      <p>Diez agentes leen BTC a la vez cada 15 minutos, de lunes a viernes de 7:00 a 21:00. Desde la v12, Vega, Paz y Ríos son aprendices del Radar BTC 15m: con su modelo buscan oportunidades que el Radar no toma (las que ve mientras ya está dentro), solo a favor de su operación. Ortega y Paz mantienen sus estrategias propias. Salinas dimensiona y aplica las paradas, Nubarrones marca la fase, Duarte puntúa sin vetar, Iturbe valida y Calvo vigila los datos. Es un backtest con mejora fuera de muestra, no una promesa: el resultado real se mide en el registro.</p>
+    </div>
+    <div class="status" aria-live="polite">
+      <span class="chip" id="officeChip"><i></i><span id="officeTxt">Comprobando horario…</span></span>
+      <span class="chip">BTC <b id="pxNow">–</b></span>
+      <span class="chip">Última ronda <b id="lastRound">–</b></span>
+    </div>
+  </header>
+
+  <section class="floor" aria-label="La oficina">
+    <div class="stage" id="stage">
+      <div class="fallback" id="fallback">Cargando la oficina en 3D…</div>
+      <div id="overlay"></div>
+      <div class="night" id="night" hidden><div><b>Oficina cerrada</b><br><span class="muted" id="nightTxt">Todos en casa. Vuelven de lunes a viernes a las 7:00 (hora de Madrid). Los stops siguen en el exchange.</span></div></div>
+      <div class="stage-cap"><span id="capL">Arrastra para girar la oficina</span><span id="capR">–</span></div>
+    </div>
+    <aside class="round" aria-live="polite">
+      <div id="emerg" class="emerg"></div>
+      <div class="round-head"><h2>La ronda</h2><span class="eyebrow" id="roundAt">esperando datos</span></div>
+      <div id="agents"></div>
+    </aside>
+  </section>
+
+  <section class="sec" aria-labelledby="apTitle">
+    <div class="sec-head"><h2 id="apTitle">v12 · Los aprendices del Radar</h2><p>El Radar BTC 15m solo lleva una operación a la vez. Mientras está dentro, su modelo sigue viendo rupturas, reversiones y barridos que él no puede operar. Los aprendices aprenden de su experiencia y salen a por esas otras oportunidades. Nunca repiten una señal del Radar y su panel no se toca. Las reglas se eligieron con 2018–21 y 2022–26 es la prueba, con los costes de la Mesa (0,14% + 0,03% en los stops) y el funding.</p></div>
+    <div class="card">
+      <div class="tbl"><table class="t">
+        <thead><tr><th scope="col"></th><th scope="col">Acierto</th><th scope="col">R por operación (cartera)</th><th scope="col">R al año</th><th scope="col">Sharpe anual</th><th scope="col">Caída máx.</th><th scope="col">Ops/semana</th></tr></thead>
+        <tbody>
+          <tr><td class="txt"><b>Oficina v12</b> · 2022–26 (prueba)</td><td class="pos">44,1%</td><td class="pos">+0,16R</td><td class="pos">+19,1R</td><td class="pos">0,77</td><td class="neg">14,3R</td><td>2,3</td></tr>
+          <tr><td class="txt">Oficina v10 · 2022–26</td><td>42,5%</td><td>+0,14R</td><td>+13,6R</td><td>0,59</td><td>12,4R</td><td>1,9</td></tr>
+          <tr><td class="txt"><b>Oficina v12</b> · 2018–21 (elección)</td><td class="pos">40,2%</td><td>+0,32R</td><td class="pos">+21,8R</td><td class="pos">1,47</td><td>9,7R</td><td>1,3</td></tr>
+          <tr><td class="txt">Oficina v10 · 2018–21</td><td>35,1%</td><td>+0,32R</td><td>+18,0R</td><td>1,28</td><td>8,8R</td><td>1,1</td></tr>
+          <tr><td class="txt"><b>Oficina v12</b> · 2020–26</td><td class="pos">42,9%</td><td class="pos">+0,22R</td><td class="pos">+26,3R</td><td class="pos">1,12</td><td class="neg">14,3R</td><td>2,3</td></tr>
+          <tr><td class="txt">Oficina v10 · 2020–26</td><td>40,2%</td><td>+0,20R</td><td>+20,2R</td><td>0,91</td><td>12,4R</td><td>2,0</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="notes">
+        <li><b>La regla que funciona:</b> solo oportunidades en el mismo sentido que la operación abierta del Radar y antes de que esta haya recorrido +0,8R. Las que van contra el Radar pierden en los dos periodos; las que llegan tarde, con el movimiento ya gastado, no aportan. Solos, los aprendices dan +0,12R por operación en 2018–21 y +0,27R en 2022–26 (54% de acierto). Con 1, 5 o 15 minutos de retraso al entrar mantienen un 54% de acierto y de +0,25 a +0,27R.</li>
+        <li><b>Por qué Vega pasa a sombra:</b> su tendencia propia era la de menor R por operación y ocupaba riesgo que los aprendices aprovechan mejor. Con ella a sombra, el Sharpe de 2018–21 es el más alto de las cinco combinaciones probadas, y por eso se eligió.</li>
+        <li><b>Lo que no mejora:</b> el R por operación en el riesgo de cada agente queda igual en 2022–26 (+0,28R frente a +0,29R). La caída máxima sube de 12,4R a 14,3R. Y 2025 empeora: −7,3R frente a +0,7R de la v10. La alternativa más prudente (v10 + aprendices a 0,5R) mejora a la v10 en los 7 años, pero en 2018–21 tenía peor Sharpe y por la regla de elección no se escoge.</li>
+        <li><b>Descartado:</b> un aprendiz genérico con aprendizaje automático sobre 47.667 situaciones del Radar (pierde fuera de muestra), el modelo del Radar en otras temporalidades, otras salidas y usar el estado del Radar como filtro de las estrategias propias.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="audTitle">
+    <div class="sec-head"><h2 id="audTitle">Auditoría externa · 11 oct 2026</h2><p>El auditor tenía razón en lo esencial: la ventaja no está demostrada tras corregir por todo lo probado, Paz concentra el resultado y 2025–26 están casi planos. Cada punto se comprobó con el código y los datos; esto es lo que salió y lo que cambió.</p></div>
+    <div class="card">
+      <div class="tbl"><table class="t">
+        <thead><tr><th scope="col">Punto</th><th scope="col">Lo que se comprobó</th><th scope="col">Cambio en la v10</th></tr></thead>
+        <tbody>
+          <tr><td class="txt">Cifras que no cuadran</td><td class="txt">Se mezclaban dos R: +0,41R por operación es en el riesgo de cada agente; +29R al año es R de cartera (1R = 0,5% del capital), tras pesos, tope y freno. 765 señales → 748 operaciones; el freno de 8R actuó en 288. En cartera eran +0,27R por operación.</td><td class="txt">El panel muestra los dos R por separado y con su unidad.</td></tr>
+          <tr><td class="txt">Funding de los perpetuos</td><td class="txt">El backtest era spot y no cobraba el funding: cuesta 1,9R al año (de +29,3 a +27,5).</td><td class="txt">Se descuenta en el backtest y en el marcador en vivo.</td></tr>
+          <tr><td class="txt">Sesgo de selección</td><td class="txt">Unas 2.700 variantes registradas (1.269 distintas guardadas). Deflated Sharpe 0,035 con 500 pruebas y 0,003 con 2.500; SPA de Hansen p = 0,12. t de la cartera 2,26 (Newey-West).</td><td class="txt">Ventaja no demostrada. Versión congelada con huellas; riesgo mínimo hasta validar en real.</td></tr>
+          <tr><td class="txt">Paz</td><td class="txt">75% del R. Sin sus 10 mejores operaciones pierde (−0,04R por operación); también Vega y Ortega. 2025: +0,04R/op; 2026: −0,25R/op.</td><td class="txt">Riesgo de 0,75R a 0,5R. Vega a 0,75R.</td></tr>
+          <tr><td class="txt">Ríos</td><td class="txt">Fallo de la regla de selección: una variante que deja de operar conserva sus estadísticas antiguas. La variante en vivo sí fue positiva cada año, pero se eligió viendo los datos.</td><td class="txt">En sombra. La regla exige ya 6 operaciones en los 2 años previos.</td></tr>
+          <tr><td class="txt">Ferrer</td><td class="txt">−0,02R por operación, t = −0,2. Quitarlo sube la cartera.</td><td class="txt">En sombra.</td></tr>
+          <tr><td class="txt">Nubarrones</td><td class="txt">Es intencional: los rebotes de bajista barren los cortos. Sin veto, −7R al año. Pero en 2017–19 los cortos de Paz en bajista ganaban (+0,26R); los de Ríos perdían en los dos periodos.</td><td class="txt">Se mantiene; el veto a Paz queda en validación prospectiva.</td></tr>
+          <tr><td class="txt">Salinas</td><td class="txt">Tope y freno forman una meseta: con freno de 6 a 10R la relación ganancia/caída va de 1,9 a 2,0. Las paradas −3R/7 d y −10R no mejoran el backtest (la de −10R con reanudación automática sube la caída a 18R).</td><td class="txt">Se miden con lo abierto. −10R exige revisión humana para reanudar. Parada operativa si fallan los datos.</td></tr>
+          <tr><td class="txt">Ejecución</td><td class="txt">Sin anticipación: 30 cortes, 12.985 operaciones idénticas. Bitstamp frente a Binance: base de 2,5 pb, correlación 0,9995 (74 h). Entrar 30–60 min tarde: −2R al año. +0,04% de coste: −3R; +0,10%: −7R.</td><td class="txt">El registro mide retraso, deslizamiento y coste real.</td></tr>
+          <tr><td class="txt">Duarte (ML)</td><td class="txt">Entrena solo con operaciones cerradas antes de cada señal (sin solape de etiquetas), pero no separa: vetar el cuartil bajo empeora.</td><td class="txt">Sin capacidad de veto. Comparación en sombra.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="kpis" id="audKpis">
+        <div class="kpi"><b>+20R</b><span>al año, v10 con costes y funding (antes +29R)</span></div>
+        <div class="kpi"><b>12R</b><span>caída máxima (antes 15,5R)</span></div>
+        <div class="kpi"><b class="neg">0,035</b><span>Deflated Sharpe (500 pruebas)</span></div>
+        <div class="kpi"><b>+0,7R · +0,3R</b><span>2025 · 2026 en la v10</span></div>
+      </div>
+      <p class="muted">Contratación: Iturbe (validación). Un agente construido por el mismo equipo no es independiente; la validación independiente de verdad exige que una persona externa repita estas pruebas con el código y los datos congelados.</p>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="perfTitle">
+    <div class="sec-head"><h2 id="perfTitle">Rendimiento</h2><p>Win rate, operaciones por semana y R esperado por operación de cada agente: lo que dio el walk-forward de 2020 a 2026 (cada año operado con reglas elegidas solo con los años anteriores, pesando más los recientes) y lo que va dando en vivo desde el 9 de octubre de 2026. El objetivo: 2–3 operaciones por semana con más acierto y más R por operación.</p></div>
+    <div class="kpis" id="perfKpis"></div>
+    <div class="card"><div class="tbl"><table class="t" id="perfTbl"></table></div>
+      <p class="muted" style="font-size:.85rem">R = lo que arriesgas en cada operación (distancia al stop). El R medio de la mesa no está ponderado: cada operación cuenta igual, aunque Paz y Ríos arriesgan tres cuartos.</p></div>
+  </section>
+
+  <section class="sec" aria-labelledby="histTitle">
+    <div class="sec-head"><h2 id="histTitle">Histórico de operaciones</h2><p>Las últimas operaciones que la mesa ha avisado en vivo y las oportunidades que encontró pero no entraron (bloqueadas por Salinas, paradas o datos). Se actualiza solo con cada ronda.</p></div>
+    <div class="kpis" id="histKpis"></div>
+    <div class="card"><div class="tbl"><table class="t" id="histTbl"></table></div></div>
+  </section>
+
+  <section class="sec" aria-labelledby="bookTitle">
+    <div class="sec-head"><h2 id="bookTitle">Operativa en vivo</h2><p>Largos y cortos en BTC, siempre a favor de la media de 50 días. Salinas dimensiona cada entrada: Vega y Ortega un 0,5%, Paz y Ríos un 0,375% y Ferrer un 0,25%, con un tope del 1% abierto. Cada entrada, movimiento de stop, cierre y reunión de emergencia te llega por correo.</p></div>
+    <div class="book" id="book"></div>
+    <div class="feed" id="feed"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="resTitle">
+    <div class="sec-head"><h2 id="resTitle">La investigación: 10 años de BTC</h2><p>Velas de 1 minuto de 2016 a octubre de 2026. Desde la v4, cada año se eligen las reglas con los años anteriores, pesando más los recientes (vida media de 2 años), y se opera el año siguiente sin verlo. Entrada en la apertura siguiente, solo de lunes a viernes de 7:00 a 21:00, con 0,14% de costes por operación y 0,03% más en los stops.</p></div>
+    <div class="thesis" id="thesis"></div>
+    <div class="kpis" id="resKpis"></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="sec-head"><h3>Resultado acumulado</h3><span class="eyebrow">R ponderado por el riesgo de cada agente</span></div>
+        <svg id="resChart" viewBox="0 0 720 280" role="img" aria-label="Resultado acumulado walk-forward de 2020 a 2026 de Vega, Ortega, Paz, Ríos y la mesa combinada"></svg>
+        <div class="legend" id="resLegend"></div>
+      </div>
+      <div class="card">
+        <h3>Año a año (R)</h3>
+        <div class="tbl"><table class="t" id="resYears"></table></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-head"><h3>Todo lo que se probó</h3><span class="eyebrow">591 variantes en 8 familias, más la estacionalidad</span></div>
+      <div class="tbl"><table class="t" id="resFam"></table></div>
+      <ul class="notes">
+        <li><b>v12 · aprendices del Radar.</b> Vega, Paz y Ríos aprenden el modelo del Radar BTC 15m y toman las oportunidades que el Radar ve pero no opera (porque ya está dentro), solo a su favor y antes de +0,8R. Vega propia a sombra. En 2022–26: 44% de acierto, +19R al año y Sharpe 0,77, frente a 43%, +14R y 0,59 de la v10.</li>
+        <li><b>v10 · auditoría externa.</b> Se reconciliaron las cifras (dos unidades de R mezcladas), se añadió el funding de los perpetuos, se probaron Deflated Sharpe y SPA (la ventaja no es significativa tras corregir por las ~2.700 variantes), ablación, regímenes, costes, retraso y anticipación temporal. Ríos y Ferrer pasan a sombra, Paz a 0,5R, Vega a 0,75R; Duarte pierde el veto; entra Iturbe (validación). Resultado: +20R al año y 12R de caída en 2020–26, casi plano en 2025–26.</li>
+        <li><b>v9 · Duarte y el modelo de calidad.</b> Se entrenó una regresión logística con las 765 señales del walk-forward 2020–26 (tendencia, impulso de 24 h y 7 días, volatilidad, RSI, funding, rango de 20 días, racha del agente y de la oficina), reentrenándola antes de cada señal solo con operaciones ya cerradas y con más peso a lo reciente. Fuera de muestra no separa: el cuartil que el modelo puntúa peor rindió +0,62R por operación y el mejor +0,71R, con los intermedios en +0,30R y −0,06R. Filtrar el 10–40% peor baja el R anual de +29 a +10–26 sin bajar la caída. Por eso Duarte puntúa en sombra y aprende de cada operación nueva, y solo vetará el cuartil bajo si en las últimas 200 operaciones puntuadas rinde al menos 0,25R menos que el resto con t ≥ 2.</li>
+        <li><b>v8 · vuelve Ríos.</b> Le pedimos perdón: sin él la mesa perdía 0,6 operaciones por semana y su mejor relación entre ganancia y caída. Con Ríos y el veto de Nubarrones vuelven las 2,6 operaciones por semana, +31R al año y 15R de caída (2,1R de ganancia por cada R de caída, el mejor registro). Ferrer y Ríos trabajan juntos: comparten el funding y la compresión en sus notas y correos. Como filtro cruzado no mejoró el walk-forward: las rupturas con la multitud atrapada en contra aciertan el 54%, pero son rarísimas.</li>
+        <li><b>v7 · Salinas y Ferrer, sale Ríos.</b> Salinas probó repartir el riesgo según el rendimiento reciente de cada agente (no aportó), un tope de riesgo abierto y un freno por caída (sí aportaron: la caída máxima baja de 23,7R a 15,5R). Ferrer usa el funding de Binance de 2020–26, de dos datasets públicos que coinciden en 572 de 572 liquidaciones. Como filtro de las demás operaciones no discrimina. Su squeeze (la multitud atrapada y el precio rompiendo en su contra) sale positivo en 43 de 216 variantes en las dos mitades, con ventaja pequeña. Sin Ríos se pierden unas 0,6 operaciones por semana.</li>
+        <li><b>v6 · Nubarrones.</b> 2022 y 2025 eran años negativos. El diagnóstico: Paz comprando caídas en mercados que giraban y cortos de Paz y Ríos en bajistas maduros. Los cortos de Ríos con la media de 50 días bajo la de 200 pierden en 2017–19 (−0,10R) y en 2020–26 (−0,20R). Sin ese régimen ganan +0,53–0,56R. Nubarrones los veta. Su propia operativa (vender el giro) se probó en 108 variantes: en 2017–19 pierde y da muy pocas operaciones, así que no opera. Resultado: +0,39R por operación y +42R al año, frente a +0,35R y +34R, con 2022 en −3R y 2025 en +14R.</li>
+        <li><b>v5 · stops y objetivos más cortos y el Radar BTC.</b> Se probaron objetivos fijos de 1, 1,5, 2 y 3R, stops más cortos y el Radar BTC como filtro (no entrar si su última señal de 24 h va en contra), en 432 variantes. Los objetivos de 1–1,5R suben el acierto al 47–49%, pero el R al año se queda por debajo de la mitad. El stop más corto sí entra en Vega (2 ATR). El Radar no se incorpora: fuera de su periodo de ajuste (2017–2020) no mejora a Vega, Ortega ni Ríos, y con él la mesa baja de 2 operaciones por semana algunos años. Ganó la regla «R medio × acierto», con Paz y Ríos a 0,75R.</li>
+        <li><b>v4 · más R al año.</b> Con el horario L–V 7:00–21:00 y la selección por recencia, Vega pasa a la media de 50 días en los dos sentidos y Ortega a la ruptura de 3 días, las dos con el stop a +0,3R al llegar a +1R. En los datos recientes son sus mejores versiones, con más del 45% de acierto. Ríos deja la confluencia, que últimamente le restaba. Paz es la más irregular: en los dos últimos años su t ponderada ronda 1, así que se queda con medio riesgo y solo con confluencia.</li>
+        <li><b>v3.</b> Se probaron 144 combinaciones de gestión de la salida (parciales, stop a +0,3R) y de filtros de confluencia, eligiendo con 2017–21. Las ganadoras: Paz y Ríos solo entran si Vega u Ortega ya están dentro, y las operaciones que van bien se protegen pronto. En 2022–26 el acierto pasa del 29% al 37% y el R por operación de +0,18 a +0,29. Los filtros por hora, volatilidad o día de la semana que funcionaban en 2017–21 no se sostuvieron en 2022–26, así que no se usan.</li>
+        <li><b>Movimientos bruscos:</b> se probó seguir el tirón y darle la vuelta (72 variantes). Solo 6 salen positivas en 2022–26. En la sala de emergencias, si ningún sistema da entrada, el veredicto es no hacer nada.</li>
+        <li>El patrón sigue siendo el mismo: en BTC gana seguir la tendencia y pierde apostar a que se gire. Los cortos solo se abren con la media de 50 días a la baja.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="jTitle">
+    <div class="sec-head"><h2 id="jTitle">Registro de operaciones reales</h2><p>Apunta lo que ejecutas. Así se ve si el resultado real se parece al del sistema y cuánto cuesta ejecutar. Paradas: −3R en 7 días o −10R desde el máximo.</p></div>
+    <div class="card">
+      <div class="stopbox" id="jKill" hidden></div>
+      <div class="kpis" id="jKpis"></div>
+      <form id="jForm" class="jform" autocomplete="off">
+        <label for="jOpened">Fecha de entrada<input id="jOpened" name="openedAt" type="datetime-local" required></label>
+        <label for="jSource">Agente<select id="jSource" name="source"><option value="vega">Vega · tendencia</option><option value="ortega">Ortega · ruptura</option><option value="paz">Paz · retroceso</option><option value="rios">Ríos · compresión</option><option value="otro">Otra</option></select></label>
+        <label for="jSide">Sentido<select id="jSide" name="side"><option value="long">Largo</option><option value="short">Corto</option></select></label>
+        <label for="jPlanned">Entrada del aviso<input id="jPlanned" name="plannedEntry" type="number" step="any" required></label>
+        <label for="jStop">Stop del aviso<input id="jStop" name="plannedStop" type="number" step="any" required></label>
+        <label for="jFill">Entrada real<input id="jFill" name="fillEntry" type="number" step="any" required></label>
+        <label for="jExit">Salida real<input id="jExit" name="exitPx" type="number" step="any" placeholder="vacío si sigue abierta"></label>
+        <label for="jQty">Cantidad (BTC)<input id="jQty" name="qty" type="number" step="any" required></label>
+        <label for="jFees">Comisiones $<input id="jFees" name="fees" type="number" step="any" value="0"></label>
+        <div class="wide"><button type="submit" class="btn" id="jSave">Guardar operación</button><span class="muted" id="jMsg" role="status"></span></div>
+      </form>
+      <div class="tbl"><table class="t" id="jTable"></table></div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="rulesTitle">
+    <div class="sec-head"><h2 id="rulesTitle">Reglas de la casa</h2></div>
+    <div class="rules">
+      <div><b>Nadie ejecuta solo</b>Los agentes leen OpenMarket en modo lectura y te escriben. Las órdenes las pones tú. Ningún agente tiene claves de un exchange.</div>
+      <div><b>Salinas manda en el tamaño</b>Ortega 0,5% por operación y Paz 0,25% con sus estrategias; cada oportunidad de los aprendices del Radar 0,5%, con stop y objetivo fijos en el exchange. Vega, Ríos y Ferrer propios en sombra. Nunca más de un 1% abierto (2R). Si la cartera cae más de 8R desde su máximo (contando lo abierto), todo a mitad de riesgo. −3R en 7 días: una semana sin entradas. −10R: parada total hasta una revisión independiente. Si fallan los datos, ninguna entrada.</div>
+      <div><b>El stop, en el exchange</b>Se pone al entrar y solo se mueve a favor. Cuando toca moverlo te llega un correo con el precio.</div>
+      <div><b>Horario L–V 7:00–21:00</b>Las horas con más volumen y menos señales falsas. Las señales de fuera de horario no se ejecutan y los stops siguen en el exchange. El backtest ya lo tiene en cuenta.</div>
+      <div><b>Sala de emergencias</b>Movimiento de 3,5 desviaciones o más en 1–3 h: todos se reúnen. Solo se entra si un sistema da señal; nunca se persigue el tirón ni se le da la vuelta a mano.</div>
+      <div><b>Parada por pérdidas</b>−3R en 7 días: nada nuevo hasta el lunes. −10R desde el máximo: se para todo y se revisa. Si tras 30 operaciones en vivo el R medio baja de −0,1, Calvo da el aviso.</div>
+    </div>
+  </section>
+</div>

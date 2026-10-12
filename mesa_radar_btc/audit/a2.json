@@ -1,0 +1,811 @@
+{
+ "base": {
+  "n": 748,
+  "nw": 2.117101501160472,
+  "win": 0.40641711229946526,
+  "exp": 0.41191464136792144,
+  "wexp": 0.2654190756230928,
+  "Ry": 29.320939861009176,
+  "tot": 198.53346856607342,
+  "dd": 15.486244347257156,
+  "RyDD": 1.8933538179773297
+ },
+ "regimenes": {
+  "vega": {
+   "regimen": {
+    "alcista": {
+     "n": 68,
+     "win": 0.44,
+     "exp": 0.217,
+     "tot": 14.8
+    },
+    "transicion": {
+     "n": 11,
+     "win": 0.45,
+     "exp": -0.052,
+     "tot": -0.6
+    },
+    "bajista": {
+     "n": 55,
+     "win": 0.44,
+     "exp": 0.127,
+     "tot": 7.0
+    }
+   },
+   "vol": {
+    "alta": {
+     "n": 78,
+     "win": 0.42,
+     "exp": 0.015,
+     "tot": 1.2
+    },
+    "baja": {
+     "n": 56,
+     "win": 0.46,
+     "exp": 0.357,
+     "tot": 20.0
+    }
+   },
+   "lado": {
+    "largo": {
+     "n": 63,
+     "win": 0.4,
+     "exp": 0.238,
+     "tot": 15.0
+    },
+    "corto": {
+     "n": 71,
+     "win": 0.48,
+     "exp": 0.087,
+     "tot": 6.2
+    }
+   },
+   "salida": {
+    "stop": {
+     "n": 79,
+     "win": 0.54,
+     "exp": 0.346,
+     "tot": 27.4
+    },
+    "senal": {
+     "n": 53,
+     "win": 0.26,
+     "exp": -0.228,
+     "tot": -12.1
+    },
+    "target": {
+     "n": 2,
+     "win": 1.0,
+     "exp": 2.943,
+     "tot": 5.9
+    }
+   },
+   "dependencia_ganadoras": {
+    "top5pct_R": 22.6,
+    "resto_exp": -0.012,
+    "top10_R": 32.3,
+    "total": 21.2,
+    "sin_top10_exp": -0.09
+   }
+  },
+  "ortega": {
+   "regimen": {
+    "alcista": {
+     "n": 58,
+     "win": 0.47,
+     "exp": 0.314,
+     "tot": 18.2
+    },
+    "transicion": {
+     "n": 18,
+     "win": 0.39,
+     "exp": 0.276,
+     "tot": 5.0
+    },
+    "bajista": {
+     "n": 40,
+     "win": 0.4,
+     "exp": 0.601,
+     "tot": 24.1
+    }
+   },
+   "vol": {
+    "alta": {
+     "n": 86,
+     "win": 0.4,
+     "exp": 0.217,
+     "tot": 18.7
+    },
+    "baja": {
+     "n": 30,
+     "win": 0.53,
+     "exp": 0.954,
+     "tot": 28.6
+    }
+   },
+   "lado": {
+    "largo": {
+     "n": 68,
+     "win": 0.44,
+     "exp": 0.582,
+     "tot": 39.5
+    },
+    "corto": {
+     "n": 48,
+     "win": 0.42,
+     "exp": 0.161,
+     "tot": 7.7
+    }
+   },
+   "salida": {
+    "stop": {
+     "n": 116,
+     "win": 0.43,
+     "exp": 0.407,
+     "tot": 47.3
+    }
+   },
+   "dependencia_ganadoras": {
+    "top5pct_R": 39.0,
+    "resto_exp": 0.075,
+    "top10_R": 54.9,
+    "total": 47.3,
+    "sin_top10_exp": -0.072
+   }
+  },
+  "paz": {
+   "regimen": {
+    "alcista": {
+     "n": 294,
+     "win": 0.37,
+     "exp": 0.317,
+     "tot": 93.1
+    },
+    "transicion": {
+     "n": 84,
+     "win": 0.33,
+     "exp": 0.284,
+     "tot": 23.9
+    },
+    "bajista": {
+     "n": 69,
+     "win": 0.55,
+     "exp": 1.532,
+     "tot": 105.7
+    }
+   },
+   "vol": {
+    "alta": {
+     "n": 228,
+     "win": 0.44,
+     "exp": 0.38,
+     "tot": 86.7
+    },
+    "baja": {
+     "n": 219,
+     "win": 0.33,
+     "exp": 0.621,
+     "tot": 136.0
+    }
+   },
+   "lado": {
+    "largo": {
+     "n": 313,
+     "win": 0.41,
+     "exp": 0.632,
+     "tot": 197.7
+    },
+    "corto": {
+     "n": 134,
+     "win": 0.34,
+     "exp": 0.186,
+     "tot": 25.0
+    }
+   },
+   "salida": {
+    "stop": {
+     "n": 414,
+     "win": 0.34,
+     "exp": -0.342,
+     "tot": -141.6
+    },
+    "tiempo": {
+     "n": 33,
+     "win": 1.0,
+     "exp": 11.04,
+     "tot": 364.3
+    }
+   },
+   "dependencia_ganadoras": {
+    "top5pct_R": 332.4,
+    "resto_exp": -0.258,
+    "top10_R": 241.4,
+    "total": 222.7,
+    "sin_top10_exp": -0.043
+   }
+  },
+  "rios": {
+   "regimen": {
+    "alcista": {
+     "n": 27,
+     "win": 0.26,
+     "exp": 0.31,
+     "tot": 8.4
+    },
+    "transicion": {
+     "n": 2,
+     "win": 1.0,
+     "exp": 2.052,
+     "tot": 4.1
+    },
+    "bajista": {
+     "n": 4,
+     "win": 0.75,
+     "exp": 1.367,
+     "tot": 5.5
+    }
+   },
+   "vol": {
+    "alta": {
+     "n": 8,
+     "win": 0.25,
+     "exp": -0.233,
+     "tot": -1.9
+    },
+    "baja": {
+     "n": 25,
+     "win": 0.4,
+     "exp": 0.793,
+     "tot": 19.8
+    }
+   },
+   "lado": {
+    "largo": {
+     "n": 21,
+     "win": 0.43,
+     "exp": 0.848,
+     "tot": 17.8
+    },
+    "corto": {
+     "n": 12,
+     "win": 0.25,
+     "exp": 0.011,
+     "tot": 0.1
+    }
+   },
+   "salida": {
+    "stop": {
+     "n": 33,
+     "win": 0.36,
+     "exp": 0.544,
+     "tot": 18.0
+    }
+   },
+   "dependencia_ganadoras": {
+    "top5pct_R": 8.4,
+    "resto_exp": 0.299,
+    "top10_R": 32.7,
+    "total": 18.0,
+    "sin_top10_exp": -0.64
+   }
+  },
+  "funding": {
+   "regimen": {
+    "alcista": {
+     "n": 21,
+     "win": 0.43,
+     "exp": 0.003,
+     "tot": 0.1
+    },
+    "transicion": {
+     "n": 1,
+     "win": 0.0,
+     "exp": -0.511,
+     "tot": -0.5
+    },
+    "bajista": {
+     "n": 13,
+     "win": 0.38,
+     "exp": -0.03,
+     "tot": -0.4
+    }
+   },
+   "vol": {
+    "alta": {
+     "n": 28,
+     "win": 0.39,
+     "exp": -0.083,
+     "tot": -2.3
+    },
+    "baja": {
+     "n": 7,
+     "win": 0.43,
+     "exp": 0.212,
+     "tot": 1.5
+    }
+   },
+   "lado": {
+    "largo": {
+     "n": 15,
+     "win": 0.33,
+     "exp": -0.069,
+     "tot": -1.0
+    },
+    "corto": {
+     "n": 20,
+     "win": 0.45,
+     "exp": 0.009,
+     "tot": 0.2
+    }
+   },
+   "salida": {
+    "stop": {
+     "n": 33,
+     "win": 0.39,
+     "exp": -0.064,
+     "tot": -2.1
+    },
+    "tiempo": {
+     "n": 2,
+     "win": 0.5,
+     "exp": 0.641,
+     "tot": 1.3
+    }
+   },
+   "dependencia_ganadoras": {
+    "top5pct_R": 3.4,
+    "resto_exp": -0.124,
+    "top10_R": 9.9,
+    "total": -0.8,
+    "sin_top10_exp": -0.429
+   }
+  }
+ },
+ "ablacion": {
+  "sin_vega": {
+   "n": 631,
+   "nw": 1.79,
+   "win": 0.4,
+   "exp": 0.45,
+   "wexp": 0.3,
+   "Ry": 27.95,
+   "tot": 189.25,
+   "dd": 16.09,
+   "RyDD": 1.74
+  },
+  "solo_vega": {
+   "n": 134,
+   "nw": 0.38,
+   "win": 0.44,
+   "exp": 0.16,
+   "wexp": 0.16,
+   "Ry": 3.13,
+   "tot": 21.16,
+   "dd": 3.27,
+   "RyDD": 0.96
+  },
+  "sin_ortega": {
+   "n": 649,
+   "nw": 1.84,
+   "win": 0.4,
+   "exp": 0.4,
+   "wexp": 0.26,
+   "Ry": 24.61,
+   "tot": 166.66,
+   "dd": 15.63,
+   "RyDD": 1.57
+  },
+  "solo_ortega": {
+   "n": 116,
+   "nw": 0.33,
+   "win": 0.43,
+   "exp": 0.41,
+   "wexp": 0.41,
+   "Ry": 6.98,
+   "tot": 47.26,
+   "dd": 5.58,
+   "RyDD": 1.25
+  },
+  "sin_paz": {
+   "n": 315,
+   "nw": 0.89,
+   "win": 0.42,
+   "exp": 0.27,
+   "wexp": 0.26,
+   "Ry": 11.91,
+   "tot": 80.62,
+   "dd": 6.62,
+   "RyDD": 1.8
+  },
+  "solo_paz": {
+   "n": 447,
+   "nw": 1.27,
+   "win": 0.39,
+   "exp": 0.5,
+   "wexp": 0.35,
+   "Ry": 22.81,
+   "tot": 154.43,
+   "dd": 16.81,
+   "RyDD": 1.36
+  },
+  "sin_rios": {
+   "n": 716,
+   "nw": 2.03,
+   "win": 0.41,
+   "exp": 0.4,
+   "wexp": 0.27,
+   "Ry": 28.91,
+   "tot": 195.75,
+   "dd": 15.49,
+   "RyDD": 1.87
+  },
+  "solo_rios": {
+   "n": 33,
+   "nw": 0.09,
+   "win": 0.36,
+   "exp": 0.54,
+   "wexp": 0.41,
+   "Ry": 1.99,
+   "tot": 13.46,
+   "dd": 7.57,
+   "RyDD": 0.26
+  },
+  "sin_funding": {
+   "n": 718,
+   "nw": 2.03,
+   "win": 0.41,
+   "exp": 0.43,
+   "wexp": 0.28,
+   "Ry": 29.7,
+   "tot": 201.13,
+   "dd": 15.49,
+   "RyDD": 1.92
+  },
+  "solo_funding": {
+   "n": 35,
+   "nw": 0.1,
+   "win": 0.4,
+   "exp": -0.02,
+   "wexp": -0.01,
+   "Ry": -0.06,
+   "tot": -0.42,
+   "dd": 1.88,
+   "RyDD": -0.03
+  }
+ },
+ "corr_diaria": {
+  "vega": {
+   "vega": 1.0,
+   "ortega": 0.04,
+   "paz": 0.09,
+   "rios": 0.08,
+   "funding": 0.13
+  },
+  "ortega": {
+   "vega": 0.04,
+   "ortega": 1.0,
+   "paz": -0.0,
+   "rios": -0.0,
+   "funding": 0.02
+  },
+  "paz": {
+   "vega": 0.09,
+   "ortega": -0.0,
+   "paz": 1.0,
+   "rios": 0.06,
+   "funding": -0.0
+  },
+  "rios": {
+   "vega": 0.08,
+   "ortega": -0.0,
+   "paz": 0.06,
+   "rios": 1.0,
+   "funding": 0.0
+  },
+  "funding": {
+   "vega": 0.13,
+   "ortega": 0.02,
+   "paz": -0.0,
+   "rios": 0.0,
+   "funding": 1.0
+  }
+ },
+ "corr_semanal": {
+  "vega": {
+   "vega": 1.0,
+   "ortega": 0.14,
+   "paz": 0.29,
+   "rios": 0.09,
+   "funding": 0.13
+  },
+  "ortega": {
+   "vega": 0.14,
+   "ortega": 1.0,
+   "paz": 0.07,
+   "rios": -0.01,
+   "funding": 0.05
+  },
+  "paz": {
+   "vega": 0.29,
+   "ortega": 0.07,
+   "paz": 1.0,
+   "rios": 0.05,
+   "funding": -0.02
+  },
+  "rios": {
+   "vega": 0.09,
+   "ortega": -0.01,
+   "paz": 0.05,
+   "rios": 1.0,
+   "funding": 0.0
+  },
+  "funding": {
+   "vega": 0.13,
+   "ortega": 0.05,
+   "paz": -0.02,
+   "rios": 0.0,
+   "funding": 1.0
+  }
+ },
+ "solapes": {
+  "vega-ortega": {
+   "horas_juntos": 5335,
+   "mismo_lado": 1.0
+  },
+  "vega-paz": {
+   "horas_juntos": 2645,
+   "mismo_lado": 0.94
+  },
+  "vega-rios": {
+   "horas_juntos": 267,
+   "mismo_lado": 0.74
+  },
+  "vega-funding": {
+   "horas_juntos": 1070,
+   "mismo_lado": 0.61
+  },
+  "ortega-paz": {
+   "horas_juntos": 4306,
+   "mismo_lado": 1.0
+  },
+  "ortega-rios": {
+   "horas_juntos": 567,
+   "mismo_lado": 1.0
+  },
+  "ortega-funding": {
+   "horas_juntos": 903,
+   "mismo_lado": 0.51
+  },
+  "paz-rios": {
+   "horas_juntos": 567,
+   "mismo_lado": 1.0
+  },
+  "paz-funding": {
+   "horas_juntos": 794,
+   "mismo_lado": 0.44
+  },
+  "rios-funding": {
+   "horas_juntos": 0,
+   "mismo_lado": null
+  }
+ },
+ "semanas_con_perdida_simultanea": {
+  "2": 71,
+  "3": 17,
+  "4": 1
+ },
+ "semanas": 353,
+ "nub_None": {
+  "n": 900,
+  "nw": 2.55,
+  "win": 0.42,
+  "exp": 0.31,
+  "wexp": 0.17,
+  "Ry": 22.41,
+  "tot": 151.72,
+  "dd": 17.85,
+  "RyDD": 1.26
+ },
+ "nub_None_por_ano": {
+  "2020": 67.5,
+  "2021": 63.2,
+  "2022": -15.7,
+  "2023": 79.8,
+  "2024": 20.6,
+  "2025": 7.7,
+  "2026": 3.0
+ },
+ "nub_na": {
+  "n": 769,
+  "nw": 2.18,
+  "win": 0.43,
+  "exp": 0.28,
+  "wexp": 0.15,
+  "Ry": 17.03,
+  "tot": 115.32,
+  "dd": 14.66,
+  "RyDD": 1.16
+ },
+ "nub_na_por_ano": {
+  "2020": 62.1,
+  "2021": 64.6,
+  "2022": -7.7,
+  "2023": 18.7,
+  "2024": 22.0,
+  "2025": 19.3,
+  "2026": 3.7
+ },
+ "nub_veto_por_ano": {
+  "2020": 68.1,
+  "2021": 62.8,
+  "2022": -0.9,
+  "2023": 82.1,
+  "2024": 24.9,
+  "2025": 7.1,
+  "2026": 4.3
+ },
+ "paz_cortos_bajista_sin_veto": {
+  "n": 146,
+  "win": 0.46,
+  "exp": -0.202,
+  "tot": -29.5
+ },
+ "rios_cortos_bajista_sin_veto": {
+  "n": 4,
+  "win": 0.75,
+  "exp": 0.19,
+  "tot": 0.8
+ },
+ "salinas_rejilla": {
+  "cap=None freno=None": [
+   36.7,
+   23.7,
+   1.55
+  ],
+  "cap=None freno=(6, 0.5)": [
+   29.8,
+   14.9,
+   2.0
+  ],
+  "cap=None freno=(8, 0.5)": [
+   31.0,
+   16.0,
+   1.93
+  ],
+  "cap=None freno=(10, 0.5)": [
+   31.4,
+   16.9,
+   1.86
+  ],
+  "cap=None freno=(12, 0.5)": [
+   30.9,
+   18.4,
+   1.68
+  ],
+  "cap=None freno=(8, 0.75)": [
+   34.3,
+   19.8,
+   1.73
+  ],
+  "cap=1.5 freno=None": [
+   26.8,
+   19.1,
+   1.4
+  ],
+  "cap=1.5 freno=(6, 0.5)": [
+   24.3,
+   14.2,
+   1.7
+  ],
+  "cap=1.5 freno=(8, 0.5)": [
+   23.5,
+   14.6,
+   1.61
+  ],
+  "cap=1.5 freno=(10, 0.5)": [
+   24.1,
+   16.0,
+   1.5
+  ],
+  "cap=1.5 freno=(12, 0.5)": [
+   23.7,
+   15.8,
+   1.5
+  ],
+  "cap=1.5 freno=(8, 0.75)": [
+   25.8,
+   17.0,
+   1.52
+  ],
+  "cap=2.0 freno=None": [
+   34.5,
+   21.8,
+   1.58
+  ],
+  "cap=2.0 freno=(6, 0.5)": [
+   29.4,
+   14.6,
+   2.02
+  ],
+  "cap=2.0 freno=(8, 0.5)": [
+   29.3,
+   15.5,
+   1.89
+  ],
+  "cap=2.0 freno=(10, 0.5)": [
+   31.3,
+   16.5,
+   1.9
+  ],
+  "cap=2.0 freno=(12, 0.5)": [
+   30.6,
+   18.2,
+   1.68
+  ],
+  "cap=2.0 freno=(8, 0.75)": [
+   31.8,
+   19.1,
+   1.67
+  ],
+  "cap=2.5 freno=None": [
+   35.4,
+   23.1,
+   1.53
+  ],
+  "cap=2.5 freno=(6, 0.5)": [
+   27.5,
+   15.2,
+   1.81
+  ],
+  "cap=2.5 freno=(8, 0.5)": [
+   30.5,
+   15.7,
+   1.94
+  ],
+  "cap=2.5 freno=(10, 0.5)": [
+   30.5,
+   16.6,
+   1.84
+  ],
+  "cap=2.5 freno=(12, 0.5)": [
+   31.8,
+   18.3,
+   1.73
+  ],
+  "cap=2.5 freno=(8, 0.75)": [
+   32.8,
+   19.6,
+   1.68
+  ],
+  "cap=3.0 freno=None": [
+   36.4,
+   23.7,
+   1.54
+  ],
+  "cap=3.0 freno=(6, 0.5)": [
+   29.4,
+   14.9,
+   1.98
+  ],
+  "cap=3.0 freno=(8, 0.5)": [
+   30.5,
+   16.0,
+   1.91
+  ],
+  "cap=3.0 freno=(10, 0.5)": [
+   31.1,
+   16.9,
+   1.84
+  ],
+  "cap=3.0 freno=(12, 0.5)": [
+   30.8,
+   18.4,
+   1.68
+  ],
+  "cap=3.0 freno=(8, 0.75)": [
+   33.9,
+   19.8,
+   1.71
+  ]
+ }
+}
