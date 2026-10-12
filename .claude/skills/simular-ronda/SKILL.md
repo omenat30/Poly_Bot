@@ -36,3 +36,11 @@ Siempre antes de publicar `office/*.js` en el artefacto. También después de un
 ## Días de regresión (añade aquí cada incidente)
 - `2026-09-07 2026-09-08`: dos aprendices seguidos con el tope de 2R.
 - `2026-09-03`: dos aprendices largos en el mismo día.
+
+## Segunda ala (ML, simulación)
+Antes de publicar `office/ala2_*.js` o `office/ala2_models.json`:
+```bash
+node mesa_radar_btc/ala2/replay_ala2.js <bitstamp.csv> /tmp/a2rep 2026-10-07 2026-10-08 2026-10-09
+```
+- Repite las rondas como la rutina horaria y comprueba lo mismo: rondas sin fallos, ningún cierre sin su decisión abierta, decisiones sin huecos en horario y 0 correos.
+- Para probar el camino del campeón, usa una copia de `office` con `champion.thr = -9` y `ALA2_OFFICE=<copia>`.

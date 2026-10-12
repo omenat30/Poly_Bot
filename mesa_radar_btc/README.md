@@ -50,6 +50,64 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## Segunda ala · machine learning (12 oct 2026, fase 2: simulación)
+
+Es un ala independiente de la primera: no ve sus señales, posiciones ni decisiones. Decide cada 10 minutos (L–V 7:00–20:50 Madrid) y registra todas las decisiones, también las de «sin operación». No envía correos y no opera con dinero.
+
+**Quién hace qué**
+- **Montes · liquidez.** Flujo comprador o vendedor estimado (BVC), volumen relativo, absorción, mechas de rechazo, iliquidez de Amihud, distancia al VWAP y funding.
+- **Aranda · técnico.** Retornos de 10 min a 7 días, EMAs, RSI de 1 h y 4 h, posición en el rango, distancia a máximos y mínimos, SMA50 diaria.
+- **Lagos · director.** Combina a los dos con un modelo propio (stacking con sus predicciones fuera de muestra y el régimen), versiona los modelos y lleva campeón y retador.
+- **Beltrán · riesgo, con veto.** Calibra el EV con una regresión isotónica sobre los últimos 24 meses fuera de muestra. Reglas:
+  - una posición a la vez, 1R = 0,5%;
+  - EV neto calibrado > +0,05R;
+  - parada diaria en −2R;
+  - mitad de riesgo si la cartera cae más de 8R;
+  - suspensión si cae 12R (solo el campeón);
+  - sin entradas si los datos son dudosos.
+
+**Fase 1 · backtest** (`ala2/`, protocolo de la casa):
+- **Modelo:** LightGBM walk-forward mensual 2018–2026 (106 versiones).
+- **Costes:** 0,14%, más 0,03% en los stops, más funding.
+- **Operación:** entrada 5 min después de la decisión, stop de 1,5 ATR de 1 h, objetivo de 1,5R, máximo 24 h.
+- **Variantes:** 16, cerradas antes de mirar.
+  - Primera tanda: 8 sobre velas de 1 min.
+  - Segunda tanda: 8 sobre velas de 5 min y EV calibrado. Son las mismas variables que ve el vivo; el código es el mismo (`office/ala2_feat.js`).
+- **Elección y prueba:** se elige con 2018–21 y se prueba en 2022–26 sin tocar.
+
+| 2022–26 (prueba) | ops/sem | acierto | R/op neto | R/op antes de costes | payoff | PF | Sharpe | caída |
+|---|---|---|---|---|---|---|---|---|
+| Velas de 1 min, elegida (media, umbral 0,20) | 2,47 | 42,3% | −0,114 | – | 1,12 | 0,82 | −0,84 | 51,0R |
+| Velas de 5 min + calibración, elegida (media, EV > 0,05) · **campeón** | 0,49 | 45,1% | +0,010 | +0,118 | 1,24 | 1,02 | −0,11 | 10,8R |
+| Explorador de Lagos (sin filtro de EV) · **retador** | 14,45 | 40,4% | −0,180 | −0,005 | 1,09 | 0,74 | −3,90 | 328R |
+| Ala 1 · v12 | 2,3 | 44,1% | +0,279 | – | – | – | 0,77 | 14,3R |
+
+**Veredicto: no hay ventaja demostrada. Descartado como estrategia de dinero real.**
+- **Poca señal:** la correlación de las predicciones con el resultado cae de 0,07–0,10 en 2018–21 a 0,01–0,04 en 2022–26.
+- **Los costes se comen lo poco que hay:** 0,11–0,18R por operación con stops de 1,5 ATR de 1 h. Una cadencia de 10 min obliga a stops cortos, y con un 0,14% de comisión eso es estructural.
+- **El campeón no opera desde 2023:** la calibración de Beltrán ya no ve EV positivo y veta.
+- **Por debajo del objetivo:** el payoff realizado (1,1–1,24) no llega al 1,5 pedido, por los cierres por tiempo.
+- **Dato llamativo sin validar:** a favor de la SMA50 diaria el campeón dio +0,26R (34 operaciones). Se vio después de la prueba, así que no se usa.
+
+Inventario: +17 pruebas (16 variantes y el explorador), 3.103 en total.
+
+**Fase 2 · simulación en vivo** (desde el 13 oct 2026):
+- **Ronda:** `office/ala2_tick.js` (rutina «Mesa Radar · Ala 2 ML»; instrucción en `ala2/rutina_ala2.txt`).
+  - Las rutinas no pueden bajar de una hora, así que corre a las :57 y calcula las 6 decisiones de 10 min de esa hora, cada una solo con velas cerradas antes de su minuto.
+  - El registro es el mismo que con una ronda cada 10 min; se publica con hasta 1 h de retraso.
+  - Se usa la rutina antigua de Calvo, desactivada desde el 9 oct, porque es la única libre que tiene el conector de OpenMarket.
+- **Base de datos:** colección `ala2`, un documento `d-AAAAMMDDHHMM` por decisión más `estado`.
+  - Cada decisión guarda: hora, datos, liquidez, técnico, régimen, predicciones de Montes, Aranda y Lagos, dirección, entrada, stop y objetivo, R:R, riesgo en % y € (capital teórico de 10.000 €), costes, EV neto, probabilidad, confianza, motivo, veto de Beltrán y versión del modelo.
+  - Al cerrar se añade: R neto y bruto, costes, MFE/MAE, previsto frente a real y motivo del cierre.
+- **Liquidez real:** cada decisión guarda también el flujo agresor comprador de Binance (10 min, 1 h, 4 h), el interés abierto y las liquidaciones. OpenMarket gratis solo guarda 7 días, así que esta es la única forma de tener histórico para reentrenar a Montes con datos de verdad.
+- **Campeón y retador:** el campeón es la variante elegida; el retador, de momento, es el explorador de Lagos, que da señales simuladas para aprender (y perderá según el backtest).
+- **Versiones:** viven en `office/ala2_models.json` (`historial`). Para volver atrás se vuelve a publicar la versión anterior. Un modelo nuevo entra como retador.
+- **Dinero real:** solo con 100 operaciones simuladas, R medio positivo y aprobación del usuario.
+- **Ensayo:** `node ala2/replay_ala2.js <bitstamp.csv> <dir> <días>`.
+  - 7, 8 y 9 oct y viernes 2 → lunes 5 oct: ✅ (510 rondas, ninguna salida sin entrada, 0 correos).
+  - Con umbral abierto en una copia de prueba: 10 entradas y 10 cierres del campeón, parada diaria correcta.
+- **Paridad de modelos:** Python y JS dan la misma predicción (diferencia máxima 0 en 300 decisiones).
+
 ## Auditoría externa de la v12 (12 oct 2026)
 
 El dictamen de diez auditores externos dice que la mesa no ha demostrado una ventaja propia y queda lejos del Radar BTC 15m (2022–26: acierto 44% frente a 56%, Sharpe 0,77 frente a 2,51). Sus propuestas se probaron el mismo día con el juez (`validar-estrategia`); ninguna mejora la cartera fuera de muestra. Inventario: 3.081 pruebas.
