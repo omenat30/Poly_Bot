@@ -50,6 +50,25 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## Auditoría externa de la v12 (12 oct 2026)
+
+El dictamen de diez auditores externos dice que la mesa no ha demostrado una ventaja propia y queda lejos del Radar BTC 15m (2022–26: acierto 44% frente a 56%, Sharpe 0,77 frente a 2,51). Sus propuestas se probaron el mismo día con el juez (`validar-estrategia`); ninguna mejora la cartera fuera de muestra. Inventario: 3.081 pruebas.
+
+| Hipótesis | Script | Resultado | Veredicto |
+|---|---|---|---|
+| Aportación de cada agente (cartera sin él) | `au_loo.py` | Vega es lo mejor (sin él, Sharpe 0,57); Ortega aporta (0,69); Paz propia resta en 2022–26 (sin ella 1,12) pero es el motor de 2018–21 (sin ella 0,72) | — |
+| Aprender de las 1.119 extras del Radar (5 variantes con ML) | `au_meta.py` | ML que aprende de todas: +0,10R/op frente a +0,27R de la regla; la mejor elegida con 2018–21 no mejora la cartera | Descartada |
+| Despido automático por resultado reciente (20, 40 ops o 12 meses) | `au_bench.py` | Sharpe 2022–26 de 0,61 a 0,75 frente a 0,77 | Descartada |
+| Oportunidades del modelo en fin de semana | `au_finde.py` | 0,05 ops/semana | Descartada |
+| Mesa sin Paz propia | juez | 2022–26: Sharpe 1,12, acierto 48%, caída 8,9R; pero −63R en 2020–21, −33R en 2023, 1,0 ops/semana | Aspirante en sombra |
+
+Decisiones:
+- La v12 queda congelada.
+- Iturbe compara en cada ronda la versión vigente con el aspirante sin Paz propia (`notes.iturbe.val.aspirante`); se decide con 20 operaciones cerradas.
+- Cada cambio, uno a uno y aprobado por la auditoría.
+
+La visita está en la escena 3D: diez auditores y una reunión de unos 31 minutos durante la semana del 12 oct. El dictamen por agente está en la sección «Auditoría externa de la v12» del panel.
+
 ## Revisión de la v12a con el juez (12 oct 2026, descartada)
 
 Se pasa por `validar-estrategia` la alternativa v12a frente a la v12 en vivo. La v12a mantiene la tendencia propia de Vega a 0,75R y lleva los aprendices a 0,5R en lugar de 1R. No es una prueba limpia: sus cifras de 2022–26 ya se habían visto al elegir la v12. Cuenta como una prueba más en el inventario (3.071).

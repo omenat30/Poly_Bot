@@ -17,6 +17,7 @@
     <div class="stage" id="stage">
       <div class="fallback" id="fallback">Cargando la oficina en 3D…</div>
       <div id="overlay"></div>
+      <div class="auditbar" id="auditBar" hidden><b>Reunión con la auditoría externa</b></div>
       <div class="night" id="night" hidden><div><b>Oficina cerrada</b><br><span class="muted" id="nightTxt">Todos en casa. Vuelven de lunes a viernes a las 7:00 (hora de Madrid). Los stops siguen en el exchange.</span></div></div>
       <div class="stage-cap"><span id="capL">Arrastra para girar la oficina</span><span id="capR">–</span></div>
     </div>
@@ -25,6 +26,39 @@
       <div class="round-head"><h2>La ronda</h2><span class="eyebrow" id="roundAt">esperando datos</span></div>
       <div id="agents"></div>
     </aside>
+  </section>
+
+  <section class="sec" aria-labelledby="audv12Title">
+    <div class="sec-head"><h2 id="audv12Title">Auditoría externa de la v12 · 12 oct 2026</h2><p>Diez auditores externos visitaron la oficina y entregaron su dictamen en persona. Diagnóstico: la mesa no ha demostrado una ventaja propia y queda lejos del Radar BTC 15m (acierto 44% frente a 56%, Sharpe 0,77 frente a 2,51 en 2022–26). Ese mismo día se probaron sus propuestas con el juez de la oficina: ninguna mejora la cartera fuera de muestra.</p></div>
+    <div class="card">
+      <div class="tbl"><table class="t">
+        <thead><tr><th scope="col">Hipótesis probada el 12 oct</th><th scope="col">Resultado en 2022–26</th><th scope="col">Veredicto</th></tr></thead>
+        <tbody>
+          <tr><td class="txt">Aprender de las 1.119 oportunidades extra del Radar (5 variantes, incluidos modelos de ML)</td><td class="txt">El modelo que aprende de todas: +0,10R por operación frente a +0,27R de la regla actual. La mejor elegida con 2018–21 no mejora la cartera.</td><td class="txt neg">Descartada</td></tr>
+          <tr><td class="txt">Despido automático: un agente pasa a sombra si sus últimas 20 o 40 operaciones, o sus últimos 12 meses, suman pérdidas</td><td class="txt">Empeora la mesa en las tres variantes (Sharpe 0,61 a 0,75 frente a 0,77)</td><td class="txt neg">Descartada</td></tr>
+          <tr><td class="txt">Oportunidades del modelo del Radar en fin de semana, cuando el Radar no opera</td><td class="txt">0,05 operaciones por semana: irrelevante</td><td class="txt neg">Descartada</td></tr>
+          <tr><td class="txt">Mesa sin la estrategia propia de Paz</td><td class="txt">Sharpe 1,12 frente a 0,77, acierto 48% frente a 44%, caída 8,9R frente a 14,3R; pero −63R en 2020–21, −33R en 2023 y 1,0 operaciones por semana frente a 2,3</td><td class="txt">Aspirante en sombra</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tbl"><table class="t">
+        <thead><tr><th scope="col">Agente</th><th scope="col">Dictamen</th><th scope="col">Decisión</th></tr></thead>
+        <tbody>
+          <tr><td class="txt">Vega (aprendiz de rupturas)</td><td class="txt">Lo mejor de la mesa: 52,6% de acierto en 2022–26. Sin él, el Sharpe cae a 0,57.</td><td class="txt pos">Sigue</td></tr>
+          <tr><td class="txt">Ortega (ruptura de 5 días)</td><td class="txt">Aporta (sin él, Sharpe 0,69), pero acierta el 39%. Separar sus rupturas por volatilidad y amplitud.</td><td class="txt pos">Sigue</td></tr>
+          <tr><td class="txt">Paz (retroceso propio + aprendiz de reversiones)</td><td class="txt">Su estrategia propia era el motor en 2018–21 y resta en 2022–26.</td><td class="txt">A prueba frente al aspirante en sombra</td></tr>
+          <tr><td class="txt">Ríos (aprendiz de barridos)</td><td class="txt">Aporta poco por volumen (0,04 operaciones por semana); su estrategia propia, en sombra.</td><td class="txt">Sigue, sin más riesgo</td></tr>
+          <tr><td class="txt">Ferrer (funding)</td><td class="txt">−0,02R por operación.</td><td class="txt neg">Sigue en sombra</td></tr>
+          <tr><td class="txt">Duarte (ML)</td><td class="txt">Aprender de todo no supera a la regla sencilla fuera de muestra.</td><td class="txt">Puntúa sin vetar; todo modelo nuevo compite en sombra</td></tr>
+          <tr><td class="txt">Salinas (cartera)</td><td class="txt">El despido automático empeora la mesa.</td><td class="txt">Límites intactos sin aprobación independiente</td></tr>
+          <tr><td class="txt">Nubarrones (régimen)</td><td class="txt">El veto salva a Ríos; en Paz no está validado.</td><td class="txt">Registrar lo evitado y lo dejado de ganar</td></tr>
+          <tr><td class="txt">Iturbe y Calvo (validación y datos)</td><td class="txt">Tres incidentes en la primera semana, corregidos con pruebas de regresión.</td><td class="txt">Estado único por oportunidad; comparar vigente y aspirante en real</td></tr>
+        </tbody>
+      </table></div>
+      <ul class="notes">
+        <li><b>Plan:</b> v12 congelada; aspirantes en sombra contra la versión vigente; un cambio cada vez, aprobado por la auditoría; revisión con 20 operaciones cerradas en real.</li>
+        <li><b>Verdad incómoda:</b> hoy la ventaja está en el modelo del Radar. La oficina tiene que añadirle lo que él no puede hacer, no competir con él. Sin mejoras sustanciales con datos reales, habrá despidos.</li>
+      </ul>
+    </div>
   </section>
 
   <section class="sec" aria-labelledby="apTitle">

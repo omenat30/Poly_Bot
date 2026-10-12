@@ -306,9 +306,10 @@
   }
   // a new round: everyone back, reading data, then the ones with news present them at the table
   let lastTickAt = null, meeting = false;
-  const AUDIT_MEET = Date.now() < Date.UTC(2026, 9, 18) && !reduce;   // la primera vez que se abre la oficina esta semana, reunión de la auditoría
+  const AUDIT_MEET = Date.now() < Date.UTC(2026, 9, 19) && !reduce;   // semana del 12 oct: los diez auditores externos visitan la oficina (reunión de 30 min)
+  let auditOn = false;
   function newRound(t) {
-    if (!officeOn) return;
+    if (!officeOn || auditOn) return;
     for (const k of M.ORDER) { if (P[k].state !== 'sit') backToDesk(k); P[k].reading = now() + 9; }
     setTimeout(() => {
       M.ORDER.forEach((k, i) => { const n = t.notes && t.notes[k]; if (n) setTimeout(() => say(k, short(n.text, 110), n.level, 6), i * 3800); });
@@ -500,7 +501,7 @@
     cloud.position.y = 2.35 + Math.sin(tnow * 0.8) * 0.05; cloud.rotation.y = Math.sin(tnow * 0.3) * 0.2; bolt.visible = bearPhase === 'mature' && !reduce && (tnow % 4) < 0.18;
     if (!reduce && Math.random() < dt * 25) { const l = leds[Math.floor(Math.random() * leds.length)]; l.material = Math.random() < 0.7 ? ledOn : Math.random() < 0.5 ? ledAmber : ledOff; }
     const blink = erActive ? (Math.sin(tnow * 6) > 0 ? 1 : 0) : 0; beaconMat.emissive.setHex(blink ? 0xff2a1a : erActive ? 0x400806 : 0x000000); alarm.intensity = erActive ? (reduce ? 0.6 : 0.4 + blink * 1.4) : 0;
-    const near = M.ORDER.some(k => !P[k].home && Math.hypot(P[k].pos.x - DOOR.in[0], P[k].pos.y - DOOR.in[1]) < 1.6);
+    const near = M.ORDER.some(k => !P[k].home && Math.hypot(P[k].pos.x - DOOR.in[0], P[k].pos.y - DOOR.in[1]) < 1.6) || VIS.some(v => v.g.visible && Math.hypot(v.pos.x - DOOR.in[0], v.pos.y - DOOR.in[1]) < 1.6);
     doorAngle += ((near ? -1.35 : 0) - doorAngle) * Math.min(1, dt * 4); hinge.rotation.y = doorAngle;
     for (const k of M.ORDER) {
       const p = P[k];
@@ -538,26 +539,107 @@
   }
   let last = performance.now(), visible = true;
   document.addEventListener('visibilitychange', () => { visible = !document.hidden; last = performance.now(); });
-  function frame(ts) { requestAnimationFrame(frame); if (!visible) return; const dt = Math.min(0.05, (ts - last) / 1000); last = ts; step(dt); renderer.render(scene, cam); overlayPos(); }
+  function frame(ts) { requestAnimationFrame(frame); if (!visible) return; const dt = Math.min(0.05, (ts - last) / 1000); last = ts; step(dt); stepV(dt); renderer.render(scene, cam); overlayPos(); overlayV(); }
   const seen = new Set(); scene.traverse(o => { const ms = o.material ? [].concat(o.material) : []; for (const m of ms) { if (seen.has(m) || [ledOn, ledAmber, ledOff].includes(m)) continue; seen.add(m); if (m.color && !m.map) m.color.convertSRGBToLinear(); if (m.emissive) m.emissive.convertSRGBToLinear(); if (m.isMeshBasicMaterial && m.map) m.toneMapped = false; } });
   applyTheme(); onData(M.S); requestAnimationFrame(frame);
-  // reunión de la v12 (semana del 12 de octubre de 2026): presentación de los aprendices del Radar
-  setTimeout(() => {
-    if (!AUDIT_MEET || !officeOn) return;
-    meeting = true; let i = 0;
+  // ---- visita de la auditoría externa (semana del 12 oct 2026): diez auditores, reunión de ~30 min en la mesa central ----
+  const AUD = [['Dir. cuantitativa', '#3b4252'], ['Estadística', '#4c566a'], ['Datos y fugas', '#2e3440'], ['Ejecución', '#434c5e'], ['Rupturas', '#3b4252'],
+    ['Retrocesos y funding', '#4c566a'], ['Machine learning', '#2e3440'], ['Riesgo de cartera', '#434c5e'], ['Regímenes', '#3b4252'], ['Software y validación', '#4c566a']];
+  const AUDLOOK = [{ hair: 'grey', hc: '#bdbdbd', skin: '#e6c0a0', glasses: true }, { hair: 'bob', hc: '#2b2118', skin: '#efc6a6' }, { hair: 'short', hc: '#111', skin: '#8d5a3b' }, { hair: 'slick', hc: '#3a2a1e', skin: '#dcb08c', glasses: true },
+    { hair: 'curly', hc: '#1d1d1d', skin: '#c99a73' }, { hair: 'pony', hc: '#7a4a24', skin: '#e2b999' }, { hair: 'short', hc: '#5a3a22', skin: '#d8a982', glasses: true }, { hair: 'bald', hc: '#e0b493', skin: '#e0b493', beard: true },
+    { hair: 'bob', hc: '#6b4a2b', skin: '#c58c66', glasses: true }, { hair: 'slick', hc: '#222', skin: '#e8c3a3' }];
+  const VIS = AUD.map(([role, col], i) => { const k = 'aud' + i; LOOK[k] = Object.assign({ suit: true, pants: '#1f2530' }, AUDLOOK[i]); const p = person(col, k); p.g.visible = false;
+    const tag = document.createElement('span'); tag.className = 'tag3d aud'; tag.textContent = 'Auditor · ' + role; tag.style.opacity = '0'; overlay.append(tag);
+    const bub = document.createElement('div'); bub.className = 'bub'; bub.style.opacity = '0'; overlay.append(bub);
+    return { ...p, role, tag, bub, pos: new T3.Vector2(DOOR.in[0], DOOR.in[1]), path: [], state: 'stand', yaw: Math.PI / 2, phase: i, after: null, say: null, sayUntil: 0 }; });
+  function goV(v, to, then) { v.path = route(v.pos, to); v.state = 'walk'; v.after = then; }
+  function sayAny(k, text, lv, secs) { if (k[0] === 'A') { const v = VIS[Number(k.slice(1)) - 1]; v.say = { text, level: lv }; v.sayUntil = now() + secs; } else say(k, text, lv, secs); }
+  function stepV(dt) {
+    for (const v of VIS) {
+      if (!v.g.visible) continue;
+      v.phase += dt * (v.state === 'walk' ? 7.5 : 2);
+      if (v.state === 'walk') { const tgt = v.path[0]; if (!tgt) { v.state = 'stand'; const f = v.after; v.after = null; f && f(); } else { const dx = tgt[0] - v.pos.x, dz = tgt[1] - v.pos.y, d = Math.hypot(dx, dz), sp = 1.25 * dt; if (d <= sp) { v.pos.set(tgt[0], tgt[1]); v.path.shift(); } else { v.pos.x += dx / d * sp; v.pos.y += dz / d * sp; v.yaw = Math.atan2(dx, dz); } } }
+      const walk = v.state === 'walk', talk = v.state === 'talk', sw = walk ? Math.sin(v.phase) * 0.55 : 0;
+      v.g.position.set(v.pos.x, 0, v.pos.y); v.g.rotation.y += ((v.yaw - v.g.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 8);
+      v.hipL.rotation.x = sw; v.hipR.rotation.x = -sw; v.knL.rotation.x = walk ? Math.max(0, -sw) * 1.1 : 0; v.knR.rotation.x = walk ? Math.max(0, sw) * 1.1 : 0;
+      const speaking = v.say && v.sayUntil > now();
+      v.shL.rotation.x = speaking ? -0.35 + Math.sin(v.phase * 2.5) * 0.25 : -sw; v.shR.rotation.x = walk ? sw : -0.15;
+      v.elL.rotation.x = walk ? -0.35 : speaking ? -0.9 + Math.sin(v.phase * 2.5) * 0.3 : -0.4; v.elR.rotation.x = walk ? -0.35 : -0.3;
+      v.head.rotation.x = speaking || talk ? Math.sin(v.phase * 3) * 0.06 : 0;
+    }
+  }
+  function overlayV() {
+    const r = stage.getBoundingClientRect(), tn = now();
+    for (const v of VIS) {
+      const show = v.g.visible, talking = v.say && v.sayUntil > tn; v.tag.style.opacity = show && (v.state === 'walk' || talking) ? '.92' : '0'; if (!show) { v.bub.style.opacity = '0'; continue; }
+      v3.set(v.pos.x, 2.0, v.pos.y).project(cam); const x = (v3.x * 0.5 + 0.5) * r.width, y = (-v3.y * 0.5 + 0.5) * r.height;
+      v.tag.style.transform = `translate(${x}px, ${y + 34}px) translate(-50%, 0)`;
+      const on = talking;
+      if (on) { if (v.bub.dataset.t !== v.say.text) { v.bub.dataset.t = v.say.text; v.bub.className = 'bub aud ' + (v.say.level || ''); v.bub.textContent = ''; const nm = document.createElement('b'); nm.textContent = 'Auditor · ' + v.role; v.bub.append(nm, v.say.text); } v.bub.style.transform = `translate(${Math.max(130, Math.min(r.width - 130, x))}px, ${y - 8}px) translate(-50%, -100%)`; }
+      v.bub.style.opacity = on ? '1' : '0';
+    }
+  }
+  // guion de la reunión: 48 intervenciones cada 38 s (~31 min). Cifras de la auditoría y de las pruebas del 12 oct (juez validar-estrategia).
+  const AUDIT_TALK = [['A1', 'Buenas. Somos los diez auditores externos. Venimos a deciros en persona lo que dice el informe. Sentaos: esto dura media hora.', 'alerta'],
+    ['A1', 'El diagnóstico: la oficina no ha demostrado una ventaja propia. 44% de acierto y Sharpe 0,77, frente a 55,7% y 2,51 del Radar.', 'alerta'],
+    ['calvo', 'Lo sabemos. Lo pone nuestro propio dossier.', 'ok'],
+    ['A1', 'Saberlo no basta. El dueño exige mejoras sustanciales en acierto, número de operaciones, Sharpe y R esperado. Si no llegan, habrá despidos.', 'alerta'],
+    ['A2', '3.081 variantes probadas. Con tantas, cualquier backtest bonito puede ser suerte. El Deflated Sharpe de la mesa no pasa.', 'alerta'],
+    ['iturbe', 'Por eso exijo 100 operaciones y 12 meses antes de subir el riesgo.', 'ok'],
+    ['A2', 'Útil, pero alcanzar esos números no demuestra ventaja. Queremos intervalos de confianza y el registro de cada hipótesis rechazada.', 'idea'],
+    ['A3', 'Ya tuvisteis una fuga: se miraban 45 minutos de futuro en la vela de 1 h abierta. Cada decisión se reconstruye con lo que existía en ese instante.', 'alerta'],
+    ['duarte', 'Corregido y comprobado: 30 cortes, 12.985 operaciones idénticas.', 'ok'],
+    ['A3', 'Bien. Lo verificaremos nosotros, no vosotros.', 'idea'],
+    ['A4', 'Nadie ha medido todavía el deslizamiento real. Una buena señal ejecutada tarde es una mala operación.', 'alerta'],
+    ['salinas', 'El diario del dueño lo medirá: el informe de los viernes ya lo calcula.', 'ok'],
+    ['A5', 'Ortega: tu ruptura de 5 días hace 0,34 operaciones por semana y +0,41R, pero en 2022–26 aciertas solo el 39%.', 'idea'],
+    ['ortega', 'Gano poco a menudo y mucho cuando gano. Sin mí, la mesa baja de Sharpe 0,77 a 0,69.', 'ok'],
+    ['A5', 'Aportas: te quedas. Pero queremos tus rupturas separadas por volatilidad y amplitud.', 'idea'],
+    ['A5', 'Vega: tus oportunidades de aprendiz son lo mejor de la mesa, 52,6% de acierto en 2022–26. Sin ti, el Sharpe cae a 0,57.', 'trade'],
+    ['vega', 'Aprendo del Radar sin copiarle: solo tomo lo que él ve y no puede operar.', 'ok'],
+    ['A5', 'Y el tope de 2R de Salinas evita que dupliques riesgo con él. Sigues.', 'idea'],
+    ['A6', 'Paz: tienes un problema serio. En 2018–21 eras el motor de la mesa. En 2022–26 tu estrategia propia resta.', 'alerta'],
+    ['paz', '¿Cuánto?', 'ok'],
+    ['A6', 'Sin tu estrategia propia, en 2022–26 la mesa sube de Sharpe 0,77 a 1,12, el acierto del 44% al 48% y la caída baja de 14,3R a 8,9R.', 'alerta'],
+    ['paz', 'Pero sin mí, 2020, 2021 y 2023 se hunden: casi 100R menos. Y la mesa pasa de 2,3 a 1 operación por semana.', 'ok'],
+    ['A6', 'Por eso hoy no te despedimos: quedas a prueba. Desde hoy compite contigo en real un aspirante en sombra: la mesa sin tu estrategia propia.', 'alerta'],
+    ['iturbe', 'Lo mido yo en cada ronda. Si el aspirante gana con muestra suficiente, tu estrategia propia pasa a sombra.', 'idea'],
+    ['A6', 'Ríos: tus barridos son pocos, 0,04 por semana. Ferrer: −0,02R por operación. Tú sigues en sombra.', 'idea'],
+    ['ferrer', 'Entendido. Mi lectura del funding queda solo como dato.', 'ok'],
+    ['A7', 'Duarte: pedimos aprender de todo, también de lo rechazado. Hoy lo hemos probado con las 1.119 oportunidades extra del Radar.', 'idea'],
+    ['duarte', '¿Y?', 'ok'],
+    ['A7', 'El modelo que aprende de todas pierde fuera de muestra: +0,10R por operación frente a +0,27R de la regla actual. La regla sencilla gana.', 'alerta'],
+    ['duarte', 'Entonces sigo puntuando sin vetar.', 'ok'],
+    ['A7', 'Exacto. Cada modelo nuevo compite en sombra contra el vigente antes de tocar dinero.', 'idea'],
+    ['A8', 'Salinas: probamos el despido automático, apartar a quien encadena pérdidas. Empeora la mesa en las tres variantes.', 'alerta'],
+    ['salinas', 'Despedir por una racha llega tarde: te pierdes la recuperación.', 'ok'],
+    ['A8', 'Así que los límites se quedan: 2R abiertos, freno a 8R, −3R en 7 días y −10R. Nadie los toca sin aprobación independiente.', 'idea'],
+    ['A9', 'Nubarrones: tu veto a los cortos en bajista maduro salva a Ríos; en Paz no está validado. Queremos lo evitado y lo dejado de ganar, juntos.', 'idea'],
+    ['nubarrones', 'Lo registraré en cada veto.', 'ok'],
+    ['A10', 'Calvo e Iturbe: en vuestra primera semana hubo un correo de relleno, un stop sin entrada y una ronda bloqueada.', 'alerta'],
+    ['calvo', 'Corregidos los tres, con prueba de regresión y control diario a las 21:22.', 'ok'],
+    ['A10', 'Cada oportunidad tendrá un estado único: candidata, bloqueada, enviada, cerrada. Nada de avisos sin su entrada.', 'idea'],
+    ['A1', 'Pruebas de hoy: 4 hipótesis, 13 variantes nuevas. Ninguna mejora la cartera fuera de muestra.', 'alerta'],
+    ['A1', 'Los fines de semana, cuando el Radar descansa, tampoco: su modelo apenas da 0,05 señales por semana en sábado y domingo.', 'idea'],
+    ['vega', 'Entonces, ¿qué hacemos?', 'ok'],
+    ['A1', 'Uno: congelar la v12. Dos: aspirantes en sombra contra la vigente. Tres: un cambio cada vez, aprobado por esta auditoría.', 'alerta'],
+    ['A1', 'Y una verdad incómoda: hoy la ventaja está en el modelo del Radar. Vuestro trabajo es añadirle lo que él no puede hacer, no competir con él.', 'alerta'],
+    ['iturbe', 'Revisión en real: con 20 operaciones cerradas comparo la vigente y el aspirante con su z.', 'idea'],
+    ['calvo', 'Queda todo en el panel, en la sección de la auditoría.', 'ok'],
+    ['A1', 'Volveremos con los datos reales. Si no hay mejoras sustanciales, el dueño ya ha dicho lo que pasará.', 'alerta'],
+    ['A1', 'Gracias. Se levanta la sesión.', 'ok']];
+  const AUDIT_GAP = 38000, AUDIT_START = 26000;
+  function auditMeeting() {
+    if (auditOn) return; auditOn = true; meeting = true; let i = 0;
     for (const k of M.ORDER) { const a = Math.PI + (i++) * (Math.PI / 9), spot = SPOTS.table(a); setTimeout(() => goTo(P[k], spot, () => { P[k].state = 'talk'; P[k].yaw = yawTo(spot, [0, 3.6]); }), i * 500); }
-    const L = [['calvo', 'Reunión corta. Desde mañana hay tres aprendices del Radar BTC 15m en la mesa.', 'idea'],
-      ['iturbe', 'No copiamos al Radar. Cuando él está dentro, su modelo sigue viendo oportunidades que no puede operar: esas son las nuestras.', 'idea'],
-      ['vega', 'Yo, las rupturas. Solo a favor de la operación del Radar y antes de que haya hecho +0,8R. Mi tendencia propia pasa a sombra.', 'trade'],
-      ['paz', 'Yo, las reversiones. Y sigo con mi retroceso de 1 h a 0,5R.', 'trade'],
-      ['rios', 'Yo, los barridos de liquidez. Pocos, pero vuelvo a operar.', 'trade'],
-      ['ortega', 'Yo sigo con mi ruptura de 5 días: diversifico, opero días y no minutos.', 'ok'],
-      ['salinas', 'Cada oportunidad de aprendiz, 1R con stop y objetivo fijos. Tope 2R y las paradas de siempre.', 'idea'],
-      ['iturbe', 'Elegido con 2018–21. En 2022–26: 44% de acierto, +19R al año y Sharpe 0,77, frente a 43%, +14R y 0,59.', 'ok'],
-      ['calvo', 'Ojo: la caída sube a 14R y 2025 sale peor. Se valida en real con 100 operaciones.', 'alerta']];
-    L.forEach(([k, txt, lv], j) => setTimeout(() => say(k, txt, lv, 8), 19000 + j * 8200));
-    setTimeout(() => { meeting = false; M.ORDER.forEach(k => backToDesk(k)); }, 19000 + L.length * 8200 + 3000);
-  }, 5000);
+    VIS.forEach((v, j) => { const a = (j + 0.5) / VIS.length * Math.PI, spot = [Math.cos(a) * 2.35, 3.6 + Math.sin(a) * 2.35];
+      setTimeout(() => { v.g.visible = true; v.pos.set(DOOR.in[0], DOOR.in[1]); goV(v, spot, () => { v.state = 'talk'; v.yaw = yawTo(spot, [0, 3.6]); }); }, j * 1300); });
+    AUDIT_TALK.forEach(([k, txt, lv], j) => setTimeout(() => { if (auditOn) sayAny(k, txt, lv, 30); }, AUDIT_START + j * AUDIT_GAP));
+    const end = AUDIT_START + AUDIT_TALK.length * AUDIT_GAP + 6000;
+    setTimeout(() => { auditOn = false; meeting = false; M.ORDER.forEach(k => backToDesk(k)); VIS.forEach((v, j) => setTimeout(() => goV(v, DOOR.in, () => { v.g.visible = false; }), j * 900)); }, end);
+    const bar = document.getElementById('auditBar'); if (bar) { bar.hidden = false; const t0 = Date.now(); const tick = () => { const left = Math.max(0, end - (Date.now() - t0)); bar.querySelector('b').textContent = `Reunión con la auditoría externa · quedan ${Math.ceil(left / 60000)} min`; if (left > 0 && auditOn) setTimeout(tick, 15000); else bar.hidden = true; }; tick(); }
+  }
+  setTimeout(() => { if (AUDIT_MEET && officeOn && !erActive) auditMeeting(); }, 5000);
   // demo-free idle: if there is no round yet, each agent introduces their job once
   setTimeout(() => { if (!M.S.ticks.length) M.ORDER.forEach((k, i) => setTimeout(() => say(k, M.AG[k].job, 'ok', 7), i * 2500)); }, 1500);
 })();

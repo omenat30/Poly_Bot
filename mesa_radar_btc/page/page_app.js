@@ -31,7 +31,7 @@
 
   // ---------- office status ----------
   const madridDow = () => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short' }).format(new Date());
-  const OPEN_EXTRA_UNTIL = 1791742566404;   // apertura extra (domingo 11 oct 2026) para la reunión de la auditoría externa; después, horario normal
+  const OPEN_EXTRA_UNTIL = Date.UTC(2026, 9, 12, 23, 0);   // apertura extra (lunes 12 oct 2026, hasta la 01:00 de Madrid) para la visita de la auditoría externa; después, horario normal
   function officeOpen() { if (Date.now() < OPEN_EXTRA_UNTIL) return true; const m = madridNow(), d = madridDow(); return d !== 'Sat' && d !== 'Sun' && m >= 7 * 60 && m < 21 * 60; }
   window.MESA_OPEN = officeOpen;
   function renderTop() {
