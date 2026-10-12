@@ -50,6 +50,33 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## Velas con machine learning (12 oct 2026, descartado)
+
+Se buscó si la forma de las velas (cuerpo, mechas, rango, cierre en el rango y volumen de las últimas 6 velas, más patrones clásicos) da ventaja. Marcos de 15 min, 1 h y 4 h. Operación fija: stop de 1 ATR, objetivo de 1,5R. Costes de la Mesa y horario de oficina. Walk-forward anual con LightGBM (`cv_data.py`, `cv_wf.py`). Elección con 2018–21 y prueba en 2022–26.
+
+- **Como señal propia** (`cv_eval.py`):
+  - El mejor umbral de cada marco en 2018–21 se vuelve negativo en 2022–26:
+    - 4 h: de +0,07R a −0,10R por operación.
+    - 1 h: de +0,10R a 0,00R.
+    - 15 min: negativo en los dos periodos.
+  - Entrar al azar cuesta −0,60R (15 min), −0,27R (1 h) y −0,10R (4 h), por los costes.
+- **Patrones clásicos uno a uno** (`cv_pat.py`): 126 combinaciones (14 patrones × 3 contextos × 3 marcos).
+  - Positivas en 2018–21: 14. Positivas también en 2022–26: 5, lo que se espera del azar.
+  - La mejor de 2018–21 (vela grande bajista en 4 h, +0,24R) da +0,04R en 2022–26.
+- **Como filtro de la mesa v12** (`cv_filter.py`, 27 variantes).
+  - La elegida con 2018–21 veta el 25% de aprendices con peor previsión en 1 h. En 2022–26 frente a la v12:
+
+    | | Filtro | v12 |
+    |---|---|---|
+    | Ops/semana | 2,05 | 2,28 |
+    | Acierto | 43,9% | 44,1% |
+    | R/op | +0,30 | +0,28 |
+    | Sharpe | 0,80 | 0,77 |
+    | Caída | 12,5R | 14,3R |
+
+  - Diferencias dentro del ruido, y quita operaciones. No se adopta.
+- Inventario: unas 170 pruebas más (126 patrones, 18 umbrales de señal propia, 27 de filtro).
+
 ## v12 · los aprendices del Radar (12 oct 2026)
 
 La v11 (los agentes copiaban las señales del Radar) se retiró: no se trataba de repetir al Radar sino de aprender de él y buscar **otras** oportunidades. El Radar BTC 15m solo lleva una operación a la vez. Mientras está dentro, su propio modelo sigue viendo señales que él ignora. Esas son las oportunidades de los aprendices. Nunca se reenvía una señal propia del Radar, y su panel no se toca.
