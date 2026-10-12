@@ -78,7 +78,9 @@ const W10 = { vega: 0.75, ortega: 1, paz: 0.5, rios: 0, ferrer: 0 };     // peso
 const V11 = +process.env.MESA_V12 || Date.UTC(2026, 9, 12, 4, 0) / 1000;   // v12: desde aquí operan los aprendices del Radar
 const wAt = (k, sigT) => sigT < V10 ? W9[k] : sigT < V11 ? W10[k] : W[k];
 const LIVE_AG = AGS.filter(k => W[k] > 0), SOMBRA = AGS.filter(k => !(W[k] > 0));
-const inLive = (k, sigT) => sigT >= GO_LIVE && wAt(k, sigT) > 0;
+// una operación propia solo cuenta (y solo se avisa de su gestión y salida) si su entrada se avisó de verdad: una señal que cae fuera de las rondas
+// (p. ej. en fin de semana) no se ejecutó. Si la entrada es más antigua que la ventana de la base de datos (72 h), no se puede comprobar y se da por buena.
+const inLive = (k, sigT, t) => sigT >= GO_LIVE && wAt(k, sigT) > 0 && !(t && t.entryT >= now - 70 * 3600 && !known.has(k + '-in-' + new Date(sigT * 1000).toISOString().slice(0, 13).replace(/[-T]/g, '')));
 // funding de los perpetuos pagado o cobrado durante la operación, en R (largo paga funding positivo)
 const fundR = tr => { if (!FUND.length || !(tr.risk > 0)) return 0; let s = 0; for (const [ts, r] of FUND) if (ts > (tr.entryT || tr.sigT) && ts <= (tr.exitT || now)) s += r; return -tr.side * s * tr.entry / tr.risk; };
 const netR = tr => tr.r + (tr.sigT >= V10 ? fundR(tr) : 0);
@@ -100,7 +102,7 @@ const known = new Set(String(knownArg || '').split(/[\s,]+/).filter(Boolean)); c
 const tag15 = s => new Date(s * 1000).toISOString().slice(0, 16).replace(/[-:T]/g, '');
 // qué oportunidades de los aprendices entraron de verdad: lo que dice la base de datos manda; si no consta (más de 72 h), se repite la regla
 // de Salinas (tope de 2R con las posiciones propias abiertas). Las que se deciden en esta ronda las resuelve el bucle de entradas.
-const ownPos = AGS.flatMap(k => [...R[k].trades, ...(R[k].open ? [R[k].open] : [])].filter(t => inLive(k, t.sigT)).map(t => [t.entryT, t.exitT || Infinity, wAt(k, t.sigT)]));
+const ownPos = AGS.flatMap(k => [...R[k].trades, ...(R[k].open ? [R[k].open] : [])].filter(t => inLive(k, t.sigT, t)).map(t => [t.entryT, t.exitT || Infinity, wAt(k, t.sigT)]));
 const radarSeen = tr => { const k = RAD_AG[tr.kind || 'bo'], tg = tag15(tr.sigT); return [...known].some(id => id.startsWith('radar-' + k + '-') && id.endsWith('-' + tg) && !id.includes('-out-')); };
 const radarDecideNow = tr => tr.sigT >= now - 20 * 60 && !radarSeen(tr);
 const radarLive = [];
@@ -113,12 +115,12 @@ for (const tr of radarAll) {
   const w = Math.min(RW, PM.cap - used); if (w >= PM.minW) { tr.w = +w.toFixed(2); radarLive.push(tr); }
 }
 const radarClosed = radarLive.filter(tr => tr.r != null), radarOpen = radarLive.filter(tr => tr.r == null && !tr.pending);
-const liveClosed = AGS.flatMap(k => R[k].trades.filter(t => inLive(k, t.sigT)).map(t => [t.exitT, netR(t) * wAt(k, t.sigT)])).concat(radarClosed.map(t => [t.exitT, radarNet(t) * t.w])).sort((a, b) => a[0] - b[0]);
+const liveClosed = AGS.flatMap(k => R[k].trades.filter(t => inLive(k, t.sigT, t)).map(t => [t.exitT, netR(t) * wAt(k, t.sigT)])).concat(radarClosed.map(t => [t.exitT, radarNet(t) * t.w])).sort((a, b) => a[0] - b[0]);
 let eqR = 0, pkR = 0; for (const [, r] of liveClosed) { eqR += r; pkR = Math.max(pkR, eqR); }
 // valor de las posiciones abiertas (R ponderado): Salinas y las paradas miran la cartera con lo abierto, no solo lo cerrado
-const openMTM = AGS.filter(k => R[k].open && inLive(k, R[k].open.sigT)).reduce((p, k) => p + wAt(k, R[k].open.sigT) * R[k].open.rNow, 0) + radarOpen.reduce((p, t) => p + t.w * (lastPx - t.entry) * t.side / t.risk, 0);
+const openMTM = AGS.filter(k => R[k].open && inLive(k, R[k].open.sigT, R[k].open)).reduce((p, k) => p + wAt(k, R[k].open.sigT) * R[k].open.rNow, 0) + radarOpen.reduce((p, t) => p + t.w * (lastPx - t.entry) * t.side / t.risk, 0);
 const ddR = Math.max(pkR, eqR + openMTM) - (eqR + openMTM);
-let openR = AGS.filter(k => R[k].open && inLive(k, R[k].open.sigT)).reduce((p, k) => p + wAt(k, R[k].open.sigT), 0) + radarOpen.reduce((p, t) => p + t.w, 0);
+let openR = AGS.filter(k => R[k].open && inLive(k, R[k].open.sigT, R[k].open)).reduce((p, k) => p + wAt(k, R[k].open.sigT), 0) + radarOpen.reduce((p, t) => p + t.w, 0);
 // paradas por rendimiento (validadas en el walk-forward: neutras en R, protegen ante un cambio de régimen en vivo)
 let pauseUntil = 0, haltAt = 0; { let e = 0, pk = 0; const done = [];
   for (const [t1, r] of liveClosed) { e += r; pk = Math.max(pk, e); done.push([t1, r]); if (t1 < V10) continue;
@@ -167,13 +169,13 @@ for (const k of AGS) {
       emails.push({ subject: (s === 1 ? '🟢' : '🔴') + ' Mesa Radar · ' + NAMES[k] + ' · ' + SIDE(s) + ' BTC ≈ ' + fmt(e) + ' · stop ' + fmt(stop), body: 'Nueva entrada de la Mesa (' + NAMES[k] + ').\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop inicial: ' + fmt(stop) + ' (' + pct((stop - e) / e) + '), colócalo en el exchange al entrar.\n' + (MAXH[k] && MAXH[k] < 1000 ? 'Sin objetivo fijo: stop móvil a favor y cierre como mucho a las ' + MAXH[k] + ' h.' : 'Sin objetivo fijo: el stop se mueve solo a favor.') + ' La Mesa te avisa cuando lo tengas que mover y cuando haya que cerrar.\n' + plan(k, s, e, p.dist) + (duTxt(k) ? duTxt(k).slice(1) + '\n' : '') + (k === 'paz' && confWho(s) ? 'Confluencia: ' + confWho(s) + ' está a favor.\n' : '') + (k === 'rios' ? 'Ferrer (funding): ' + crowdNow(s) + '.\n' : '') + sizeLine(k, p.dist, w) + calWarn() + '\n\n' + REF + ' Apunta la ejecución en Mesa Radar: ' + URL_ });
     }
   }
-  if (r.open && inLive(k, r.open.sigT)) {
+  if (r.open && inLive(k, r.open.sigT, r.open)) {
     const o = r.open, s = o.side, step = Math.floor((o.stop - o.stop0) * s / o.risk);
     if (o.part > 0) { const id = k + '-tp-' + tag(o.sigT); if (!known.has(id)) { events.push({ id, agent: k, type: 'parcial', at: new Date(now * 1000).toISOString(), real: true, text: 'Parcial: cerrado el ' + Math.round(o.part * 100) + '% en ' + fmt(o.tp) + ' (+' + String(G[k].tp).replace('.', ',') + 'R)' }); emails.push({ subject: '💰 Mesa Radar · ' + NAMES[k] + ' · parcial cobrado en ' + fmt(o.tp), body: 'La orden límite del ' + Math.round(o.part * 100) + '% se ha ejecutado en ' + fmt(o.tp) + ' (+' + String(G[k].tp).replace('.', ',') + 'R). El resto sigue con su stop en ' + fmt(o.stop) + '.\n\n' + URL_ }); } }
     if (step >= 1 && office) { const id = k + '-stop-' + tag(o.sigT) + '-' + step; if (!known.has(id)) { events.push({ id, agent: k, type: 'stop', at: new Date(now * 1000).toISOString(), stop: +o.stop.toFixed(1), real: true, text: (s === 1 ? 'Sube' : 'Baja') + ' el stop a ' + fmt(o.stop) + ' (asegura ' + sR((o.stop - o.entry) * s / o.risk) + ' antes de costes)' }); emails.push({ subject: (s === 1 ? '⬆' : '⬇') + ' Mesa Radar · ' + NAMES[k] + ' · ' + (s === 1 ? 'sube' : 'baja') + ' el stop a ' + fmt(o.stop), body: 'Posición ' + SIDE(s) + ' BTC desde ' + fmt(o.entry) + '.\nMueve el stop a ' + fmt(o.stop) + ' (asegura ' + sR((o.stop - o.entry) * s / o.risk) + ' antes de costes). Precio ahora ≈ ' + fmt(lastPx) + '.\n\n' + URL_ }); } }
     if (o.exitDue && office) { const id = k + '-out-' + tag(o.sigT); if (!known.has(id)) { const rr = ((lastPx - o.entry) * s - E.FEE * o.entry) / o.risk; events.push({ id, agent: k, type: 'salida', at: new Date(now * 1000).toISOString(), exit: +lastPx.toFixed(1), r: +rr.toFixed(2), real: true, text: 'Cierra a mercado ≈ ' + fmt(lastPx) + ': la tendencia diaria se ha perdido (' + sR(rr) + ')' }); emails.push({ subject: '⚪ Mesa Radar · ' + NAMES[k] + ' · CIERRA BTC ≈ ' + fmt(lastPx) + ' (' + sR(rr) + ')', body: 'La tendencia diaria se ha perdido: cierra la posición ' + SIDE(s) + ' a mercado (≈ ' + fmt(lastPx) + ') y quita el stop.\nResultado aproximado: ' + sR(rr) + '.\n\n' + URL_ }); } }
   }
-  for (const tr of r.trades) if (inLive(k, tr.sigT) && tr.exitT >= now - 72 * 3600) {
+  for (const tr of r.trades) if (inLive(k, tr.sigT, tr) && tr.exitT >= now - 72 * 3600) {
     const id = k + '-out-' + tag(tr.sigT), s = tr.side;
     if (known.has(id)) continue;
     const txt = tr.why === 'stop' ? 'Saltó el stop en ' + fmt(tr.exit) : tr.why === 'tiempo' ? 'Cierre por plazo (' + MAXH[k] + ' h) ≈ ' + fmt(tr.exit) : 'Cerrada en ' + fmt(tr.exit);
@@ -283,13 +285,13 @@ notes.nubarrones = st('nubarrones', 'Fase: ' + PHT[NUB.phase] + '. BTC ' + pct(N
 notes.nubarrones.phase = NUB.phase; notes.nubarrones.veto = NUB.phase === 'mature';
 // Calvo: riesgo, datos, calendario y marcador en vivo
 const score = {}; let nAll = 0, wAll = 0, sumW = 0, sumR = 0;
-for (const k of AGS) { const T = R[k].trades.filter(t => inLive(k, t.sigT)); const w = T.filter(t => netR(t) > 0).length, s = T.reduce((p, t) => p + netR(t), 0), f = T.reduce((p, t) => p + (t.sigT >= V10 ? fundR(t) : 0), 0); score[k] = { n: T.length, win: w, sumR: +s.toFixed(2), fundR: +f.toFixed(3) }; nAll += T.length; wAll += w; sumR += s; sumW += T.reduce((p, t) => p + netR(t) * (t.sigT >= V10 ? W[k] : W9[k]), 0); }
+for (const k of AGS) { const T = R[k].trades.filter(t => inLive(k, t.sigT, t)); const w = T.filter(t => netR(t) > 0).length, s = T.reduce((p, t) => p + netR(t), 0), f = T.reduce((p, t) => p + (t.sigT >= V10 ? fundR(t) : 0), 0); score[k] = { n: T.length, win: w, sumR: +s.toFixed(2), fundR: +f.toFixed(3) }; nAll += T.length; wAll += w; sumR += s; sumW += T.reduce((p, t) => p + netR(t) * (t.sigT >= V10 ? W[k] : W9[k]), 0); }
 { const n = radarClosed.length, w = radarClosed.filter(t => radarNet(t) > 0).length, sr = radarClosed.reduce((p, t) => p + radarNet(t), 0); score.radar = { n, win: w, sumR: +sr.toFixed(2), porAgente: Object.fromEntries(['vega', 'paz', 'rios'].map(k => { const T = radarClosed.filter(t => RAD_AG[t.kind || 'bo'] === k); return [k, { n: T.length, win: T.filter(t => radarNet(t) > 0).length, sumR: +T.reduce((p, t) => p + radarNet(t), 0).toFixed(2) }]; })) };
   nAll += n; wAll += w; sumR += sr; sumW += radarClosed.reduce((p, t) => p + radarNet(t) * t.w, 0); }
 score.sombra = Object.fromEntries(SOMBRA.map(k => { const T = R[k].trades.filter(t => t.sigT >= V10); return [k, { n: T.length, win: T.filter(t => t.r > 0).length, sumR: +T.reduce((p, t) => p + t.r, 0).toFixed(2) }]; }));
 const weeks = Math.max(1, (now - GO_LIVE) / 604800);
 score.mesa = { n: nAll, win: wAll, sumR: +sumR.toFixed(2), sumW: +sumW.toFixed(2), perWeek: +(nAll / weeks).toFixed(2), since: new Date(GO_LIVE * 1000).toISOString() };
-const openRisk = AGS.filter(k => R[k].open && inLive(k, R[k].open.sigT)).reduce((p, k) => p + RISK[k], 0);
+const openRisk = AGS.filter(k => R[k].open && inLive(k, R[k].open.sigT, R[k].open)).reduce((p, k) => p + RISK[k], 0);
 notes.salinas = st('salinas', (events.some(e => e.agent === 'salinas') ? events.filter(e => e.agent === 'salinas').map(e => e.text).join(' · ') + '. ' : '') + 'Cartera en vivo, neta de funding y con lo abierto: ' + sR(eqR + openMTM, 1) + ' (caída desde el máximo ' + ddR.toFixed(1).replace('.', ',') + 'R; 7 días ' + sR(w7now, 1) + '). Riesgo abierto ' + String(+openR.toFixed(2)).replace('.', ',') + 'R de ' + String(PM.cap).replace('.', ',') + 'R. ' + (halted ? 'PARADA TOTAL: −10R desde el máximo. Nada nuevo hasta una revisión independiente. ' : paused ? 'PARADA SEMANAL: −3R en 7 días; nada nuevo hasta ' + madrid(pauseUntil) + '. ' : '') + (ddR > PM.ddR ? 'FRENO ACTIVO: riesgo a la mitad hasta recuperar.' : 'Tamaños v12: Ortega 1R (0,5%) y Paz 0,5R con sus estrategias; cada oportunidad de los aprendices del Radar 1R; Vega, Ríos y Ferrer propios en sombra.') + ' Paradas: −3R en 7 días pausa una semana; −10R desde el máximo para todo hasta revisión.', halted || paused || ddR > PM.ddR || openR >= PM.cap ? 'alerta' : 'ok');
 // Duarte: ciencia de datos y modelo de calidad
 const DN = { lado: 'lado', sobreSMA200: 'a favor de la SMA200', 'SMA50>200': 'SMA50 sobre SMA200', ret24h: 'impulso de 24 h', ret7d: 'impulso de 7 días', volrel: 'volatilidad relativa', RSI: 'RSI', funding: 'funding a favor', 'funding-media30d': 'funding frente a su media', pos20d: 'posición en el rango de 20 días', R10agente: 'racha del agente', R10oficina: 'racha de la oficina' };
