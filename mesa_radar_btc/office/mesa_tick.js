@@ -106,7 +106,10 @@ const tag15 = s => new Date(s * 1000).toISOString().slice(0, 16).replace(/[-:T]/
 // de Salinas (tope de 2R con las posiciones propias abiertas). Las que se deciden en esta ronda las resuelve el bucle de entradas.
 const ownPos = AGS.flatMap(k => [...R[k].trades, ...(R[k].open ? [R[k].open] : [])].filter(t => inLive(k, t.sigT, t)).map(t => [t.entryT, t.exitT || Infinity, wAt(k, t.sigT)]));
 const radarSeen = tr => { const k = RAD_AG[tr.kind || 'bo'], tg = tag15(tr.sigT); return [...known].some(id => id.startsWith('radar-' + k + '-') && id.endsWith('-' + tg) && !id.includes('-out-')); };
-const radarDecideNow = tr => tr.sigT >= now - 20 * 60 && !radarSeen(tr);
+// v12.2 (13 oct): ventana de aviso de 35 min (antes 20). Las rondas llegan 2-5,6 min tarde cada 15 min, así que con 20 min cada señal tenía en la práctica un solo intento
+// (la 2.ª ronda cae hacia el minuto 18-21). Con 35 min hay dos intentos seguros. Entrar 35 min tarde sigue siendo rentable en el backtest (research/v13_delay.py).
+const RADAR_WINDOW = 35 * 60;
+const radarDecideNow = tr => tr.sigT >= now - RADAR_WINDOW && !radarSeen(tr);
 const radarLive = [], radarMissed = [];
 for (const tr of radarAll) {
   if (radarDecideNow(tr)) continue;
@@ -202,14 +205,16 @@ if (RD) for (const tr of RD.R.trades) {
   if (radarDecideNow(tr)) {
     if (!radarHours(tr.sigT)) { decisions.push({ agent: k, desk: 'radar', sigT: tr.sigT, side: s, status: 'fuera_horario' }); continue; }
     const veto = false, stopWhy = (problems.length || radarProblems.length) ? 'operativa' : halted ? 'maximo' : paused ? 'semana' : null, w = veto || stopWhy ? 0 : sizeRadar();
-    decisions.push({ agent: k, desk: 'radar', kind, sigT: tr.sigT, side: s, price: +lastPx.toFixed(1), status: stopWhy ? 'parada_' + stopWhy : !w ? 'bloqueada_salinas' : 'enviada', w });
+    decisions.push({ agent: k, desk: 'radar', kind, sigT: tr.sigT, side: s, price: +lastPx.toFixed(1), status: stopWhy ? 'parada_' + stopWhy : !w ? 'bloqueada_salinas' : 'enviada', w, lateMin: Math.round((now - tr.sigT) / 60) });
     if (stopWhy) { const bid = 'radar-' + k + '-stop' + stopWhy + '-' + tag15(tr.sigT); if (!known.has(bid)) events.push({ id: bid, agent: stopWhy === 'operativa' ? 'calvo' : 'salinas', type: 'bloqueo', at: new Date(now * 1000).toISOString(), real: true, text: (stopWhy === 'operativa' ? 'Parada operativa: no entra la oportunidad del aprendiz ' + k[0].toUpperCase() + k.slice(1) + ' (' + problems.concat(radarProblems).join('; ') + ').' : stopWhy === 'maximo' ? 'Parada por −10R: no entra la oportunidad del aprendiz.' : 'Parada semanal: no entra la oportunidad del aprendiz hasta ' + madrid(pauseUntil) + '.') }); continue; }
     if (!w) { const bid = 'radar-' + k + '-pm-' + tag15(tr.sigT); if (!known.has(bid)) events.push({ id: bid, agent: 'salinas', type: 'bloqueo', at: new Date(now * 1000).toISOString(), real: true, text: 'Salinas no deja entrar la oportunidad del aprendiz ' + k[0].toUpperCase() + k.slice(1) + ': ya hay ' + String(+openR.toFixed(2)).replace('.', ',') + 'R de riesgo abierto (tope 2R).' }); continue; }
     openR += w;
     const e = tr.pending ? lastPx : tr.entry, risk = Math.abs(e - tr.sl0), pc = +(R1 * w).toFixed(3);
-    events.push({ id, agent: k, desk: 'radar', type: 'entrada', at: new Date(now * 1000).toISOString(), side: s === 1 ? 'long' : 'short', entry: +e.toFixed(1), stop: +tr.sl0.toFixed(1), target: +tr.tp.toFixed(1), real: true, text: 'Aprendiz del Radar · ' + RAD_TXT[kind] + ': entrada ' + SIDE(s) + ' ≈ ' + fmt(e) + ', stop ' + fmt(tr.sl0) + ', objetivo ' + fmt(tr.tp) + ' (1,65R), ' + String(pc).replace('.', ',') + '% de riesgo' });
+    const lateMin = Math.round((now - tr.sigT) / 60), lateR = tr.pending ? 0 : (lastPx - e) * s / risk;
+    const lateTxt = lateMin >= 10 ? 'AVISO TARDÍO: la señal cerró hace ' + lateMin + ' min (la ronda anterior no la vio). El precio ahora es ≈ ' + fmt(lastPx) + ', ' + 'a ' + sR(lateR) + ' de la entrada de la señal (' + (lateR >= 0 ? 'a favor' : 'en contra') + '). El stop y el objetivo son los de la señal; entra solo si te sigue pareciendo bien.' : '';
+    events.push({ id, agent: k, desk: 'radar', type: 'entrada', at: new Date(now * 1000).toISOString(), side: s === 1 ? 'long' : 'short', entry: +e.toFixed(1), stop: +tr.sl0.toFixed(1), target: +tr.tp.toFixed(1), real: true, text: 'Aprendiz del Radar · ' + RAD_TXT[kind] + ': entrada ' + SIDE(s) + ' ≈ ' + fmt(e) + ', stop ' + fmt(tr.sl0) + ', objetivo ' + fmt(tr.tp) + ' (1,65R), ' + String(pc).replace('.', ',') + '% de riesgo' + (lateTxt ? ' · ' + lateTxt : '') });
     emails.push({ subject: (s === 1 ? '🟢' : '🔴') + ' Mesa Radar · ' + NAMES_R[k] + ' · ' + SIDE(s) + ' BTC ≈ ' + fmt(e) + ' · stop ' + fmt(tr.sl0) + ' · objetivo ' + fmt(tr.tp),
-      body: 'Nueva entrada de un aprendiz del Radar (' + NAMES_R[k] + '). Es una oportunidad que el Radar NO toma: su modelo la ve mientras él ya tiene una operación abierta en este mismo sentido. No es un aviso del Radar.\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop: ' + fmt(tr.sl0) + ' (' + pct((tr.sl0 - e) / e) + ').\nObjetivo: ' + fmt(tr.tp) + ' (' + pct((tr.tp - e) / e) + ', 1,65R).\nPon las dos órdenes en el exchange al entrar: no se mueven. Cierre por tiempo a las 72 h si no toca ninguna.\nTamaño (Salinas): ' + String(pc).replace('.', ',') + '% de riesgo.' + '' + calWarn() + '\n\n' + REF + '\n' + URL_ });
+      body: 'Nueva entrada de un aprendiz del Radar (' + NAMES_R[k] + '). Es una oportunidad que el Radar NO toma: su modelo la ve mientras él ya tiene una operación abierta en este mismo sentido. No es un aviso del Radar.\n\n' + VERB(s) + ' BTC a mercado ahora (≈ ' + fmt(e) + ').\nStop: ' + fmt(tr.sl0) + ' (' + pct((tr.sl0 - e) / e) + ').\nObjetivo: ' + fmt(tr.tp) + ' (' + pct((tr.tp - e) / e) + ', 1,65R).\nPon las dos órdenes en el exchange al entrar: no se mueven. Cierre por tiempo a las 72 h si no toca ninguna.\nTamaño (Salinas): ' + String(pc).replace('.', ',') + '% de riesgo.' + (lateTxt ? '\n\n' + lateTxt : '') + calWarn() + '\n\n' + REF + '\n' + URL_ });
   }
   if (tr.r != null && tr.exitT >= now - 72 * 3600 && known.has(id)) {
     const oid = 'radar-' + k + '-out-' + tag15(tr.sigT);

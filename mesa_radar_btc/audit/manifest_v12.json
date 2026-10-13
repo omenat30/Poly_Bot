@@ -1,11 +1,11 @@
 {
- "version": "v12.1",
+ "version": "v12.2",
  "fecha": "2026-10-13",
- "nota": "v12 congelada. v12.1 solo cambia la contabilidad (lo que consta en signals es lo que cuenta; las señales no avisadas se anotan como perdidas). Ninguna regla de entrada, salida, tamaño ni parada cambia. Cualquier cambio de estrategia es una v13 con su propia evidencia.",
- "commit": "d647349e8d5417d237a253cad4bff4f66680527e (+ v12.1 sin confirmar hasta el siguiente commit)",
+ "nota": "v12 congelada. v12.1: contabilidad (lo que consta en signals es lo que cuenta). v12.2: ventana de aviso de los aprendices de 20 a 35 min y aviso tardío con distancia en R. Ninguna regla de entrada, salida, tamaño ni parada cambia. Cualquier cambio de estrategia es una v13 con su propia evidencia (las 8 variantes probadas el 13 oct: descartadas).",
+ "commit": "4bca7ffeadb0ac17476244a8d03dca20053d334a (+ v12.2 sin confirmar hasta el siguiente commit)",
  "sha256": {
   "office/engine.js": "7be7655e7513054d6086ce677e12a10ac6f8afc2b8b946b81ffab3701a0fe87a",
-  "office/mesa_tick.js": "23b3dc26f23cdaecffc4c2f9ea23d38ea1638b0fa844c80f37bd08a025ee9821",
+  "office/mesa_tick.js": "23c5e65e06a61dbc62fc622637a25ed41b1778625a0f20bedbd5e3071ef2626b",
   "office/ml.js": "90409dc869d6ac92f453e37cd785d3430156590d8120cb7df61f7d5be1c23005",
   "office/ml_hist.json": "73cc7592ab1733028ebb77af35866a65315ddb369560da21ff743b341d201ea1",
   "office/radar_multi.js": "e232cff68d0117fdbc5a6310a3bb3d193a7fd358069425e94de2f5950f8decdb",
@@ -104,7 +104,8 @@
    "ru_max": 0.8,
    "riesgo_R": 1,
    "objetivo_R": 1.65,
-   "cierre_h": 72
+   "cierre_h": 72,
+   "ventana_aviso_min": 35
   }
  }
 }

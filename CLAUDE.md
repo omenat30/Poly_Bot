@@ -57,7 +57,7 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 ## Estado tras la auditoría externa (12 oct 2026)
 - v12 congelada: un cambio cada vez, solo con veredicto ADOPTAR del juez y aprobación explícita del usuario.
 - Aspirantes en sombra (lo mide Iturbe en cada ronda, `notes.iturbe.val.retadores`): sin la estrategia propia de Paz y v12a. Promoción con 20+ operaciones cerradas, más R y aprobación del usuario.
-- Ya probado y descartado (no repetir sin una razón nueva): segunda ala de ML cada 10 min (a piñón y con aprendizaje error a error: sin ventaja tras costes), ML sobre todas las extras del Radar, despido automático por racha, pesos adaptativos por resultado reciente, señales de fin de semana, velas/patrones, v12a.
+- Ya probado y descartado (no repetir sin una razón nueva): 8 reducciones de riesgo sobre la cartera (funding de multitud, volatilidad, aprendices contra tendencia, apilado, fin de semana; v13, juez DESCARTAR), guarda de precio en el aviso tardío, segunda ala de ML cada 10 min (a piñón y con aprendizaje error a error: sin ventaja tras costes), ML sobre todas las extras del Radar, despido automático por racha, pesos adaptativos por resultado reciente, señales de fin de semana, velas/patrones, v12a.
 
 ## Errores ya cometidos (no repetir)
 - La ronda envió un correo «placeholder». La instrucción de las rutinas prohíbe enviar nada que no salga de `EMAIL_JSON`.
@@ -65,7 +65,7 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 - Se contaban como operadas oportunidades que Salinas había bloqueado.
 - El cierre de las velas de 15 min de `mklive_bs.js` era incorrecto; está corregido.
 - La v11 copió las señales del Radar sin que se pidiera. Hay que aprender del Radar, no clonarlo.
-- El marcador contó (12 oct, 13:35 UTC) un corto de un aprendiz que nunca se avisó, porque una regla de reserva daba por operadas las oportunidades que no constaban en `signals`. Desde la v12.1 solo cuenta lo que consta; lo no avisado se anota como `-lost-`. Regresión: `simulate.py --saltar` (3 sep, rondas 15:16, 15:31, 16:01 y 16:16).
+- El marcador contó (12 oct, 13:35 UTC) un corto de un aprendiz que nunca se avisó, porque una regla de reserva daba por operadas las oportunidades que no constaban en `signals`. Desde la v12.1 solo cuenta lo que consta; lo no avisado se anota como `-lost-`. Regresión: `simulate.py --saltar` (ver `simular-ronda`). Desde la v12.2 la ventana de aviso de los aprendices es de 35 min (antes 20, que dejaba perder ~21% de las señales por el retraso de 2-5,6 min de las rondas).
 
 ## Working preferences
 - Aprende del Radar BTC 15m, nunca copies sus señales ni toques su panel.

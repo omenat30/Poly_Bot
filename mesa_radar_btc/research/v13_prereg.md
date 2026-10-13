@@ -43,3 +43,20 @@ falta probar 20–35 min y una guarda de precio.
 
 **Regla (fijada ahora):** se adopta la ventana más larga (L2) si en 2018-21 el R por operación con retraso es ≥ 0,9× el de entrada inmediata y se confirma en 2022-26,
 y no empeora el acierto más de 2 puntos. Si no, la ventana se queda en 20 min y solo se añade la política de aviso. No se toca ningún umbral después de ver 2022-26.
+
+### Resultado de la adenda (13 oct)
+`v13_delay.py`, aprendices del Radar, entrada a mercado `d` min tarde con stop y objetivo de la señal:
+
+| | 2018-21: tomadas · acierto · R/op | 2022-26: tomadas · acierto · R/op |
+|---|---|---|
+| Inmediata (d = 0) | 115 · 46,1% · +0,144 | 194 · 53,6% · +0,272 |
+| d = 5 / 15 (referencia) | 115 · 46,1% · +0,179 / +0,187 | 194 · 54,1% · +0,247 / +0,251 |
+| L1 · d = 20 + guarda 0,25R | 80 · 47,5% · +0,258 | 135 · 51,1% · +0,238 |
+| L2 · d = 35 + guarda 0,25R | 83 · 47,0% · +0,216 | 118 · 53,4% · +0,270 |
+| L3 · d = 35 sin guarda | 115 · 47,0% · +0,186 | 192 · 53,6% · +0,239 |
+
+**Según la regla pre-registrada se adoptaba L2** (R/op 150% de la inmediata en 2018-21 y 99% en 2022-26; acierto −0,2 puntos).
+**Desviación declarada:** se adopta **L3 (ventana de 35 min, sin guarda)**. La regla premiaba el R por operación, y la guarda lo sube porque descarta entre el 28% y el 39% de las señales (32 de 115 y 76 de 194),
+lo que baja el R total por oportunidad en los dos periodos: 2018-21, 0,156 (L2) frente a 0,186 (L3); 2022-26, 0,164 frente a 0,237. La decisión se sostiene solo con 2018-21.
+Además, la comparación correcta de ampliar la ventana no es contra la entrada inmediata, sino contra perder la señal: cada señal recuperada entre los min 20 y 35 vale +0,19R (2018-21) y +0,24R (2022-26) de media.
+La guarda queda descartada como política de entrada; la distancia en R al precio de la señal se enseña en el aviso para que decida el usuario.

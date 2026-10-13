@@ -50,6 +50,38 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## v12.2 · captura de las señales y búsqueda de una v13 (13 oct 2026)
+
+**Encargo:** una versión que rinda mejor que la v12. **Resultado honesto: ninguna variante de estrategia lo consigue; sí se corrige una fuga real de captura en vivo.**
+
+**1. Ocho variantes de estrategia (pre-registradas antes de mirar, `research/v13_prereg.md`; `v13_eval.py`).** Reducciones de riesgo con razón de mercado sobre la cartera v12g.
+
+| Variante | 2018-21: Sharpe rec. · ops/sem · caída |
+|---|---|
+| v12 | 1,68 · 1,32 · 9,7R |
+| F1/F2 · saltar entradas a favor del funding de multitud (θ 0,0003 / 0,0006) | 1,63 · 1,08 · 8,7R / 1,45 · 1,24 · 9,7R |
+| V1/V2 · riesgo ×0,5 con volatilidad turbulenta (ratio ≥ 2,0 / ≥ 1,5) | **1,69** · 1,32 · 9,7R / 1,49 · 1,31 · 9,7R |
+| T1/T2 · aprendices contra la SMA50 diaria ×0,5 / saltados | 1,57 · 1,34 · 11,4R / 1,45 · 1,10 · 12,4R |
+| S1 · apilado del mismo lado ×0,5 | 1,63 · 1,36 · 7,9R |
+| W1 · saltar viernes 19-21 h | 1,62 · 1,31 · 9,7R |
+
+- La regla de elección (solo 2018-21) escoge V1, con +0,01 de Sharpe: ruido. En 2022-26 empeora: 0,75 frente a 0,77, R/año +18,5 frente a +19,1, 2 de 5 años mejores.
+- **Juez: DESCARTAR.** DSR 0,000. Inventario: 3.114 pruebas.
+- Por qué no hay más margen: con 2018-26 consumido por 12 versiones y más de 3.100 pruebas, no queda periodo limpio. Una mejora «de backtest» ya no es certificable; solo el futuro y otros activos lo son.
+
+**2. La fuga de captura (lo que sí mejora).**
+- Un aprendiz solo se avisaba si la vela de señal cerraba hace menos de 20 min. La primera oportunidad real de verla es la ronda a +16 min nominales, que llega 3,4 min tarde de media (mediana 3,4, p90 4,2, máx. 5,6; 6 de 84 rondas del 12-13 oct no se ejecutaron).
+- **Con 20 min, solo el 79% de las señales tenían su primer intento a tiempo** (66 de 84 rondas). Con 35 min, el 93% más un segundo intento: ≈ 99%.
+- Ya perdió la primera señal real (12 oct, vela de las 15:15 Madrid).
+- **v12.2:** ventana de 35 min y, si el aviso llega con 10 min o más de retraso, el correo dice «AVISO TARDÍO», el precio de ahora y la distancia en R a la entrada de la señal. El stop y el objetivo son los de la señal. No cambia ninguna regla de entrada, salida, tamaño ni parada.
+- **Estimación (no medida):** unas +0,16 operaciones por semana de aprendices y alrededor de +2R al año (≈ 10% de los +19R/año). El backtest no cambia (ya supone entrada inmediata); mejora lo que se cobra en vivo.
+- Backtest de la ventana (`v13_delay.py`): entrar 35 min tarde da +0,19R (2018-21) y +0,24R (2022-26) por operación recuperada. Detalle y la desviación del pre-registro (se descarta la guarda de precio) en `v13_prereg.md`.
+
+**3. Pruebas.** `simular-ronda`:
+- 7 y 8 sep, 3 sep: ✅ sin cambios.
+- `--saltar 2026-09-03T15:16`: ✅, las dos entradas se avisan tarde (31 y 16 min) con su aviso.
+- Seis rondas seguidas perdidas el 3 sep: ✅, 0 operaciones contadas y 2 señales perdidas anotadas.
+
 ## v12.1 · la contabilidad anota, no deduce (13 oct 2026)
 
 **Incidente.** El 12 oct, a las 13:35 UTC, el marcador contaba un corto del aprendiz de Vega desde 82.533 (cerrado después por objetivo, +1,5R) que nadie había avisado: no hubo evento de entrada, ni correo, ni documento en `signals`. Con él, Iturbe daba z = 0,84 y Calvo «100% ganadoras», y el tope de riesgo abierto estaba ocupado por una operación que no existía para el usuario.
@@ -76,7 +108,7 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Pendiente del dictamen del 13 oct** (nada de esto cambia reglas de la v12 sin aprobación):
 - Libro de operaciones con estados (señal, avisada, ejecutada, cerrada, perdida). `trades`, el diario del usuario, ya es la fuente natural de «ejecutada».
-- Política de aviso tardío (entrar solo si el precio no se alejó más de un umbral fijo de la señal), modelada también en el backtest.
+- Política de aviso tardío con guarda de precio: descartada en la v12.2 (descarta entre el 28% y el 39% de las señales y baja el R total).
 - Latido y parte diario fuera del camino del modelo de lenguaje.
 - Datos de una sola fuente (Binance perpetuo) para el backtest.
 - Regla escrita de reanudación tras −10R.

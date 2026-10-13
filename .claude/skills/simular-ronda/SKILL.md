@@ -34,7 +34,8 @@ Siempre antes de publicar `office/*.js` en el artefacto. También después de un
 5. El marcador de los aprendices cuenta solo lo que entró (el fallo de Salinas).
 
 ## Días de regresión (añade aquí cada incidente)
-- `2026-09-03 --saltar 2026-09-03T15:16,2026-09-03T15:31,2026-09-03T16:01,2026-09-03T16:16`: rondas perdidas con dos oportunidades de aprendices (incidente del 12 oct, 13:35 UTC). Debe dar ✅ con 0 operaciones contadas y 2 señales perdidas anotadas.
+- `2026-09-03 --saltar 2026-09-03T15:16,2026-09-03T15:31,2026-09-03T15:46,2026-09-03T16:01,2026-09-03T16:16,2026-09-03T16:31`: seis rondas perdidas con dos oportunidades de aprendices (incidente del 12 oct, 13:35 UTC). Debe dar ✅ con 0 operaciones contadas y 2 señales perdidas anotadas.
+- `2026-09-03 --saltar 2026-09-03T15:16`: una ronda perdida. Debe dar ✅ con las dos entradas avisadas tarde (31 y 16 min) y su «AVISO TARDÍO».
 - `2026-09-07 2026-09-08`: dos aprendices seguidos con el tope de 2R.
 - `2026-09-03`: dos aprendices largos en el mismo día.
 
