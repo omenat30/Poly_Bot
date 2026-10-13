@@ -1,0 +1,110 @@
+{
+ "version": "v12.1",
+ "fecha": "2026-10-13",
+ "nota": "v12 congelada. v12.1 solo cambia la contabilidad (lo que consta en signals es lo que cuenta; las señales no avisadas se anotan como perdidas). Ninguna regla de entrada, salida, tamaño ni parada cambia. Cualquier cambio de estrategia es una v13 con su propia evidencia.",
+ "commit": "d647349e8d5417d237a253cad4bff4f66680527e (+ v12.1 sin confirmar hasta el siguiente commit)",
+ "sha256": {
+  "office/engine.js": "7be7655e7513054d6086ce677e12a10ac6f8afc2b8b946b81ffab3701a0fe87a",
+  "office/mesa_tick.js": "23b3dc26f23cdaecffc4c2f9ea23d38ea1638b0fa844c80f37bd08a025ee9821",
+  "office/ml.js": "90409dc869d6ac92f453e37cd785d3430156590d8120cb7df61f7d5be1c23005",
+  "office/ml_hist.json": "73cc7592ab1733028ebb77af35866a65315ddb369560da21ff743b341d201ea1",
+  "office/radar_multi.js": "e232cff68d0117fdbc5a6310a3bb3d193a7fd358069425e94de2f5950f8decdb",
+  "office/radar_desk.js": "051417be1c3eb0ed18d79ec5841ea2ba1201a9347209e4f0604f3ec4840209c8",
+  "rutina_mesa.txt": "d36be21f10a927d4f520dd58840d463d5fb88f132071b672b47c1c07561a991e"
+ },
+ "parametros": {
+  "PICK": {
+   "vega": {
+    "n": 50,
+    "k": 2,
+    "shorts": 1,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    }
+   },
+   "ortega": {
+    "N": 5,
+    "k": 2,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    }
+   },
+   "paz": {
+    "rsiLo": 40,
+    "en": 50,
+    "k": 2,
+    "tk": 5,
+    "maxh": 96,
+    "lb": 6,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    },
+    "conf": false,
+    "nub": true
+   },
+   "rios": {
+    "q": 0.2,
+    "vm": 1,
+    "k": 4,
+    "G": {},
+    "conf": false,
+    "nub": true
+   },
+   "ferrer": {
+    "lo": -0.00005,
+    "hi": 0.0005,
+    "N": 12,
+    "k": 2,
+    "T": 3,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    }
+   }
+  },
+  "PM": {
+   "base": {
+    "vega": 0,
+    "ortega": 1,
+    "paz": 0.5,
+    "rios": 0,
+    "ferrer": 0
+   },
+   "cap": 2,
+   "ddR": 8,
+   "ddCut": 0.5,
+   "minW": 0.2
+  },
+  "SHADOW": {
+   "vega": {
+    "n": 20,
+    "k": 3.5,
+    "shorts": 0,
+    "G": {}
+   },
+   "ortega": {
+    "N": 5,
+    "k": 2,
+    "G": {
+     "tp": 1.5,
+     "f": 0.33,
+     "be": 0.75,
+     "beoff": 0.3
+    }
+   }
+  },
+  "costes": {
+   "fee": 0.0014,
+   "stopSlip": 0.0003
+  },
+  "aprendices": {
+   "ru_max": 0.8,
+   "riesgo_R": 1,
+   "objetivo_R": 1.65,
+   "cierre_h": 72
+  }
+ }
+}

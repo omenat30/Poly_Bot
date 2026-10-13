@@ -50,6 +50,38 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## v12.1 · la contabilidad anota, no deduce (13 oct 2026)
+
+**Incidente.** El 12 oct, a las 13:35 UTC, el marcador contaba un corto del aprendiz de Vega desde 82.533 (cerrado después por objetivo, +1,5R) que nadie había avisado: no hubo evento de entrada, ni correo, ni documento en `signals`. Con él, Iturbe daba z = 0,84 y Calvo «100% ganadoras», y el tope de riesgo abierto estaba ocupado por una operación que no existía para el usuario.
+
+**Causa.**
+- El motor ve oportunidades que el usuario nunca recibió. Una entrada solo se avisa si la vela de señal cerró hace menos de 20 minutos.
+- Ese día faltaron 3 de 56 rondas (≈10:31, 13:01 y 17:01 UTC) y las rondas llegan 2–5 minutos tarde. Perder una sola deja la siguiente en el límite de la ventana o fuera.
+- Si una oportunidad no constaba, `mesa_tick.js` repetía la regla del tope de 2R y la daba por operada.
+- Es el mismo tipo de fallo que el de Salinas: se confundía «el motor cree que hay una operación» con «hay una operación».
+
+**Arreglo (v12.1, solo contabilidad; ninguna regla de entrada, salida, tamaño ni parada cambia).**
+- La rutina pide ahora todas las señales desde el arranque (`2026-10-09`, límite 1.000), no una ventana de 72 h.
+- Una oportunidad solo cuenta si su entrada consta en `signals`. Ya no hay repetición de la regla del tope ni excepción por antigüedad.
+- Lo que ninguna ronda avisó se anota como `radar-<agente>-lost-<hora>` (tipo `bloqueo`, de Calvo). No genera correo y no cuenta. El tick lleva `radar.missed`.
+- El mismo criterio vale para las operaciones propias (`inLive`).
+
+**Prueba de regresión** (`simular-ronda`, opción nueva `--saltar`): el 3 sep 2026 se pierden las rondas de las 15:16, 15:31, 16:01 y 16:16.
+- Código anterior: ‼️ marcador de aprendices 2 con 0 entradas ni salidas avisadas.
+- v12.1: ✅ 0 operaciones contadas y 2 señales perdidas anotadas.
+- Días de regresión habituales (3 sep; 7 y 8 sep): ✅, sin cambios en entradas, salidas ni correos.
+- El simulador ahora también comprueba que nada abierto en el tick falta en `signals`.
+
+**Estado de la v12.** Congelada. `audit/manifest_v12.json` guarda los hashes y los parámetros. Cualquier cambio de estrategia es una v13 con su propia evidencia.
+
+**Pendiente del dictamen del 13 oct** (nada de esto cambia reglas de la v12 sin aprobación):
+- Libro de operaciones con estados (señal, avisada, ejecutada, cerrada, perdida). `trades`, el diario del usuario, ya es la fuente natural de «ejecutada».
+- Política de aviso tardío (entrar solo si el precio no se alejó más de un umbral fijo de la señal), modelada también en el backtest.
+- Latido y parte diario fuera del camino del modelo de lenguaje.
+- Datos de una sola fuente (Binance perpetuo) para el backtest.
+- Regla escrita de reanudación tras −10R.
+- Prueba de estabilidad en otros activos y PBO.
+
 ## Segunda ala · machine learning (12 oct 2026) · CERRADA Y DESCARTADA
 
 **Cerrada el 12 oct 2026 por decisión del usuario, antes de su primera ronda en vivo.** No hay ventaja fuera de muestra y aprender error a error no la crea.

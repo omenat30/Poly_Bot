@@ -79,8 +79,9 @@ const V11 = +process.env.MESA_V12 || Date.UTC(2026, 9, 12, 4, 0) / 1000;   // v1
 const wAt = (k, sigT) => sigT < V10 ? W9[k] : sigT < V11 ? W10[k] : W[k];
 const LIVE_AG = AGS.filter(k => W[k] > 0), SOMBRA = AGS.filter(k => !(W[k] > 0));
 // una operación propia solo cuenta (y solo se avisa de su gestión y salida) si su entrada se avisó de verdad: una señal que cae fuera de las rondas
-// (p. ej. en fin de semana) no se ejecutó. Si la entrada es más antigua que la ventana de la base de datos (72 h), no se puede comprobar y se da por buena.
-const inLive = (k, sigT, t) => sigT >= GO_LIVE && wAt(k, sigT) > 0 && !(t && t.entryT >= now - 70 * 3600 && !known.has(k + '-in-' + new Date(sigT * 1000).toISOString().slice(0, 13).replace(/[-T]/g, '')));
+// (p. ej. en fin de semana) no se ejecutó. v12.1 (13 oct): `known` trae TODAS las señales desde el arranque (la rutina ya no usa una ventana de 72 h), así que no hay
+// excepción por antigüedad: lo que no consta, no cuenta. El marcador anota lo que pasó; no lo deduce.
+const inLive = (k, sigT, t) => sigT >= GO_LIVE && wAt(k, sigT) > 0 && !(t && !known.has(k + '-in-' + new Date(sigT * 1000).toISOString().slice(0, 13).replace(/[-T]/g, '')));
 // funding de los perpetuos pagado o cobrado durante la operación, en R (largo paga funding positivo)
 const fundR = tr => { if (!FUND.length || !(tr.risk > 0)) return 0; let s = 0; for (const [ts, r] of FUND) if (ts > (tr.entryT || tr.sigT) && ts <= (tr.exitT || now)) s += r; return -tr.side * s * tr.entry / tr.risk; };
 const netR = tr => tr.r + (tr.sigT >= V10 ? fundR(tr) : 0);
@@ -99,20 +100,22 @@ const RD_FEE = 0.0008;   // comisión con la que el motor del Radar calcula su R
 const isApprentice = tr => tr.extra && tr.side === tr.radarSide && tr.ru < 0.8;
 const radarAll = RD ? RD.R.trades.filter(tr => tr.sigT >= Math.max(V11, GO_LIVE) && isApprentice(tr) && radarHours(tr.sigT)) : [];
 const known = new Set(String(knownArg || '').split(/[\s,]+/).filter(Boolean)); const sd = path.join(dbDir, 'signals'); if (fs.existsSync(sd)) for (const f of fs.readdirSync(sd)) known.add(f.replace(/\.json$/, ''));
+if (known.size >= 900) warns.push('la lista de señales conocidas se acerca al límite de la consulta (' + known.size + ')');
 const tag15 = s => new Date(s * 1000).toISOString().slice(0, 16).replace(/[-:T]/g, '');
 // qué oportunidades de los aprendices entraron de verdad: lo que dice la base de datos manda; si no consta (más de 72 h), se repite la regla
 // de Salinas (tope de 2R con las posiciones propias abiertas). Las que se deciden en esta ronda las resuelve el bucle de entradas.
 const ownPos = AGS.flatMap(k => [...R[k].trades, ...(R[k].open ? [R[k].open] : [])].filter(t => inLive(k, t.sigT, t)).map(t => [t.entryT, t.exitT || Infinity, wAt(k, t.sigT)]));
 const radarSeen = tr => { const k = RAD_AG[tr.kind || 'bo'], tg = tag15(tr.sigT); return [...known].some(id => id.startsWith('radar-' + k + '-') && id.endsWith('-' + tg) && !id.includes('-out-')); };
 const radarDecideNow = tr => tr.sigT >= now - 20 * 60 && !radarSeen(tr);
-const radarLive = [];
+const radarLive = [], radarMissed = [];
 for (const tr of radarAll) {
   if (radarDecideNow(tr)) continue;
   const k = RAD_AG[tr.kind || 'bo'], tg = tag15(tr.sigT);
   if (known.has('radar-' + k + '-in-' + tg)) { tr.w = RW; radarLive.push(tr); continue; }
-  if ([...known].some(id => id.startsWith('radar-' + k + '-') && id.endsWith('-' + tg))) continue;   // bloqueada en su día
-  const T = tr.entryT, used = ownPos.filter(p => p[0] <= T && T < p[1]).reduce((a, p) => a + p[2], 0) + radarLive.filter(o => o.entryT <= T && T < (o.exitT || Infinity)).reduce((a, o) => a + o.w, 0);
-  const w = Math.min(RW, PM.cap - used); if (w >= PM.minW) { tr.w = +w.toFixed(2); radarLive.push(tr); }
+  if ([...known].some(id => id.startsWith('radar-' + k + '-') && id.endsWith('-' + tg))) continue;   // bloqueada o perdida en su día
+  // v12.1 (13 oct): antes se repetía aquí la regla del tope de 2R y la oportunidad contaba como operada aunque nadie la hubiera avisado (ronda perdida o
+  // retrasada más de 20 min: el corto de Vega del 12 oct). Ahora una oportunidad que ninguna ronda avisó no entró: se anota como perdida y no se cuenta.
+  radarMissed.push(tr);
 }
 const radarClosed = radarLive.filter(tr => tr.r != null), radarOpen = radarLive.filter(tr => tr.r == null && !tr.pending);
 const liveClosed = AGS.flatMap(k => R[k].trades.filter(t => inLive(k, t.sigT, t)).map(t => [t.exitT, netR(t) * wAt(k, t.sigT)])).concat(radarClosed.map(t => [t.exitT, radarNet(t) * t.w])).sort((a, b) => a[0] - b[0]);
@@ -145,6 +148,10 @@ let cal = null; const cd = path.join(dbDir, 'calendar'), readCal = f => { try { 
 if (fs.existsSync(cd)) for (const f of fs.readdirSync(cd)) readCal(path.join(cd, f));
 if (fs.existsSync(path.join(dbDir, 'cal.json'))) readCal(path.join(dbDir, 'cal.json'));
 const events = [], emails = [];
+for (const tr of radarMissed) {   // quedan anotadas para que el silencio no sea ambiguo: ni correo ni marcador
+  const k = RAD_AG[tr.kind || 'bo'], bid = 'radar-' + k + '-lost-' + tag15(tr.sigT);
+  if (!known.has(bid)) events.push({ id: bid, agent: 'calvo', type: 'bloqueo', at: new Date(now * 1000).toISOString(), real: true, text: 'Señal perdida: la oportunidad del aprendiz ' + k[0].toUpperCase() + k.slice(1) + ' (' + RAD_TXT[tr.kind || 'bo'] + ', ' + (tr.side === 1 ? 'largo' : 'corto') + ', vela de las ' + hm(tr.sigT) + ') no se avisó: ninguna ronda la vio dentro de los 20 min de su vela. No se cuenta ni se avisa.' });
+}
 const crowdNow = s => { const f = R.ferrer && R.ferrer.ctx && R.ferrer.ctx.f3; return f == null || isNaN(f) ? 'sin datos' : f * s > 0.0001 ? 'la multitud ya está cargada en este lado' : f * s < -0.0001 ? 'la multitud está atrapada en contra' : 'funding neutro'; };
 const tag = s => new Date(s * 1000).toISOString().slice(0, 13).replace(/[-T]/g, '');
 const sizeLine = (k, risk, w = W[k]) => { const pc = +(R1 * w).toFixed(3); return 'Tamaño (Salinas): ' + String(pc).replace('.', ',') + '% de riesgo' + (w < W[k] ? ' (rebajado: ' + (ddR > PM.ddR ? 'la cartera cae ' + ddR.toFixed(1).replace('.', ',') + 'R desde su máximo' : 'tope de riesgo abierto de ' + String(PM.cap).replace('.', ',') + 'R') + ')' : '') + ' → (capital × ' + (pc / 100) + ') / ' + fmt(risk) + ' BTC.'; };
@@ -323,7 +330,7 @@ notes.calvo = st('calvo', (emergency ? 'SALA DE EMERGENCIAS: BTC ' + pct(emergen
 fs.mkdirSync(outDir, { recursive: true });
 const id = 'tick-' + new Date(now * 1000).toISOString().slice(0, 16).replace(/[-:T]/g, '');
 if (TEST) { notes.ortega.level = 'trade'; notes.ortega.text = 'PRUEBA (no es una señal real). ' + notes.ortega.text; }
-const tick = { version: 'v12', radar: RD ? { ok: !radarProblems.length, problems: radarProblems, rangeHi: RST && RST.rangeHi, rangeLo: RST && RST.rangeLo, open: radarOpen.map(t => ({ agent: RAD_AG[t.kind || 'bo'], w: t.w, side: t.side, entry: +t.entry.toFixed(1), stop: +t.sl0.toFixed(1), target: +t.tp.toFixed(1) })) } : null, decisions, stops: { paused, pauseUntil: paused ? new Date(pauseUntil * 1000).toISOString() : null, halted: !!halted, w7: +w7now.toFixed(2), dd: +ddR.toFixed(2), openMTM: +openMTM.toFixed(2) }, test: !!TEST, at: new Date(now * 1000).toISOString(), price: +lastPx.toFixed(1), office, notes, events: events.map(e => e.id), dataOk: !problems.length, lastBar: new Date((lastT + 3600) * 1000).toISOString(), emergency, score, move: win.map(w => ({ h: w.h, move: +w.move.toFixed(4), z: +w.z.toFixed(2) })) };
+const tick = { version: 'v12', radar: RD ? { ok: !radarProblems.length, missed: radarMissed.length, problems: radarProblems, rangeHi: RST && RST.rangeHi, rangeLo: RST && RST.rangeLo, open: radarOpen.map(t => ({ agent: RAD_AG[t.kind || 'bo'], w: t.w, side: t.side, entry: +t.entry.toFixed(1), stop: +t.sl0.toFixed(1), target: +t.tp.toFixed(1) })) } : null, decisions, stops: { paused, pauseUntil: paused ? new Date(pauseUntil * 1000).toISOString() : null, halted: !!halted, w7: +w7now.toFixed(2), dd: +ddR.toFixed(2), openMTM: +openMTM.toFixed(2) }, test: !!TEST, at: new Date(now * 1000).toISOString(), price: +lastPx.toFixed(1), office, notes, events: events.map(e => e.id), dataOk: !problems.length, lastBar: new Date((lastT + 3600) * 1000).toISOString(), emergency, score, move: win.map(w => ({ h: w.h, move: +w.move.toFixed(4), z: +w.z.toFixed(2) })) };
 fs.writeFileSync(path.join(outDir, id + '.json'), JSON.stringify(tick));
 const writes = [{ op: 'set', collection: 'ticks', doc_id: id, data: tick }];
 for (const e of events) { fs.writeFileSync(path.join(outDir, e.id + '.json'), JSON.stringify(e)); writes.push({ op: 'set', collection: 'signals', doc_id: e.id, data: e }); }

@@ -65,6 +65,7 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 - Se contaban como operadas oportunidades que Salinas había bloqueado.
 - El cierre de las velas de 15 min de `mklive_bs.js` era incorrecto; está corregido.
 - La v11 copió las señales del Radar sin que se pidiera. Hay que aprender del Radar, no clonarlo.
+- El marcador contó (12 oct, 13:35 UTC) un corto de un aprendiz que nunca se avisó, porque una regla de reserva daba por operadas las oportunidades que no constaban en `signals`. Desde la v12.1 solo cuenta lo que consta; lo no avisado se anota como `-lost-`. Regresión: `simulate.py --saltar` (3 sep, rondas 15:16, 15:31, 16:01 y 16:16).
 
 ## Working preferences
 - Aprende del Radar BTC 15m, nunca copies sus señales ni toques su panel.
