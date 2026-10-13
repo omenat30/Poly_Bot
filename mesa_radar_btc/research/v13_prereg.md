@@ -25,3 +25,21 @@ pocas operaciones. Métrica que debe mejorar: Sharpe ponderado por recencia de l
 3. No se retoca ningún umbral después de ver 2022-26. Cada variante suma al inventario (9 pruebas).
 4. DSR por debajo de 0,95: se le dirá al usuario «ventaja no demostrada estadísticamente».
 5. Si el juez no da ADOPTAR, la v13 no se publica y las variantes quedan documentadas como descartadas.
+
+---
+
+## Adenda (13 oct, tras el resultado de las 8 variantes y antes de la prueba siguiente): fidelidad de la captura
+**Resultado de la lista anterior:** ninguna variante mejora la elección de forma material (la mejor, V1, +0,01 de Sharpe) y la elegida empeora en la prueba. Veredicto del juez: DESCARTAR (8 pruebas al inventario).
+
+**Hipótesis nueva (no cambia ninguna regla de la v12, solo cuánto de ella llega al usuario):** en vivo, un aprendiz solo se avisa si la vela de señal cerró hace menos de 20 min.
+Las rondas son cada 15 min y llegan 2–5,6 min tarde (media 3,4), así que la 2.ª oportunidad de ver una señal cae hacia el minuto 18–21: la mitad de las veces fuera. Cada señal tiene
+en la práctica un solo intento. El 12 oct se perdió así la primera señal de aprendiz. El backtest ya supone entrada inmediata y se ha probado robusto a 1, 5 y 15 min de retraso (`mx_delay.py`);
+falta probar 20–35 min y una guarda de precio.
+
+**Variantes (cerradas, 3 en total)** sobre los aprendices (2018-21 y 2022-26), entrada a mercado `d` minutos después del cierre de la señal, con stop y objetivo fijos de la señal:
+- L1: d = 20 min, guarda: se salta si el precio se ha alejado más de 0,25R de la entrada de la señal (en cualquier sentido).
+- L2: d = 35 min, misma guarda.
+- L3: d = 35 min, sin guarda.
+
+**Regla (fijada ahora):** se adopta la ventana más larga (L2) si en 2018-21 el R por operación con retraso es ≥ 0,9× el de entrada inmediata y se confirma en 2022-26,
+y no empeora el acierto más de 2 puntos. Si no, la ventana se queda en 20 min y solo se añade la política de aviso. No se toca ningún umbral después de ver 2022-26.
