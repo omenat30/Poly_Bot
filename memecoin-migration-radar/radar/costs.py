@@ -34,10 +34,20 @@ def amm_slip(pos_usd, liq_usd):
     return pos_usd / (liq_usd / 2 + pos_usd)
 
 
+def reserves_from_progress(progress_pct, cfg):
+    """Reservas virtuales (SOL, tokens) deducidas del progreso. Parámetros iniciales de pump.fun,
+    VERIFICADOS con un token completado (reservas finales 115,005 SOL / 279,9 M tokens):
+    k = 30 SOL x 1.073 M tokens; al completarse quedan 279,9 M tokens virtuales."""
+    sold = cfg["curve_tokens_initial"] * progress_pct / 100
+    vt = 1_073_000_000 - sold
+    return (30 * 1_073_000_000 / vt, vt) if vt > 0 else (None, None)
+
+
 def entry_slippage(coin, cfg):
     """Deslizamiento de compra (en %) para el tamaño de posición, al evaluar."""
     c = cfg["costs"]
-    s = curve_buy_slip(coin.get("virtual_sol"), coin.get("virtual_tokens"), c["position_sol"], c["fee_pct"])
+    vs, vt = coin.get("virtual_sol"), coin.get("virtual_tokens")
+    s = curve_buy_slip(vs, vt, c["position_sol"], c["fee_pct"])
     return None if s is None else round(s * 100, 2)
 
 

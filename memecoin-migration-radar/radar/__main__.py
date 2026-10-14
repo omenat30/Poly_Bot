@@ -87,7 +87,7 @@ def cmd_check(cfg, a):
     try:
         coins = pump.list_live(sol)
         need = ("mint", "mcap_usd", "real_sol", "virtual_sol", "virtual_tokens", "creator", "bonding_curve")
-        miss = [k for k in need if not coins[0].get(k)] if coins else list(need)
+        miss = [k for k in need if coins[0].get(k) is None] if coins else list(need)
         _row("pump.fun lista", bool(coins) and not miss, f"{len(coins)} tokens en {time.time()-t:.1f}s; campos que faltan: {miss or 'ninguno'}")
     except Exception as e:
         _row("pump.fun lista", False, redact(e))

@@ -21,12 +21,17 @@ LABELS = {
 
 
 def curve_progress(coin, cfg):
-    real = coin.get("real_sol")
-    if real is not None and cfg["curve_target_sol"] > 0:
-        return clamp(real / cfg["curve_target_sol"], 0, 1.5) * 100
+    """% de la curva completado = tokens vendidos / 793,1 M, que es lo que muestra pump.fun.
+    VERIFICADO con datos reales: medirlo en SOL (real_sol / 85) subestima hasta 20 puntos porque la
+    curva no es lineal (un token con 74 SOL reales está al 96 % de tokens, no al 87 %)."""
+    if coin.get("complete") or coin.get("pool"):
+        return 100.0  # ya migrado (o con pool): llegamos tarde
     rt = coin.get("real_tokens")
     if rt is not None:
-        return clamp(1 - rt / cfg["curve_tokens_initial"], 0, 1.5) * 100
+        return clamp(1 - rt / cfg["curve_tokens_initial"], 0, 1.0) * 100
+    real = coin.get("real_sol")
+    if real is not None and cfg["curve_target_sol"] > 0:
+        return clamp(real / cfg["curve_target_sol"], 0, 1.0) * 100  # solo como último recurso
     return 0.0
 
 

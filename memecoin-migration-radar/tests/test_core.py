@@ -173,8 +173,34 @@ class Evaluate(unittest.TestCase):
         self.assertFalse(evaluate.score_curve(99.9, 60000, CFG)["ok"])
         self.assertTrue(evaluate.score_curve(90, 40000, CFG)["ok"])
 
-    def test_progress_from_sol(self):
-        self.assertAlmostEqual(evaluate.curve_progress({"real_sol": 42.5}, CFG), 50.0)
+    def test_progress_is_by_tokens_not_sol(self):
+        # Datos reales verificados: NOXI tenía 74 SOL y real_token_reserves = 3,17e13 (6 decimales)
+        c = normalize_coin({"mint": "m", "usd_market_cap": 34789, "real_sol_reserves": 74_000_000_000,
+                            "real_token_reserves": 31_700_000_000_000, "virtual_sol_reserves": 104_000_000_000,
+                            "virtual_token_reserves": 309_500_000_000_000, "complete": False})
+        p = evaluate.curve_progress(c, CFG)
+        self.assertAlmostEqual(p, 96.0, delta=0.1)
+        self.assertGreater(p, 74_000_000_000 / 1e9 / 85 * 100 + 5)  # el progreso por SOL (87 %) subestima
+
+    def test_progress_migrated_and_empty(self):
+        self.assertEqual(evaluate.curve_progress({"complete": True}, CFG), 100.0)
+        self.assertEqual(evaluate.curve_progress({"pool": "P", "real_tokens": 5e8}, CFG), 100.0)
+        self.assertEqual(evaluate.curve_progress({"real_tokens": 793_100_000.0}, CFG), 0.0)
+
+    def test_pool_address_field_does_not_mean_migrated(self):
+        """Regresión con datos reales: pool_address viene en todos los tokens, también los que siguen en curva."""
+        c = normalize_coin({"mint": "m", "pool_address": "XYZ", "real_token_reserves": 31_700_000_000_000,
+                            "real_sol_reserves": 74_000_000_000, "complete": False})
+        self.assertIsNone(c["pool"])
+        self.assertLess(evaluate.curve_progress(c, CFG), 99.5)
+
+    def test_small_reserves_are_not_misread(self):
+        """Cerca de completar quedan pocos tokens: no deben confundirse con 'tokens enteros'."""
+        c = normalize_coin({"mint": "m", "real_sol_reserves": 84_900_000_000, "real_token_reserves": 12_000_000_000})
+        self.assertAlmostEqual(c["real_tokens"], 12_000.0)
+        self.assertGreater(evaluate.curve_progress(c, CFG), 99.99)
+        c2 = normalize_coin({"mint": "m", "real_sol_reserves": 500_000})
+        self.assertAlmostEqual(c2["real_sol"], 0.0005)
 
     def test_volume_spike_scores_lower_than_spread(self):
         now = 10_000
@@ -189,6 +215,13 @@ class Costs(unittest.TestCase):
         b = costs.curve_buy_slip(100, 3e8, 10, 1.0)
         self.assertGreater(b, a)
         self.assertGreater(a, 0)
+
+    def test_reserves_from_progress_match_a_real_completed_token(self):
+        vs, vt = costs.reserves_from_progress(100.0, CFG)
+        self.assertAlmostEqual(vs, 115.005, delta=0.05)   # reservas finales reales vistas en pump.fun
+        self.assertAlmostEqual(vt, 279_900_000, delta=1)
+        vs0, vt0 = costs.reserves_from_progress(0.0, CFG)
+        self.assertAlmostEqual(vs0, 30.0)
 
     def test_flat_price_loses_costs(self):
         s = {"price": 1e-5, "vsol": 100, "vtok": 100 * 150 / 1e-5, "liq": None, "complete": False, "sol_usd": 150.0}

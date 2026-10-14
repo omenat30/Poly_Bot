@@ -36,7 +36,7 @@ DEFAULTS = {
                  "min_n_select": 10, "min_n_test": 15, "alpha": 0.10, "perm": 5000, "seed": 7},
     "endpoints": {
         "pumpfun_api": "https://frontend-api-v3.pump.fun",
-        "pumpfun_list_path": "/coins?offset=0&limit=50&sort=market_cap&order=DESC&includeNsfw=false&complete=false",
+        "pumpfun_list_path": "/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false",
         "dexscreener_api": "https://api.dexscreener.com",
         "helius_rpc": "https://mainnet.helius-rpc.com",
         "helius_api": "https://api.helius.xyz",

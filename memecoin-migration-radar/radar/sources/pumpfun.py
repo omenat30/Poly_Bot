@@ -9,13 +9,11 @@ from ..util import http_json, sanitize_text
 
 
 def _sol(v):
-    v = float(v or 0)
-    return v / 1e9 if v > 1e6 else v  # lamports → SOL
+    return float(v or 0) / 1e9  # la API devuelve lamports (verificado con datos reales)
 
 
 def _tok(v):
-    v = float(v or 0)
-    return v / 1e6 if v > 5e10 else v  # unidades crudas (6 decimales) → tokens
+    return float(v or 0) / 1e6  # unidades crudas con 6 decimales (verificado con datos reales)
 
 
 def _ts(v):
@@ -36,7 +34,7 @@ def normalize_coin(raw, total_supply=1_000_000_000, sol_usd=None):
         "creator": raw.get("creator"),
         "bonding_curve": raw.get("bonding_curve"),
         "assoc_curve": raw.get("associated_bonding_curve"),
-        "pool": raw.get("pump_swap_pool") or raw.get("raydium_pool"),
+        "pool": raw.get("pump_swap_pool") or raw.get("raydium_pool"),  # pool_address viene relleno en todos los tokens: NO indica migración
         "mcap_usd": mcap,
         "price_usd": mcap / total_supply if mcap else None,
         "real_sol": _sol(raw["real_sol_reserves"]) if raw.get("real_sol_reserves") is not None else None,
