@@ -520,4 +520,4 @@ Hay un límite: las combinaciones que llegan a un 45% de acierto en 2022–26 se
 - `page/` contiene las piezas de la página del artefacto; `build_mesa.sh` las monta.
 - `office/mesa_tick.js` hace una ronda completa. Une el histórico de Bitstamp con 167 h de Binance futuros (OpenMarket) y escribe la nota de cada agente, las señales y los correos.
 - `replay.sh` reproduce rondas cada 15 minutos sobre el histórico para probar los avisos; `page/replay12.sh` lo hace con la v12 (incluye las velas de 15 min de los aprendices).
-- Cuatro rutinas en Haiku, a :01, :16, :31 y :46 entre las 7:00 y las 19:59, ejecutan el script y escriben en la base de datos del artefacto Mesa Radar.
+- Dos rutinas en Haiku (desde el 14 oct; antes cuatro), a :01 y :31 entre las 7:00 y las 19:59, ejecutan el script y escriben en la base de datos del artefacto Mesa Radar.

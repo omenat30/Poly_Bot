@@ -2,7 +2,7 @@
 """Control diario de la Mesa Radar: solo lee la base de datos (ticks y signals del día) y dice si todo ha ido bien.
 Sustituye al control anterior, que dependía de list_triggers y list_events (no disponibles en la rutina) y por eso nunca comprobó las rondas.
 Uso: python3 control_diario.py <dir_ticks> <dir_signals> [--dia AAAA-MM-DD] [--hasta AAAA-MM-DDTHH:MM:SSZ]
-Los directorios son los que crea ArtifactData con out_dir (cada documento es un .json). Cuenta las rondas esperadas (L-V 7-20 Madrid, :01 :16 :31 :46),
+Los directorios son los que crea ArtifactData con out_dir (cada documento es un .json). Cuenta las rondas esperadas (L-V 7-20 Madrid, :01 :31 desde el 14 oct (antes también :16 :46)),
 las que llegaron, su retraso, los avisos de datos, las señales perdidas y que ninguna salida, stop o parcial carezca de su entrada."""
 import json, os, sys, re, datetime as dt
 from zoneinfo import ZoneInfo
@@ -20,7 +20,7 @@ ticks = sorted([(dt.datetime.fromisoformat(x['at'].replace('Z', '+00:00')), x) f
 ticks = [(t, x) for t, x in ticks if t.astimezone(tz).date() == day]
 inc = []
 if day.weekday() >= 5: print(f'Control {dia}: fin de semana, sin rondas · nada que comprobar'); sys.exit(0)
-slots = [dt.datetime(day.year, day.month, day.day, h, m, tzinfo=tz).astimezone(utc) for h in range(7, 21) for m in (1, 16, 31, 46)]
+slots = [dt.datetime(day.year, day.month, day.day, h, m, tzinfo=tz).astimezone(utc) for h in range(7, 21) for m in (1, 31)]
 slots = [s for s in slots if s + dt.timedelta(minutes=14) <= hasta]
 lags = []; falt = []
 for s in slots:
