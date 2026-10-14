@@ -1,7 +1,7 @@
 {
- "version": "v12.2",
+ "version": "v12.3",
  "fecha": "2026-10-13",
- "nota": "v12 congelada. v12.1: contabilidad (lo que consta en signals es lo que cuenta). v12.2: ventana de aviso de los aprendices de 20 a 35 min y aviso tardío con distancia en R. Ninguna regla de entrada, salida, tamaño ni parada cambia. Cualquier cambio de estrategia es una v13 con su propia evidencia (las 8 variantes probadas el 13 oct: descartadas).",
+ "nota": "v12 congelada. v12.1: contabilidad (lo que consta en signals es lo que cuenta). v12.2: ventana de aviso de los aprendices de 20 a 35 min y aviso tardío con distancia en R. Ninguna regla de entrada, salida, tamaño ni parada cambia. Cualquier cambio de estrategia es una v13 con su propia evidencia (las 8 variantes probadas el 13 oct: descartadas). v12.3: solo eficiencia (ventanas de datos más cortas en radar_desk.js, control diario sin LLM pesado, rutinas en Haiku); ninguna regla de estrategia cambia.",
  "commit": "4bca7ffeadb0ac17476244a8d03dca20053d334a (+ v12.2 sin confirmar hasta el siguiente commit)",
  "sha256": {
   "office/engine.js": "7be7655e7513054d6086ce677e12a10ac6f8afc2b8b946b81ffab3701a0fe87a",
@@ -9,8 +9,8 @@
   "office/ml.js": "90409dc869d6ac92f453e37cd785d3430156590d8120cb7df61f7d5be1c23005",
   "office/ml_hist.json": "73cc7592ab1733028ebb77af35866a65315ddb369560da21ff743b341d201ea1",
   "office/radar_multi.js": "e232cff68d0117fdbc5a6310a3bb3d193a7fd358069425e94de2f5950f8decdb",
-  "office/radar_desk.js": "051417be1c3eb0ed18d79ec5841ea2ba1201a9347209e4f0604f3ec4840209c8",
-  "rutina_mesa.txt": "d36be21f10a927d4f520dd58840d463d5fb88f132071b672b47c1c07561a991e"
+  "office/radar_desk.js": "8873b676850864a5886b4d2f9b5135fd7dab735c191a76392313badde8ffedcf",
+  "rutina_mesa.txt": "147f3d63f418e5776878be3169ed30501debc717693adb0a803f72520e95ae6b"
  },
  "parametros": {
   "PICK": {
@@ -54,7 +54,7 @@
     "nub": true
    },
    "ferrer": {
-    "lo": -0.00005,
+    "lo": -5e-05,
     "hi": 0.0005,
     "N": 12,
     "k": 2,

@@ -9,7 +9,7 @@ import argparse, json, os, re, shutil, subprocess, sys, datetime as dt
 from zoneinfo import ZoneInfo
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 ap = argparse.ArgumentParser(); ap.add_argument('dias', nargs='+'); ap.add_argument('--inicio'); ap.add_argument('--office', default=os.path.join(ROOT, 'mesa_radar_btc', 'office'))
-ap.add_argument('--saltar', default=''); ap.add_argument('--csv', default='/tmp/bitstamp/data/updates/btcusd_bitstamp_1min_latest.csv'); ap.add_argument('--work', default='/tmp/simular-ronda')
+ap.add_argument('--saltar', default=''); ap.add_argument('--horas-h', default='167'); ap.add_argument('--horas-15', default='72'); ap.add_argument('--csv', default='/tmp/bitstamp/data/updates/btcusd_bitstamp_1min_latest.csv'); ap.add_argument('--work', default='/tmp/simular-ronda')
 A = ap.parse_args()
 if not os.path.exists(A.csv):
     print('Descargando el histórico de 1 min de Bitstamp…', flush=True)
@@ -29,8 +29,8 @@ for d in A.dias:
         for m in (1, 16, 31, 46):
             if f'{d}T{h:02d}:{m:02d}' in saltar: perdidas += 1; continue
             now = int(dt.datetime(day.year, day.month, day.day, h, m, tzinfo=tz).timestamp()); ms = str(now * 1000)
-            subprocess.run(['node', mk, A.csv, ms, '3600', '167', W + '/h.json'], check=True)
-            subprocess.run(['node', mk, A.csv, ms, '900', '72', W + '/m15.json'], check=True)
+            subprocess.run(['node', mk, A.csv, ms, '3600', A.horas_h, W + '/h.json'], check=True)
+            subprocess.run(['node', mk, A.csv, ms, '900', A.horas_15, W + '/m15.json'], check=True)
             shutil.rmtree(W + '/out', ignore_errors=True)
             p = subprocess.run(['node', W + '/office/mesa_tick.js', A.csv, W + '/h.json', W + '/db', W + '/out', '', W + '/fund.json', W + '/m15.json'], env=dict(env, MESA_NOW=ms), capture_output=True, text=True)
             rondas += 1; hm = f'{d} {h:02d}:{m:02d}'

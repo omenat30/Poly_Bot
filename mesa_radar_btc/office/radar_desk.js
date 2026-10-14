@@ -46,5 +46,7 @@ function run(minPath, livePath, nowS) {
 module.exports = { run, V20 };
 if (require.main === module && process.argv[2] === 'need') {
   const nowS = Math.floor((+process.env.MESA_NOW || Date.now()) / 1000), M = to15(loadMinutes(process.argv[3], nowS));
-  console.log('LOOKBACK=' + Math.min(167, Math.max(72, Math.ceil((nowS - M.lastMin) / 3600) + 6)) + 'h');
+  // v12.3: este mismo N sirve para las velas de 1 h y de 15 min de Binance (antes 167 h y 72 h). Mínimo 60 h (la ronda exige 48 velas de 1 h) y, como poco, el hueco de Bitstamp + 16 h
+  // para que haya solape suficiente (12 velas de 1 h y 20 de 15 min). Menos JSON que reescribir en cada ronda = menos consumo.
+  console.log('LOOKBACK=' + Math.min(167, Math.max(60, Math.ceil((nowS - M.lastMin) / 3600) + 16)) + 'h');
 }

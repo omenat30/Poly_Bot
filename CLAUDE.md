@@ -73,3 +73,6 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 - Nunca envíes correos de prueba o relleno; solo las líneas EMAIL_JSON del script.
 - No vuelvas con resultados hasta que el cambio esté completo, probado y funcione.
 - Si algo no mejora fuera de muestra, dilo claro y descártalo.
+
+## v12.3 (14 oct 2026)
+Solo eficiencia: ventanas de datos más cortas, `research/control_diario.py` (control diario determinista, alojado en el artefacto como `ops/control_diario.py.txt`), rutinas de control e informe en Haiku. Rondas cada 30 min: propuesta pendiente, no aplicada.

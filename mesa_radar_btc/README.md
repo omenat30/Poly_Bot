@@ -50,6 +50,14 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## v12.3 · eficiencia de las tareas programadas (14 oct 2026)
+
+Sin cambios de estrategia (backtest idéntico). Medido: las 4 rutinas de ronda (280 ejecuciones/semana) son ≈80% del consumo; los escáneres del Radar (155/sem) no se tocan.
+- `radar_desk.js`: la ventana de datos pasa de 167 h / 72 h fijas a `max(60, horas desde la última vela + 16)` (tope 167). Verificado idéntico en la simulación de regresión.
+- Control diario: antes no comprobaba nada (dependía de herramientas que la rutina no tiene). Ahora lo hace `research/control_diario.py`, solo con la base de datos (rondas recibidas, retraso, avisos de datos, señales perdidas, salidas sin entrada, z de Iturbe). Rutina en Haiku.
+- Informe semanal en Haiku. Ningún modelo inferior a Haiku existe.
+- Propuesta pendiente de aprobación: rondas cada 30 min (−50% consumo principal; coste estimado −1 a −1,5R/año y captura 86–93%).
+
 ## v12.2 · captura de las señales y búsqueda de una v13 (13 oct 2026)
 
 **Encargo:** una versión que rinda mejor que la v12. **Resultado honesto: ninguna variante de estrategia lo consigue; sí se corrige una fuga real de captura en vivo.**
