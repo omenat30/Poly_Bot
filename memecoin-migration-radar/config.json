@@ -1,0 +1,5 @@
+{
+  "_nota": "Solo se anotan los valores que cambian respecto a los de radar/config.py. Borra la línea de un ajuste para volver al valor por defecto.",
+  "email": {"enabled": false, "to": "albertomenat@gmail.com"},
+  "track_score": 55
+}

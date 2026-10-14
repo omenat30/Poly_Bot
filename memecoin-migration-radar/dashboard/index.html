@@ -1,0 +1,485 @@
+<title>Radar de Migración</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Concepto: mesa de control sobria. Una tira de estado arriba, la tabla de candidatos como pieza central,
+   y la medición frente al azar abajo, donde se decide si la idea sirve. */
+:root{
+  --bg:#eef2f1; --surface:#ffffff; --surface-2:#e6ecea; --ink:#12201f; --muted:#566866; --line:#d2dcda;
+  --accent:#0a7b75; --accent-ink:#ffffff; --accent-soft:#d6efec;
+  --good:#17784a; --good-bg:#dff2e7; --warn:#8f5200; --warn-bg:#faedd0; --bad:#b0261d; --bad-bg:#f8e0dc;
+  --bar:#c6d3d1; --shadow:0 1px 0 rgba(18,32,31,.04);
+  --font-ui:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-data:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1514; --surface:#142120; --surface-2:#1b2b2a; --ink:#e4eeec; --muted:#8ea6a2; --line:#273b39;
+    --accent:#3dc6bc; --accent-ink:#06211f; --accent-soft:#12403d;
+    --good:#52c98a; --good-bg:#153525; --warn:#e5a94a; --warn-bg:#392a10; --bad:#f0857c; --bad-bg:#3d1a17;
+    --bar:#2b4240; --shadow:none; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1514; --surface:#142120; --surface-2:#1b2b2a; --ink:#e4eeec; --muted:#8ea6a2; --line:#273b39;
+  --accent:#3dc6bc; --accent-ink:#06211f; --accent-soft:#12403d;
+  --good:#52c98a; --good-bg:#153525; --warn:#e5a94a; --warn-bg:#392a10; --bad:#f0857c; --bad-bg:#3d1a17;
+  --bar:#2b4240; --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.45;
+  padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:1180px;margin-inline:auto}
+h1,h2,h3{margin:0;font-weight:600;text-wrap:balance}
+.num,.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
+  padding-block:12px;margin-inline:-16px;padding-inline:16px}
+.top-in{max-width:1180px;margin-inline:auto;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-size:19px;letter-spacing:-.01em}
+.brand .tag{font-family:var(--font-data);font-size:12px;color:var(--muted)}
+.strip{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:500;
+  background:var(--surface-2);color:var(--ink);white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.pill.good{background:var(--good-bg);color:var(--good)} .pill.good::before{background:var(--good)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.warn::before{background:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.bad::before{background:var(--bad)}
+.pill.plain::before{display:none}
+
+.banner{margin-top:14px;padding:10px 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);font-size:13px}
+.banner.demo{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.banner.alert{background:var(--accent);color:var(--accent-ink);border-color:transparent;display:flex;gap:12px;justify-content:space-between;align-items:center}
+.banner.alert button{background:transparent;border:1px solid currentColor;border-radius:4px;padding:2px 10px;cursor:pointer}
+
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;margin-top:18px;border:1px solid var(--line);
+  border-radius:8px;background:var(--surface);box-shadow:var(--shadow)}
+.fig{padding:12px 16px;border-right:1px solid var(--line);min-width:0}
+.fig:last-child{border-right:0}
+.fig .k{font-size:12px;color:var(--muted)}
+.fig .v{font-family:var(--font-data);font-size:22px;font-weight:500;margin-top:2px;overflow-wrap:anywhere}
+.fig .s{font-size:12px;color:var(--muted)}
+@media (max-width:520px){.fig{border-right:0;border-bottom:1px solid var(--line)}.fig:last-child{border-bottom:0}}
+
+section{margin-top:30px}
+.sh{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.sh h2{font-size:16px}
+.sh .note{font-size:12.5px;color:var(--muted)}
+.tog{display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:860px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;text-align:left;
+  padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.row:last-child td{border-bottom:0}
+th.r,td.r{text-align:right}
+tr.row.disc td{opacity:.62}
+tr.row .tk{display:flex;flex-direction:column;min-width:0}
+.tk b{font-weight:600}
+.tk span{font-size:12px;color:var(--muted);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.expander{background:none;border:0;padding:0;cursor:pointer;text-align:left;display:flex;gap:8px;align-items:center}
+.expander .chev{display:inline-block;transition:transform .15s;color:var(--muted)}
+.expander[aria-expanded="true"] .chev{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.expander .chev{transition:none}}
+.curve{display:flex;align-items:center;gap:8px;min-width:120px}
+.curve .track{flex:1;height:6px;border-radius:3px;background:var(--bar);overflow:hidden}
+.curve .fill{height:100%;background:var(--accent)}
+.score{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.score .big{font-family:var(--font-data);font-size:20px;font-weight:700;min-width:2.2ch;text-align:right}
+.score.hit .big{color:var(--accent)}
+.seg{display:flex;gap:2px;width:84px;height:8px}
+.seg i{display:block;height:100%;background:var(--bar);border-radius:1px;position:relative;overflow:hidden}
+.seg i b{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.seg i.off b{background:var(--bad)}
+tr.detail td{background:var(--surface-2);padding:14px 16px 18px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px 28px}
+.dgrid > div{min-width:0}
+.dgrid h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;margin-bottom:8px}
+.crit{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-bottom:10px}
+.crit .nm{font-weight:500}
+.crit .sc{font-family:var(--font-data);text-align:right}
+.crit .bar{grid-column:1/-1;height:5px;background:var(--bar);border-radius:3px;overflow:hidden}
+.crit .bar i{display:block;height:100%;background:var(--accent)}
+.crit.off .bar i{background:var(--bad)}
+.crit .why{grid-column:1/-1;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.crit .gate{font-size:11px;color:var(--bad);font-weight:600}
+.list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.list li{overflow-wrap:anywhere}
+.ok{color:var(--good)} .no{color:var(--bad)} .un{color:var(--warn)}
+.mint{font-family:var(--font-data);font-size:12px;overflow-wrap:anywhere;color:var(--muted)}
+.links{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px}
+.empty{padding:26px 18px;color:var(--muted);text-align:center}
+
+.alerts{display:flex;flex-direction:column;gap:10px}
+.al{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:12px 14px}
+.al-head{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between;align-items:baseline}
+.al-head .t{font-weight:600}
+.al-meta{font-size:12.5px;color:var(--muted)}
+.outs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.out{border:1px solid var(--line);border-radius:6px;padding:4px 10px;min-width:92px}
+.out .h{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.out .r{font-family:var(--font-data);font-size:15px;font-weight:500}
+.out.pos .r{color:var(--good)} .out.neg .r{color:var(--bad)} .out.pend .r{color:var(--muted)}
+.out .rg{font-size:11px;color:var(--bad);font-weight:600}
+.al details{margin-top:10px}
+.al summary{cursor:pointer;font-size:13px;color:var(--accent)}
+.al pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font-data);font-size:12px;margin:8px 0 0;color:var(--muted)}
+
+.verdict{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:16px 18px}
+.verdict .vt{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.verdict .vname{font-size:18px;font-weight:700}
+.verdict p{margin:8px 0 0;max-width:70ch}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px 18px;margin-top:14px}
+.stat .k{font-size:12px;color:var(--muted)} .stat .v{font-family:var(--font-data);font-size:17px}
+.vbars{margin-top:18px}
+.xr{display:flex;flex-wrap:wrap;gap:2px 16px;justify-content:space-between;padding-block:4px;border-bottom:1px solid var(--line);font-size:13px}
+.vbars h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;margin-bottom:8px}
+.vb{display:grid;grid-template-columns:44px minmax(0,1fr) 78px;gap:10px;align-items:center;font-size:12.5px;padding-block:3px}
+.vb .id{font-family:var(--font-data)}
+.vb .lane{position:relative;height:14px}
+.vb .lane::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line)}
+.vb .lane i{position:absolute;top:2px;height:10px;border-radius:2px}
+.vb .val{font-family:var(--font-data);text-align:right}
+.vb .dsc{grid-column:2/-1;color:var(--muted);font-size:12px;margin-top:-4px;overflow-wrap:anywhere}
+.risk{margin-top:14px;font-size:13px;color:var(--muted);max-width:80ch}
+
+.health{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 28px;font-size:13px}
+.health h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;margin-bottom:6px}
+.srcbox{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.srcbox input[type=text]{flex:1;min-width:200px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink);font:inherit}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+</style>
+
+<div class="top"><div class="top-in">
+  <div class="brand"><h1>Radar de Migración</h1><span class="tag">pump.fun → pool · solo avisa, no opera</span></div>
+  <div class="strip" id="strip" aria-live="polite"></div>
+</div></div>
+
+<div class="wrap">
+  <div id="banners"></div>
+  <div class="figures" id="figures"></div>
+
+  <section aria-labelledby="h-cand">
+    <div class="sh"><h2 id="h-cand">Candidatos</h2>
+      <label class="tog"><input type="checkbox" id="showDisc"> Mostrar descartados</label></div>
+    <div class="tablebox"><table id="cand">
+      <thead><tr>
+        <th>Token</th><th>Curva</th><th class="r">Capitalización</th><th class="r">Volumen 5 min</th>
+        <th class="r">Compradores</th><th>Wallets</th><th>Seguridad</th><th class="r">Puntuación</th></tr></thead>
+      <tbody id="candBody"></tbody></table></div>
+    <p class="risk" id="candNote"></p>
+  </section>
+
+  <section aria-labelledby="h-al">
+    <div class="sh"><h2 id="h-al">Registro de avisos</h2><span class="note">Resultado neto de comisiones, retraso de entrada y deslizamiento. Nada se compra.</span></div>
+    <div class="alerts" id="alerts"></div>
+  </section>
+
+  <section aria-labelledby="h-me">
+    <div class="sh"><h2 id="h-me">Medición frente al azar</h2><span class="note">Segunda mitad de los avisos, sin tocar nada tras verla.</span></div>
+    <div id="measure"></div>
+  </section>
+
+  <section aria-labelledby="h-he">
+    <div class="sh"><h2 id="h-he">Estado y fuente de datos</h2></div>
+    <div class="health" id="health"></div>
+  </section>
+</div>
+
+<script type="application/json" id="sample">{"mode":"demo","generated_at":1791989986,"config":{"alert_score":70,"track_score":55,"gates":{"min_mcap_usd":30000,"min_curve_pct":60,"max_curve_pct":99.5},"curve_target_sol":85.0,"position_sol":1.0,"weights":{"curve":15,"volume":25,"wallets":25,"history":20,"manipulation":15}},"health":{"last_cycle":{"ts":1791989986,"listed":50},"errors":[],"sample_fails":null,"helius":false,"gmgn":false,"gmgn_blocked_until":null,"email":false,"sol_usd":150.0,"n_candidates_tracked":45,"n_controls_tracked":90},"candidates":[{"mint":"qCY12WFLcciLdowV1yDc5EDiYGpEVhlMgNsCXDIfAAkY","name":"Demo good","symbol":"GOOD93","ts":1791989966,"progress":92.11,"mcap":54646.51806254876,"price":5.4646518062548764e-05,"score":73.9,"raw_score":73.9,"discarded":false,"reasons":[],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":81.3,"ok":true,"note":"curva 92% · 54,647 USD"},"volume":{"label":"Volumen real","weight":25,"score":60.9,"ok":true,"note":"26 compradores únicos (prev 25) · compra/venta 1.8 · mayor minuto 23%","metrics":{"unique_buyers":26,"unique_buyers_prev":25,"growth":1.04,"buy_sol":66.79,"sell_sol":37.32,"ratio":1.79,"spike_share":0.23,"covered":true,"vol_sol":104.1}},"wallets":{"label":"Wallets independientes","weight":25,"score":85.9,"ok":true,"note":"11.1 holders independientes efectivos · 17 entidades · 0 clústeres multi-wallet · mayor 12%"},"history":{"label":"Historial de wallets","weight":20,"score":75.0,"ok":true,"note":"12/16 wallets con historial rentable que no sale al entrar · cobertura 94%","metrics":{"quality":12,"with_data":16,"coverage":0.94,"bots":0,"median_hold_s":2980.0,"pnl_sol_total":24.0}},"manipulation":{"label":"Sin manipulación","weight":15,"score":66.5,"ok":true,"note":"wash 7% · circular 0% · creador 0.0% · mayor clúster 12%"}},"security":{"ok":true,"fails":[],"warnings":[],"checks":{"mint_authority":{"ok":true,"note":"renunciada"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"8.1% del circulante (máx 35%)"},"creador":{"ok":true,"note":"0 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":92.11,"mcap":54646.51806254876,"score":73.9,"unique_buyers":26,"eff_independent":11.14,"largest_cluster_pct":11.7,"quality_share":0.75,"coverage":0.94,"wash_share":0.069,"top10_pct":8.1,"creator_pct":0.0,"prev_rugs":0,"sec_ok":true,"discarded":false,"slip_buy_pct":0.91,"vsol":108.29193310779415,"vtok":297252058.1746192,"sol_usd":150.0,"gx_smart_wallets":0,"gx_rug_ratio":0.09,"gx_bundler_rate":0.03},"extras":{"data_source":"demo (sintético)","smart_wallets":0,"rug_ratio":0.09,"bundler_rate":0.03,"creator_status":"creator_close"},"volume":{"unique_buyers":26,"unique_buyers_prev":25,"growth":1.04,"buy_sol":66.79,"sell_sol":37.32,"ratio":1.79,"spike_share":0.23,"covered":true,"vol_sol":104.1},"history":{"quality":12,"with_data":16,"coverage":0.94,"bots":0,"median_hold_s":2980.0,"pnl_sol_total":24.0}},{"mint":"0yDm0aOxkV00RLB8wvzsr7NVDxKDw1H0npdqh6pJPNWy","name":"Demo good","symbol":"GOOD95","ts":1791989966,"progress":95.07,"mcap":57219.98594780162,"price":5.721998594780162e-05,"score":69.0,"raw_score":69.0,"discarded":false,"reasons":[],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":88.8,"ok":true,"note":"curva 95% · 57,220 USD"},"volume":{"label":"Volumen real","weight":25,"score":62.5,"ok":true,"note":"27 compradores únicos (prev 26) · compra/venta 1.9 · mayor minuto 24%","metrics":{"unique_buyers":27,"unique_buyers_prev":26,"growth":1.04,"buy_sol":73.77,"sell_sol":38.39,"ratio":1.92,"spike_share":0.24,"covered":true,"vol_sol":112.15}},"wallets":{"label":"Wallets independientes","weight":25,"score":82.5,"ok":true,"note":"10.5 holders independientes efectivos · 18 entidades · 0 clústeres multi-wallet · mayor 15%"},"history":{"label":"Historial de wallets","weight":20,"score":53.3,"ok":true,"note":"8/15 wallets con historial rentable que no sale al entrar · cobertura 83%","metrics":{"quality":8,"with_data":15,"coverage":0.83,"bots":0,"median_hold_s":1904,"pnl_sol_total":9.5}},"manipulation":{"label":"Sin manipulación","weight":15,"score":58.4,"ok":true,"note":"wash 7% · circular 0% · creador 0.0% · mayor clúster 15%"}},"security":{"ok":true,"fails":[],"warnings":[],"checks":{"mint_authority":{"ok":true,"note":"renunciada"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"7.2% del circulante (máx 35%)"},"creador":{"ok":true,"note":"0 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":95.07,"mcap":57219.98594780162,"score":69.0,"unique_buyers":27,"eff_independent":10.53,"largest_cluster_pct":14.6,"quality_share":0.53,"coverage":0.83,"wash_share":0.067,"top10_pct":7.2,"creator_pct":0.0,"prev_rugs":0,"sec_ok":true,"discarded":false,"slip_buy_pct":0.89,"vsol":110.81249471245663,"vtok":290490707.6005163,"sol_usd":150.0,"gx_smart_wallets":0,"gx_rug_ratio":0.2,"gx_bundler_rate":0.07},"extras":{"data_source":"demo (sintético)","smart_wallets":0,"rug_ratio":0.2,"bundler_rate":0.07,"creator_status":"creator_close"},"volume":{"unique_buyers":27,"unique_buyers_prev":26,"growth":1.04,"buy_sol":73.77,"sell_sol":38.39,"ratio":1.92,"spike_share":0.24,"covered":true,"vol_sol":112.15},"history":{"quality":8,"with_data":15,"coverage":0.83,"bots":0,"median_hold_s":1904,"pnl_sol_total":9.5}},{"mint":"K3VBYyEdff8Lzy6J1yEdCnIu1kEYXz4P8J8DZpZMKqCD","name":"Demo good","symbol":"GOOD36","ts":1791989966,"progress":94.75,"mcap":56934.85865759525,"price":5.693485865759525e-05,"score":68.9,"raw_score":68.9,"discarded":false,"reasons":[],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":88.0,"ok":true,"note":"curva 95% · 56,935 USD"},"volume":{"label":"Volumen real","weight":25,"score":55.6,"ok":true,"note":"25 compradores únicos (prev 29) · compra/venta 1.4 · mayor minuto 25%","metrics":{"unique_buyers":25,"unique_buyers_prev":29,"growth":0.86,"buy_sol":62.45,"sell_sol":43.24,"ratio":1.44,"spike_share":0.25,"covered":true,"vol_sol":105.69}},"wallets":{"label":"Wallets independientes","weight":25,"score":84.9,"ok":true,"note":"11.0 holders independientes efectivos · 19 entidades · 0 clústeres multi-wallet · mayor 13%"},"history":{"label":"Historial de wallets","weight":20,"score":64.7,"ok":true,"note":"11/17 wallets con historial rentable que no sale al entrar · cobertura 89%","metrics":{"quality":11,"with_data":17,"coverage":0.89,"bots":0,"median_hold_s":2952,"pnl_sol_total":18.5}},"manipulation":{"label":"Sin manipulación","weight":15,"score":50.8,"ok":true,"note":"wash 12% · circular 0% · creador 0.0% · mayor clúster 13%"}},"security":{"ok":true,"fails":[],"warnings":[],"checks":{"mint_authority":{"ok":true,"note":"renunciada"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"8.4% del circulante (máx 35%)"},"creador":{"ok":true,"note":"0 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":94.75,"mcap":56934.85865759525,"score":68.9,"unique_buyers":25,"eff_independent":10.98,"largest_cluster_pct":12.6,"quality_share":0.65,"coverage":0.89,"wash_share":0.123,"top10_pct":8.4,"creator_pct":0.0,"prev_rugs":0,"sec_ok":true,"discarded":false,"slip_buy_pct":0.9,"vsol":110.53606048670244,"vtok":291217181.5990536,"sol_usd":150.0,"gx_smart_wallets":1,"gx_rug_ratio":0.2,"gx_bundler_rate":0.3},"extras":{"data_source":"demo (sintético)","smart_wallets":1,"rug_ratio":0.2,"bundler_rate":0.3,"creator_status":"creator_close"},"volume":{"unique_buyers":25,"unique_buyers_prev":29,"growth":0.86,"buy_sol":62.45,"sell_sol":43.24,"ratio":1.44,"spike_share":0.25,"covered":true,"vol_sol":105.69},"history":{"quality":11,"with_data":17,"coverage":0.89,"bots":0,"median_hold_s":2952,"pnl_sol_total":18.5}},{"mint":"Qb2PATBNA4G64dcpRtBeAVp59Xj8dJ7n3wsxSmAxgqEY","name":"Demo good","symbol":"GOOD49","ts":1791989966,"progress":85.09,"mcap":48788.63317832204,"price":4.878863317832204e-05,"score":66.1,"raw_score":66.1,"discarded":false,"reasons":[],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":63.5,"ok":true,"note":"curva 85% · 48,789 USD"},"volume":{"label":"Volumen real","weight":25,"score":56.0,"ok":true,"note":"25 compradores únicos (prev 28) · compra/venta 1.5 · mayor minuto 21%","metrics":{"unique_buyers":25,"unique_buyers_prev":28,"growth":0.89,"buy_sol":66.82,"sell_sol":45.05,"ratio":1.48,"spike_share":0.21,"covered":true,"vol_sol":111.86}},"wallets":{"label":"Wallets independientes","weight":25,"score":85.9,"ok":true,"note":"10.9 holders independientes efectivos · 18 entidades · 0 clústeres multi-wallet · mayor 12%"},"history":{"label":"Historial de wallets","weight":20,"score":66.7,"ok":true,"note":"10/15 wallets con historial rentable que no sale al entrar · cobertura 83%","metrics":{"quality":10,"with_data":15,"coverage":0.83,"bots":0,"median_hold_s":2620,"pnl_sol_total":17.5}},"manipulation":{"label":"Sin manipulación","weight":15,"score":52.0,"ok":true,"note":"wash 12% · circular 0% · creador 0.0% · mayor clúster 12%"}},"security":{"ok":true,"fails":[],"warnings":[],"checks":{"mint_authority":{"ok":true,"note":"renunciada"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"9.8% del circulante (máx 35%)"},"creador":{"ok":true,"note":"0 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":85.09,"mcap":48788.63317832204,"score":66.1,"unique_buyers":25,"eff_independent":10.93,"largest_cluster_pct":11.7,"quality_share":0.67,"coverage":0.83,"wash_share":0.12,"top10_pct":9.8,"creator_pct":0.0,"prev_rugs":0,"sec_ok":true,"discarded":false,"slip_buy_pct":0.97,"vsol":102.32321672068323,"vtok":314591360.90170664,"sol_usd":150.0,"gx_smart_wallets":0,"gx_rug_ratio":0.2,"gx_bundler_rate":0.08},"extras":{"data_source":"demo (sintético)","smart_wallets":0,"rug_ratio":0.2,"bundler_rate":0.08,"creator_status":"creator_close"},"volume":{"unique_buyers":25,"unique_buyers_prev":28,"growth":0.89,"buy_sol":66.82,"sell_sol":45.05,"ratio":1.48,"spike_share":0.21,"covered":true,"vol_sol":111.86},"history":{"quality":10,"with_data":15,"coverage":0.83,"bots":0,"median_hold_s":2620,"pnl_sol_total":17.5}},{"mint":"tSISptItxQuNNBRVVj0qu8vvc4gwlcYqSI1oADu9Tf6H","name":"Demo wash","symbol":"WASH53","ts":1791989966,"progress":92.03,"mcap":54579.27287062784,"price":5.457927287062784e-05,"score":49.9,"raw_score":49.9,"discarded":false,"reasons":[],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":81.1,"ok":true,"note":"curva 92% · 54,579 USD"},"volume":{"label":"Volumen real","weight":25,"score":54.1,"ok":true,"note":"26 compradores únicos (prev 28) · compra/venta 1.3 · mayor minuto 25%","metrics":{"unique_buyers":26,"unique_buyers_prev":28,"growth":0.93,"buy_sol":59.09,"sell_sol":44.37,"ratio":1.33,"spike_share":0.25,"covered":true,"vol_sol":103.46}},"wallets":{"label":"Wallets independientes","weight":25,"score":83.2,"ok":true,"note":"10.0 holders independientes efectivos · 21 entidades · 0 clústeres multi-wallet · mayor 14%"},"history":{"label":"Historial de wallets","weight":20,"score":16.7,"ok":true,"note":"3/18 wallets con historial rentable que no sale al entrar · cobertura 86%","metrics":{"quality":3,"with_data":18,"coverage":0.86,"bots":0,"median_hold_s":43.5,"pnl_sol_total":-15.0}},"manipulation":{"label":"Sin manipulación","weight":15,"score":0.5,"ok":true,"note":"wash 25% · circular 0% · creador 0.0% · mayor clúster 14%"}},"security":{"ok":true,"fails":[],"warnings":[],"checks":{"mint_authority":{"ok":true,"note":"renunciada"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"7.8% del circulante (máx 35%)"},"creador":{"ok":true,"note":"0 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":92.03,"mcap":54579.27287062784,"score":49.9,"unique_buyers":26,"eff_independent":10.01,"largest_cluster_pct":14.0,"quality_share":0.17,"coverage":0.86,"wash_share":0.249,"top10_pct":7.8,"creator_pct":0.0,"prev_rugs":0,"sec_ok":true,"discarded":false,"slip_buy_pct":0.91,"vsol":108.22528335854213,"vtok":297435118.6806966,"sol_usd":150.0,"gx_smart_wallets":6,"gx_rug_ratio":0.2,"gx_bundler_rate":0.08},"extras":{"data_source":"demo (sintético)","smart_wallets":6,"rug_ratio":0.2,"bundler_rate":0.08,"creator_status":"creator_close"},"volume":{"unique_buyers":26,"unique_buyers_prev":28,"growth":0.93,"buy_sol":59.09,"sell_sol":44.37,"ratio":1.33,"spike_share":0.25,"covered":true,"vol_sol":103.46},"history":{"quality":3,"with_data":18,"coverage":0.86,"bots":0,"median_hold_s":43.5,"pnl_sol_total":-15.0}},{"mint":"wJzLftpvVQ9oX511FKKiRyWAhEp42oJ06hbVg5frfedN","name":"Demo unsafe","symbol":"UNSA28","ts":1791989966,"progress":89.87,"mcap":52743.58253571875,"price":5.274358253571875e-05,"score":0.0,"raw_score":73.0,"discarded":true,"reasons":["mint_authority: sin renunciar","creador: 3 rugs previos (máx 1)"],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":75.6,"ok":true,"note":"curva 90% · 52,744 USD"},"volume":{"label":"Volumen real","weight":25,"score":75.0,"ok":true,"note":"27 compradores únicos (prev 29) · compra/venta 3.2 · mayor minuto 27%","metrics":{"unique_buyers":27,"unique_buyers_prev":29,"growth":0.93,"buy_sol":84.43,"sell_sol":26.33,"ratio":3.21,"spike_share":0.27,"covered":true,"vol_sol":110.76}},"wallets":{"label":"Wallets independientes","weight":25,"score":85.4,"ok":true,"note":"11.3 holders independientes efectivos · 21 entidades · 0 clústeres multi-wallet · mayor 12%"},"history":{"label":"Historial de wallets","weight":20,"score":58.8,"ok":true,"note":"10/17 wallets con historial rentable que no sale al entrar · cobertura 81%","metrics":{"quality":10,"with_data":17,"coverage":0.81,"bots":0,"median_hold_s":2066,"pnl_sol_total":14.5}},"manipulation":{"label":"Sin manipulación","weight":15,"score":65.2,"ok":true,"note":"wash 6% · circular 0% · creador 0.0% · mayor clúster 12%"}},"security":{"ok":false,"fails":["mint_authority: sin renunciar","creador: 3 rugs previos (máx 1)"],"warnings":[],"checks":{"mint_authority":{"ok":false,"note":"sin renunciar"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"8.8% del circulante (máx 35%)"},"creador":{"ok":false,"note":"3 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":89.87,"mcap":52743.58253571875,"score":0.0,"unique_buyers":27,"eff_independent":11.33,"largest_cluster_pct":12.2,"quality_share":0.59,"coverage":0.81,"wash_share":0.058,"top10_pct":8.8,"creator_pct":0.0,"prev_rugs":3,"sec_ok":false,"discarded":true,"slip_buy_pct":0.93,"vsol":106.38972136520165,"vtok":302566823.0627477,"sol_usd":150.0,"gx_smart_wallets":2,"gx_rug_ratio":0.29,"gx_bundler_rate":0.15},"extras":{"data_source":"demo (sintético)","smart_wallets":2,"rug_ratio":0.29,"bundler_rate":0.15,"creator_status":"creator_close"},"volume":{"unique_buyers":27,"unique_buyers_prev":29,"growth":0.93,"buy_sol":84.43,"sell_sol":26.33,"ratio":3.21,"spike_share":0.27,"covered":true,"vol_sol":110.76},"history":{"quality":10,"with_data":17,"coverage":0.81,"bots":0,"median_hold_s":2066,"pnl_sol_total":14.5}},{"mint":"AbkK7zcuzQhwEJsxu0FINgNSoy3fYvvFsQJzmP6eRdxv","name":"Demo cluster","symbol":"CLUS72","ts":1791989966,"progress":87.83,"mcap":51040.937141879316,"price":5.1040937141879315e-05,"score":0.0,"raw_score":32.5,"discarded":true,"reasons":["Sin manipulación: wash 4% · circular 27% · creador 0.0% · mayor clúster 88% · SUPERA: wash/circular, clúster dominante"],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":70.5,"ok":true,"note":"curva 88% · 51,041 USD"},"volume":{"label":"Volumen real","weight":25,"score":54.2,"ok":true,"note":"24 compradores únicos (prev 25) · compra/venta 1.3 · mayor minuto 26%","metrics":{"unique_buyers":24,"unique_buyers_prev":25,"growth":0.96,"buy_sol":61.72,"sell_sol":46.34,"ratio":1.33,"spike_share":0.26,"covered":true,"vol_sol":108.05}},"wallets":{"label":"Wallets independientes","weight":25,"score":11.3,"ok":true,"note":"1.3 holders independientes efectivos · 12 entidades · 1 clústeres multi-wallet · mayor 88%"},"history":{"label":"Historial de wallets","weight":20,"score":27.8,"ok":true,"note":"5/18 wallets con historial rentable que no sale al entrar · cobertura 90%","metrics":{"quality":5,"with_data":18,"coverage":0.9,"bots":0,"median_hold_s":51.0,"pnl_sol_total":-7.0}},"manipulation":{"label":"Sin manipulación","weight":15,"score":0.0,"ok":false,"note":"wash 4% · circular 27% · creador 0.0% · mayor clúster 88% · SUPERA: wash/circular, clúster dominante"}},"security":{"ok":true,"fails":[],"warnings":[],"checks":{"mint_authority":{"ok":true,"note":"renunciada"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"7.4% del circulante (máx 35%)"},"creador":{"ok":true,"note":"0 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":87.83,"mcap":51040.937141879316,"score":0.0,"unique_buyers":24,"eff_independent":1.29,"largest_cluster_pct":87.7,"quality_share":0.28,"coverage":0.9,"wash_share":0.269,"top10_pct":7.4,"creator_pct":0.0,"prev_rugs":0,"sec_ok":true,"discarded":true,"slip_buy_pct":0.95,"vsol":104.65842111673241,"vtok":307572000.9582065,"sol_usd":150.0,"gx_smart_wallets":6,"gx_rug_ratio":0.35,"gx_bundler_rate":0.1},"extras":{"data_source":"demo (sintético)","smart_wallets":6,"rug_ratio":0.35,"bundler_rate":0.1,"creator_status":"creator_close"},"volume":{"unique_buyers":24,"unique_buyers_prev":25,"growth":0.96,"buy_sol":61.72,"sell_sol":46.34,"ratio":1.33,"spike_share":0.26,"covered":true,"vol_sol":108.05},"history":{"quality":5,"with_data":18,"coverage":0.9,"bots":0,"median_hold_s":51.0,"pnl_sol_total":-7.0},"links":[{"a":"8wqhRZCw0iwjztn1hVTNxoTArjZywC9Zes2k59UsesjE","b":"R0ki8XKcKqqjDYvwRXoQZGQ5NRfvEHWU9vL8RSvXyD3E","peso":2,"motivos":["mismo fondeador"]},{"a":"8wqhRZCw0iwjztn1hVTNxoTArjZywC9Zes2k59UsesjE","b":"Eae3ZjN0PHHoZi3n3D0Sgsy2bnx8PjkyvrNRFkvUS7Sf","peso":2,"motivos":["mismo fondeador"]},{"a":"0WyPpU2h0BNeyqXtQJY6sPEHmqsuSw0avij1dQKpxVM7","b":"Eae3ZjN0PHHoZi3n3D0Sgsy2bnx8PjkyvrNRFkvUS7Sf","peso":2,"motivos":["mismo fondeador"]},{"a":"0WyPpU2h0BNeyqXtQJY6sPEHmqsuSw0avij1dQKpxVM7","b":"DG2zgJngB4fBUAtBxFtnhydT1Idl0zClh6E5OO37qWet","peso":2,"motivos":["mismo fondeador"]},{"a":"DG2zgJngB4fBUAtBxFtnhydT1Idl0zClh6E5OO37qWet","b":"EQkN6GnEvpKIO1crEttmlaXfKSg9abghzThf0UB0DxAL","peso":2,"motivos":["mismo fondeador"]},{"a":"EQkN6GnEvpKIO1crEttmlaXfKSg9abghzThf0UB0DxAL","b":"y5rplXKbcA5EjMeefthbrC8Nq4OImLDdKshl9U4tbDE5","peso":2,"motivos":["mismo fondeador"]},{"a":"7PVfAhgKHnNQTKWJV7EVEGKC1vJXujm0jNuJGqlW4lXM","b":"y5rplXKbcA5EjMeefthbrC8Nq4OImLDdKshl9U4tbDE5","peso":2,"motivos":["mismo fondeador"]},{"a":"7PVfAhgKHnNQTKWJV7EVEGKC1vJXujm0jNuJGqlW4lXM","b":"i7ojEtSgKJH8BbBgAICVYQggUnWWiaTwXEWM5AmJ1phM","peso":2,"motivos":["mismo fondeador"]}]},{"mint":"FpUuyqrd67rjwm7mVyANQctG9n95WbC4MCpIBxABR9cW","name":"Demo cluster","symbol":"CLUS50","ts":1791989966,"progress":85.05,"mcap":48762.83279993352,"price":4.8762832799933525e-05,"score":0.0,"raw_score":30.5,"discarded":true,"reasons":["Sin manipulación: wash 10% · circular 31% · creador 0.0% · mayor clúster 86% · SUPERA: wash/circular, clúster dominante"],"criteria":{"curve":{"label":"Curva y capitalización","weight":15,"score":63.4,"ok":true,"note":"curva 85% · 48,763 USD"},"volume":{"label":"Volumen real","weight":25,"score":53.6,"ok":true,"note":"24 compradores únicos (prev 27) · compra/venta 1.3 · mayor minuto 28%","metrics":{"unique_buyers":24,"unique_buyers_prev":27,"growth":0.89,"buy_sol":64.73,"sell_sol":50.21,"ratio":1.29,"spike_share":0.28,"covered":true,"vol_sol":114.93}},"wallets":{"label":"Wallets independientes","weight":25,"score":11.7,"ok":true,"note":"1.3 holders independientes efectivos · 10 entidades · 1 clústeres multi-wallet · mayor 86%"},"history":{"label":"Historial de wallets","weight":20,"score":23.5,"ok":true,"note":"4/17 wallets con historial rentable que no sale al entrar · cobertura 94%","metrics":{"quality":4,"with_data":17,"coverage":0.94,"bots":0,"median_hold_s":48,"pnl_sol_total":-9.5}},"manipulation":{"label":"Sin manipulación","weight":15,"score":0.0,"ok":false,"note":"wash 10% · circular 31% · creador 0.0% · mayor clúster 86% · SUPERA: wash/circular, clúster dominante"}},"security":{"ok":true,"fails":[],"warnings":[],"checks":{"mint_authority":{"ok":true,"note":"renunciada"},"freeze_authority":{"ok":true,"note":"renunciada"},"top10":{"ok":true,"note":"9.2% del circulante (máx 35%)"},"creador":{"ok":true,"note":"0 rugs previos (máx 1)"},"honeypot":{"ok":true,"note":"hay ventas de terceros"},"liquidez_retirable":{"ok":true,"note":"por diseño pump.fun (sin verificar on-chain)"}}},"features":{"progress":85.05,"mcap":48762.83279993352,"score":0.0,"unique_buyers":24,"eff_independent":1.34,"largest_cluster_pct":86.2,"quality_share":0.24,"coverage":0.94,"wash_share":0.306,"top10_pct":9.2,"creator_pct":0.0,"prev_rugs":0,"sec_ok":true,"discarded":true,"slip_buy_pct":0.97,"vsol":102.29615788907095,"vtok":314674574.9230049,"sol_usd":150.0,"gx_smart_wallets":6,"gx_rug_ratio":0.11,"gx_bundler_rate":0.27},"extras":{"data_source":"demo (sintético)","smart_wallets":6,"rug_ratio":0.11,"bundler_rate":0.27,"creator_status":"creator_close"},"volume":{"unique_buyers":24,"unique_buyers_prev":27,"growth":0.89,"buy_sol":64.73,"sell_sol":50.21,"ratio":1.29,"spike_share":0.28,"covered":true,"vol_sol":114.93},"history":{"quality":4,"with_data":17,"coverage":0.94,"bots":0,"median_hold_s":48,"pnl_sol_total":-9.5},"links":[{"a":"PJpj4hG9dMkbRBzCzdFWivtLzMREnK4T1prFVEFEZaN7","b":"wPFTOgUJWJSiQFDd16SoYLvzAjuxtag6eGRMaKCMcOmW","peso":2,"motivos":["mismo fondeador"]},{"a":"wPFTOgUJWJSiQFDd16SoYLvzAjuxtag6eGRMaKCMcOmW","b":"xiShXyXZE9rjtkT0tJEpVy63SzNNN7CgpaZaxVFKdSQP","peso":2,"motivos":["mismo fondeador"]},{"a":"XjnmmoeRWmzEujLhOJRaaj44WdUWcSXNXIeXrT8TLDU4","b":"xiShXyXZE9rjtkT0tJEpVy63SzNNN7CgpaZaxVFKdSQP","peso":3,"motivos":["compra en el mismo slot 4779974297","mismo fondeador"]},{"a":"RVdT36FagotLCWibvaUVEz6SU8OnSO08Qiq0LFJpGxvi","b":"XjnmmoeRWmzEujLhOJRaaj44WdUWcSXNXIeXrT8TLDU4","peso":2,"motivos":["mismo fondeador"]},{"a":"FvfCtlZOWQYfSxsbhoYG1d1EgwbGgq6Ea4WqqCynOcW5","b":"RVdT36FagotLCWibvaUVEz6SU8OnSO08Qiq0LFJpGxvi","peso":2,"motivos":["mismo fondeador"]},{"a":"FvfCtlZOWQYfSxsbhoYG1d1EgwbGgq6Ea4WqqCynOcW5","b":"Ml0mlxGTA7yibqtW83dHhGuSjB2S0Gvt4OUw0SvkwnnU","peso":2,"motivos":["mismo fondeador"]},{"a":"Ml0mlxGTA7yibqtW83dHhGuSjB2S0Gvt4OUw0SvkwnnU","b":"kFwgeEuulTalHUBPUaUUKBGdBrVs1cpI74rPMXQr45gD","peso":2,"motivos":["mismo fondeador"]},{"a":"CLRM94UWgqIycUyDF8mWVV00c9BP5H7kms5uVh6See60","b":"kFwgeEuulTalHUBPUaUUKBGdBrVs1cpI74rPMXQr45gD","peso":2,"motivos":["mismo fondeador"]}]}],"alerts":[{"mint":"Qb2PATBNA4G64dcpRtBeAVp59Xj8dJ7n3wsxSmAxgqEY","name":"Demo good","symbol":"GOOD49","ts":1791884343,"price":4.878863317832204e-05,"mcap":48788.63317832204,"progress":85.09,"score":66.1,"reason":"GOOD49 (Demo good) · puntuación 66/100\nCurva 85% · capitalización 48,789 USD · precio 0.00004879 USD\n\n- Curva y capitalización: 64/100 (peso 15) — curva 85% · 48,789 USD\n- Volumen real: 56/100 (peso 25) — 25 compradores únicos (prev 28) · compra/venta 1.5 · mayor minuto 21%\n- Wallets independientes: 86/100 (peso 25) — 10.9 holders independientes efectivos · 18 entidades · 0 clústeres multi-wallet · mayor 12%\n- Historial de wallets: 67/100 (peso 20) — 10/15 wallets con historial rentable que no sale al entrar · cobertura 83%\n- Sin manipulación: 52/100 (peso 15) — wash 12% · circular 0% · creador 0.0% · mayor clúster 12%\n- Seguridad: superada","emailed":true,"email_note":"enviado (demo)","outcomes":{"5m":{"ret":-0.008303362548333856,"rug":false,"status":"ok"},"1h":{"ret":-0.04519126173568744,"rug":false,"status":"ok"},"24h":{"ret":0.365242629375931,"rug":false,"status":"ok"}}},{"mint":"0yDm0aOxkV00RLB8wvzsr7NVDxKDw1H0npdqh6pJPNWy","name":"Demo good","symbol":"GOOD95","ts":1791833527,"price":5.721998594780162e-05,"mcap":57219.98594780162,"progress":95.07,"score":69.0,"reason":"GOOD95 (Demo good) · puntuación 69/100\nCurva 95% · capitalización 57,220 USD · precio 0.00005722 USD\n\n- Curva y capitalización: 89/100 (peso 15) — curva 95% · 57,220 USD\n- Volumen real: 62/100 (peso 25) — 27 compradores únicos (prev 26) · compra/venta 1.9 · mayor minuto 24%\n- Wallets independientes: 82/100 (peso 25) — 10.5 holders independientes efectivos · 18 entidades · 0 clústeres multi-wallet · mayor 15%\n- Historial de wallets: 53/100 (peso 20) — 8/15 wallets con historial rentable que no sale al entrar · cobertura 83%\n- Sin manipulación: 58/100 (peso 15) — wash 7% · circular 0% · creador 0.0% · mayor clúster 15%\n- Seguridad: superada","emailed":true,"email_note":"enviado (demo)","outcomes":{"5m":{"ret":-0.0724866948788434,"rug":false,"status":"ok"},"1h":{"ret":-0.006295963754020303,"rug":false,"status":"ok"},"24h":{"ret":-0.6368982776895808,"rug":false,"status":"ok"}}},{"mint":"K3VBYyEdff8Lzy6J1yEdCnIu1kEYXz4P8J8DZpZMKqCD","name":"Demo good","symbol":"GOOD36","ts":1791828105,"price":5.693485865759525e-05,"mcap":56934.85865759525,"progress":94.75,"score":68.9,"reason":"GOOD36 (Demo good) · puntuación 69/100\nCurva 95% · capitalización 56,935 USD · precio 0.00005693 USD\n\n- Curva y capitalización: 88/100 (peso 15) — curva 95% · 56,935 USD\n- Volumen real: 56/100 (peso 25) — 25 compradores únicos (prev 29) · compra/venta 1.4 · mayor minuto 25%\n- Wallets independientes: 85/100 (peso 25) — 11.0 holders independientes efectivos · 19 entidades · 0 clústeres multi-wallet · mayor 13%\n- Historial de wallets: 65/100 (peso 20) — 11/17 wallets con historial rentable que no sale al entrar · cobertura 89%\n- Sin manipulación: 51/100 (peso 15) — wash 12% · circular 0% · creador 0.0% · mayor clúster 13%\n- Seguridad: superada","emailed":true,"email_note":"enviado (demo)","outcomes":{"5m":{"ret":-0.0309666235053434,"rug":false,"status":"ok"},"1h":{"ret":-0.007756271803101119,"rug":false,"status":"ok"},"24h":{"ret":0.44027364508910805,"rug":false,"status":"ok"}}}],"report":{"generated_at":1791989986,"horizon":"1h","n_cohort":49,"n_controls":90,"n_variants":12,"verdict":"DESCARTAR","detail":"En la segunda mitad la variante elegida no supera con claridad al azar con la misma capitalización (exceso medio, mediana o significación insuficientes). Se documenta como idea descartada.","cut_ts":1791359575,"selection_table":[{"id":"V00","desc":"Base: el aviso tal como está configurado","n_select":15,"mean_excess":-0.02744682001199239,"mean_ret":-0.1308634238580803},{"id":"V01","desc":"Puntuación mínima 60","n_select":17,"mean_excess":-0.025371426869867743,"mean_ret":-0.12917463290662862},{"id":"V02","desc":"Puntuación mínima 80","n_select":4,"mean_excess":0.024518322943731925,"mean_ret":-0.07542941785355764},{"id":"V03","desc":"Base + curva al menos 80%","n_select":6,"mean_excess":-0.1103634418321558,"mean_ret":-0.21445009057675032},{"id":"V04","desc":"Base + curva al menos 90%","n_select":1,"mean_excess":-0.8771574863359786,"mean_ret":-0.9702611467873025},{"id":"V05","desc":"Base + 6 holders independientes efectivos","n_select":8,"mean_excess":0.019928868815713114,"mean_ret":-0.0822037509303607},{"id":"V06","desc":"Base + 10 holders independientes efectivos","n_select":1,"mean_excess":-0.05856643181325627,"mean_ret":-0.1671031493727324},{"id":"V07","desc":"Base + 40% de wallets de calidad","n_select":8,"mean_excess":-0.10952459016805317,"mean_ret":-0.21411652443557405},{"id":"V08","desc":"Base + 60% de wallets de calidad","n_select":5,"mean_excess":-0.18314033367645327,"mean_ret":-0.28285521972250494},{"id":"V09","desc":"Base + mayor clúster <= 15%","n_select":7,"mean_excess":-0.12481271782748068,"mean_ret":-0.22713534379777878},{"id":"V10","desc":"Base + 25 compradores únicos en 5 min","n_select":7,"mean_excess":0.0077714706653765975,"mean_ret":-0.09499912221516657},{"id":"V11","desc":"Combinada: score 65, curva 80%, 6 independientes, 40% calidad","n_select":2,"mean_excess":-0.0016354745323715128,"mean_ret":-0.11300404398625574}],"chosen":{"id":"V01","desc":"Puntuación mínima 60","select_excess":-0.025371426869867743},"test":{"n":18,"pendientes":4,"sin_control":0,"rug_pct":4.545454545454546,"faltan_precio":0,"mean_ret":-0.11648895730254132,"median_ret":-0.08033396813306909,"win_pct":11.11111111111111,"ci90_mean":[-0.20948076288327744,-0.04584247967571837],"mean_excess":-0.0006330255191068509,"median_excess":0.036744636350772145,"p_excess":0.5086982603479304},"score_vs_return":{"n":45,"spearman":0.10382081686429513,"p":0.24591802732422527},"exploratory":[{"feature":"smart_wallets","n":45,"spearman":0.33090192133764607,"p":0.01898101898101898},{"feature":"bundler_rate","n":45,"spearman":-0.26811594202898553,"p":0.9690309690309691},{"feature":"insider_hold_rate","n":45,"spearman":0.1292490118577075,"p":0.2077922077922078},{"feature":"rug_ratio","n":45,"spearman":-0.003689064558629776,"p":0.4915084915084915}]}}</script>
+<script>
+(function(){
+'use strict';
+var $ = function(s,r){return (r||document).querySelector(s)};
+function h(tag, attrs){
+  var e=document.createElement(tag), a=attrs||{};
+  Object.keys(a).forEach(function(k){
+    var v=a[k]; if(v==null||v===false) return;
+    if(k==='class') e.className=v; else if(k==='text') e.textContent=v;
+    else if(k.slice(0,2)==='on') e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k, v===true?'':v);
+  });
+  for(var i=2;i<arguments.length;i++){
+    [].concat(arguments[i]).forEach(function(kid){
+      if(kid==null||kid===false) return;
+      e.append(kid.nodeType?kid:document.createTextNode(String(kid)));
+    });
+  }
+  return e;
+}
+function ls(k,v){ try{ if(v===undefined) return localStorage.getItem(k); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v);}catch(e){return null} }
+var nf0=new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}), nf1=new Intl.NumberFormat('es-ES',{maximumFractionDigits:1,minimumFractionDigits:1});
+function usd(x){ return x==null?'—':'$'+nf0.format(x); }
+function pct(x,d){ return x==null?'—':(d===0?nf0.format(x):nf1.format(x))+'%'; }
+function sret(x){ return (x>=0?'+':'')+nf1.format(x*100)+'%'; }
+function ago(ts){ if(!ts) return 'nunca'; var s=Math.max(0,Math.round(Date.now()/1000-ts));
+  if(s<90) return s+' s'; if(s<5400) return Math.round(s/60)+' min'; if(s<172800) return Math.round(s/3600)+' h'; return Math.round(s/86400)+' d'; }
+function when(ts){ return new Date(ts*1000).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+function price(p){ return p==null?'—':'$'+(p<0.001?p.toExponential(2):p.toFixed(6)); }
+
+var S=null, src={kind:'ejemplo',label:'datos de ejemplo'}, openRows={}, seen=null, newAlert=null, timer=null;
+
+async function tryFetch(u){
+  try{ var r=await fetch(u,{cache:'no-store'}); if(!r.ok) return null; var j=await r.json(); return (j&&j.candidates)?j:null; }catch(e){ return null; }
+}
+async function load(){
+  var j=null;
+  if(/^https?:/.test(location.protocol)){ j=await tryFetch('api/state'); if(j) return {state:j,kind:'detector',label:'detector local'}; }
+  var saved=ls('radar_src');
+  if(saved){ j=await tryFetch(saved); if(j) return {state:j,kind:'url',label:saved}; }
+  var el=$('#sample'), sm=null; try{ sm=JSON.parse(el.textContent); }catch(e){}
+  if(sm){ sm.generated_at=Math.round(Date.now()/1000); return {state:sm,kind:'ejemplo',label:'datos de ejemplo'}; }
+  return null;
+}
+async function refresh(){
+  var r=await load();
+  if(!r){ S=null; src={kind:'nada',label:'sin datos'}; }
+  else{
+    S=r.state; src={kind:r.kind,label:r.label};
+    var cur={}; S.alerts.forEach(function(a){cur[a.mint]=1});
+    if(seen){ var fresh=S.alerts.filter(function(a){return !seen[a.mint]}); if(fresh.length){ newAlert=fresh[0]; } }
+    seen=cur;
+  }
+  render();
+  clearTimeout(timer);
+  if(src.kind==='detector'||src.kind==='url') timer=setTimeout(refresh,15000);
+}
+
+function chip(text,cls){ return h('span',{class:'pill '+(cls||'plain')},text); }
+
+function renderStrip(){
+  var st=$('#strip'); st.textContent='';
+  if(!S){ st.append(chip('sin datos','bad')); return; }
+  var mode=S.mode, hl=S.health||{}, lc=hl.last_cycle;
+  if(src.kind==='ejemplo'||mode==='demo') st.append(chip('DATOS DE EJEMPLO','warn'));
+  else if(lc&&Date.now()/1000-lc.ts<180) st.append(chip('en marcha · ciclo hace '+ago(lc.ts),'good'));
+  else st.append(chip('sin ciclos recientes'+(lc?' · último hace '+ago(lc.ts):''),'bad'));
+  st.append(chip(hl.gmgn?'GMGN con clave':'sin clave GMGN',hl.gmgn?'good':(hl.helius?'plain':'warn')));
+  st.append(chip(hl.helius?'Helius con clave':'sin clave Helius',hl.helius?'good':(hl.gmgn?'plain':'warn')));
+  if(hl.gmgn_blocked_until&&hl.gmgn_blocked_until>Date.now()/1000) st.append(chip('GMGN en pausa por límite de uso','bad'));
+  st.append(chip(hl.email?'correo activo':'correo apagado',hl.email?'good':'plain'));
+  if(hl.sol_usd) st.append(chip('SOL $'+nf1.format(hl.sol_usd),'plain'));
+}
+
+function renderBanners(){
+  var b=$('#banners'); b.textContent='';
+  if(!S){ b.append(h('div',{class:'banner'},'No hay datos. Arranca el detector (README, paso 4) o carga un archivo de estado abajo.')); return; }
+  if(src.kind==='ejemplo'||S.mode==='demo')
+    b.append(h('div',{class:'banner demo'},'Todo lo que ves son datos sintéticos generados al azar para enseñar el panel. No son tokens reales ni resultados reales.'));
+  if(newAlert){
+    var a=newAlert;
+    b.append(h('div',{class:'banner alert',role:'alert'},
+      h('span',null,'Nuevo aviso: '+a.symbol+' · curva '+pct(a.progress,0)+' · puntuación '+nf0.format(a.score)),
+      h('button',{type:'button',onclick:function(){newAlert=null;renderBanners();document.title='Radar de Migración'}},'Cerrar')));
+    document.title='(1) Radar de Migración';
+  }
+}
+
+function renderFigures(){
+  var f=$('#figures'); f.textContent='';
+  if(!S) return;
+  var live=S.candidates.filter(function(c){return !c.discarded});
+  var rep=S.report, hl=S.health||{};
+  function fig(k,v,s){ return h('div',{class:'fig'},h('div',{class:'k'},k),h('div',{class:'v'},v),h('div',{class:'s'},s||'')); }
+  f.append(fig('Candidatos vivos',String(live.length),(S.candidates.length-live.length)+' descartados ahora'));
+  f.append(fig('Avisos emitidos',String(S.alerts.length),'umbral '+nf0.format(S.config.alert_score)+' puntos'));
+  f.append(fig('En seguimiento',String(hl.n_candidates_tracked||0)+' + '+String(hl.n_controls_tracked||0),'candidatos + controles al azar'));
+  f.append(fig('Veredicto',rep&&rep.verdict?rep.verdict.replace(' (provisional)',''):'sin medir',rep?'horizonte '+rep.horizon:'faltan semanas de datos'));
+}
+
+function segBar(c){
+  var wsum=0, k; for(k in c.criteria) wsum+=c.criteria[k].weight;
+  var seg=h('div',{class:'seg',title:'Reparto de la puntuación por criterio'});
+  ['curve','volume','wallets','history','manipulation'].forEach(function(k){
+    var x=c.criteria[k]; if(!x) return;
+    var b=h('b'); b.style.width=Math.max(0,Math.min(100,x.score))+'%';
+    var i=h('i',{class:x.ok?'':'off'},b); i.style.flex=String(x.weight/wsum); seg.append(i);
+  });
+  return seg;
+}
+
+function detailBlock(c){
+  var wrap=h('div',{class:'dgrid'});
+  var crit=h('div',null,h('h3',null,'Puntuación por criterio'));
+  ['curve','volume','wallets','history','manipulation'].forEach(function(k){
+    var x=c.criteria[k]; if(!x) return;
+    var bar=h('div',{class:'bar'},h('i')); bar.firstChild.style.width=Math.max(0,Math.min(100,x.score))+'%';
+    crit.append(h('div',{class:'crit'+(x.ok?'':' off')},
+      h('span',{class:'nm'},x.label+' ',h('small',{class:'mono'},'peso '+x.weight),x.ok?null:h('span',{class:'gate'},'  PUERTA NO SUPERADA')),
+      h('span',{class:'sc'},nf0.format(x.score)+'/100'), bar, h('span',{class:'why'},x.note)));
+  });
+  wrap.append(crit);
+  var right=h('div',null,h('h3',null,'Seguridad'));
+  var ul=h('ul',{class:'list'});
+  var ch=c.security.checks||{};
+  Object.keys(ch).forEach(function(k){
+    var x=ch[k], cls=x.ok===true?'ok':(x.ok===false?'no':'un'), sym=x.ok===true?'✓':(x.ok===false?'✗':'?');
+    ul.append(h('li',null,h('span',{class:cls},sym+' '),k.replace('_',' ')+': '+x.note));
+  });
+  right.append(ul);
+  if(c.discarded){
+    right.append(h('h3',{style:'margin-top:14px'},'Por qué se descarta'));
+    var r=h('ul',{class:'list'}); c.reasons.forEach(function(t){ r.append(h('li',{class:'no'},t)); }); right.append(r);
+  }
+  if(c.links&&c.links.length){
+    right.append(h('h3',{style:'margin-top:14px'},'Wallets enlazadas (misma entidad probable)'));
+    var l=h('ul',{class:'list'});
+    c.links.slice(0,6).forEach(function(k){ l.append(h('li',{class:'mono'},k.a.slice(0,5)+'… ↔ '+k.b.slice(0,5)+'… · '+k.motivos.join(', '))); });
+    right.append(l);
+  }
+  var ex=c.extras||{}, exKeys=Object.keys(ex).filter(function(k){return k!=='data_source'&&ex[k]!=null&&ex[k]!==''});
+  if(exKeys.length){
+    right.append(h('h3',{style:'margin-top:14px'},'Datos de GMGN (solo se registran, no puntúan)'));
+    var el2=h('ul',{class:'list'});
+    exKeys.forEach(function(k){ var v=ex[k]; el2.append(h('li',{class:'mono'},k.replace(/_/g,' ')+': '+(typeof v==='number'?(/rate|ratio/.test(k)?nf1.format(v*100)+' %':nf1.format(v)):v))); });
+    right.append(el2);
+  }
+  if(ex.data_source) right.append(h('div',{class:'mint'},'fuente de holders e historial: '+ex.data_source));
+  right.append(h('div',{class:'mint'},c.mint));
+  right.append(h('div',{class:'links'},
+    h('a',{href:'https://pump.fun/coin/'+encodeURIComponent(c.mint),target:'_blank',rel:'noopener noreferrer'},'pump.fun'),
+    h('a',{href:'https://dexscreener.com/solana/'+encodeURIComponent(c.mint),target:'_blank',rel:'noopener noreferrer'},'DexScreener')));
+  wrap.append(right);
+  return wrap;
+}
+
+function renderCandidates(){
+  var tb=$('#candBody'); tb.textContent='';
+  if(!S){ return; }
+  var show=$('#showDisc').checked;
+  var rows=S.candidates.filter(function(c){return show||!c.discarded});
+  if(!rows.length){
+    tb.append(h('tr',null,h('td',{colspan:8,class:'empty'},
+      'Ningún candidato ahora mismo. Un token entra en esta tabla cuando supera '+usd(S.config.gates.min_mcap_usd)+' de capitalización y el '+S.config.gates.min_curve_pct+'% de la curva.')));
+  }
+  rows.forEach(function(c){
+    var id=c.mint, isOpen=!!openRows[id];
+    var ind=c.features.eff_independent, cl=c.features.largest_cluster_pct;
+    var wal=c.criteria.wallets.note.split(' · ');
+    var btn=h('button',{class:'expander','aria-expanded':String(isOpen),type:'button',
+      onclick:function(){ openRows[id]=!openRows[id]; renderCandidates(); }},
+      h('span',{class:'chev'},'▸'),
+      h('span',{class:'tk'},h('b',null,c.symbol||'?'),h('span',null,c.name||'')));
+    var tr=h('tr',{class:'row'+(c.discarded?' disc':'')},
+      h('td',null,btn),
+      h('td',null,h('div',{class:'curve'},h('span',{class:'num'},pct(c.progress,0)),
+        (function(){var t=h('div',{class:'track'},h('div',{class:'fill'})); t.firstChild.style.width=Math.min(100,c.progress)+'%'; return t;})())),
+      h('td',{class:'r num'},usd(c.mcap)),
+      h('td',{class:'r num'},(c.volume.vol_sol!=null?nf1.format(c.volume.vol_sol)+' SOL':'—')),
+      h('td',{class:'r num'},c.volume.unique_buyers!=null?c.volume.unique_buyers+(c.volume.unique_buyers_prev!=null?' (ant. '+c.volume.unique_buyers_prev+')':''):'—'),
+      h('td',null,h('span',{class:'num'},nf1.format(ind)+' indep.'),h('br'),h('small',{class:'mono'},'mayor clúster '+nf0.format(cl)+'%')),
+      h('td',null,c.security.ok?chip('superada','good'):chip('descartado','bad')),
+      h('td',{class:'r'},h('div',{class:'score'+((!c.discarded&&c.score>=S.config.alert_score)?' hit':'')},segBar(c),
+        h('span',{class:'big'},c.discarded?'—':nf0.format(c.score)))));
+    tb.append(tr);
+    if(isOpen) tb.append(h('tr',{class:'detail'},h('td',{colspan:8},detailBlock(c))));
+  });
+  $('#candNote').textContent='La barra de 5 tramos es el desglose: el ancho de cada tramo es el peso del criterio y el relleno es su nota. Rojo = puerta no superada. Un descartado muestra «—» aunque su puntuación bruta sea alta.';
+}
+
+function outBox(label,o){
+  if(!o) return h('div',{class:'out pend'},h('div',{class:'h'},label),h('div',{class:'r'},'—'));
+  var cls='pend', txt='pendiente';
+  if(o.status==='ok'){ cls=o.ret>=0?'pos':'neg'; txt=sret(o.ret); }
+  else if(o.status==='falta'||o.status==='sin_entrada'){ cls='neg'; txt='sin precio'; }
+  return h('div',{class:'out '+cls},h('div',{class:'h'},label),h('div',{class:'r'},txt),o.rug?h('div',{class:'rg'},'RUG'):null);
+}
+function renderAlerts(){
+  var el=$('#alerts'); el.textContent='';
+  if(!S) return;
+  if(!S.alerts.length){ el.append(h('div',{class:'empty'},'Aún no hay avisos. Cada aviso quedará aquí con su precio, capitalización y hora, y se rellenará solo a 5 min, 1 h y 24 h.')); return; }
+  S.alerts.forEach(function(a){
+    var o=a.outcomes||{};
+    el.append(h('div',{class:'al'},
+      h('div',{class:'al-head'},h('span',{class:'t'},a.symbol+' · '+a.name),
+        h('span',{class:'al-meta mono'},when(a.ts)+' · curva '+pct(a.progress,0)+' · puntuación '+nf0.format(a.score))),
+      h('div',{class:'al-meta mono'},'precio '+price(a.price)+' · capitalización '+usd(a.mcap)+' · correo: '+(a.emailed?'enviado':('no enviado'+(a.email_note?' ('+a.email_note+')':'')))),
+      h('div',{class:'outs'},outBox('5 min',o['5m']),outBox('1 h',o['1h']),outBox('24 h',o['24h'])),
+      h('details',null,h('summary',null,'Razón del aviso'),h('pre',null,a.reason))));
+  });
+}
+
+function stat(k,v){ return h('div',{class:'stat'},h('div',{class:'k'},k),h('div',{class:'v'},v)); }
+function renderMeasure(){
+  var m=$('#measure'); m.textContent='';
+  var r=S&&S.report;
+  if(!r){ m.append(h('div',{class:'verdict'},h('div',{class:'vname'},'Aún sin medir'),
+    h('p',null,'La medición arranca sola cuando hay suficientes avisos con su seguimiento. Hasta entonces no hay ninguna conclusión, ni buena ni mala.'))); return; }
+  var cls=/DESCARTAR/.test(r.verdict)?'bad':(/SUPERA/.test(r.verdict)?'good':'warn');
+  var box=h('div',{class:'verdict'},
+    h('div',{class:'vt'},h('span',{class:'vname'},r.verdict),chip(r.n_cohort+' candidatos · '+r.n_controls+' controles · horizonte '+r.horizon,cls)),
+    h('p',null,r.detail));
+  if(r.test&&r.test.n){
+    var t=r.test, s=h('div',{class:'stats'});
+    s.append(stat('Variante elegida en la 1.ª mitad: '+r.chosen.desc,r.chosen.id));
+    s.append(stat('Alertas en la 2.ª mitad',String(t.n)));
+    s.append(stat('Retorno neto medio',t.mean_ret!=null?sret(t.mean_ret):'—'));
+    s.append(stat('Retorno neto mediano',t.median_ret!=null?sret(t.median_ret):'—'));
+    s.append(stat('Aciertos (neto > 0)',t.win_pct!=null?pct(t.win_pct,0):'—'));
+    s.append(stat('Rugs',t.rug_pct!=null?pct(t.rug_pct,0):'—'));
+    s.append(stat('Exceso medio sobre el azar',t.mean_excess!=null?sret(t.mean_excess):'—'));
+    s.append(stat('Probabilidad de que sea azar (p)',t.p_excess!=null?nf1.format(t.p_excess*100)+' %':'—'));
+    if(r.score_vs_return&&r.score_vs_return.spearman!=null) s.append(stat('Puntuación y retorno (Spearman)',(Math.round(r.score_vs_return.spearman*100)/100)+' · p '+nf1.format((r.score_vs_return.p||1)*100)+' %'));
+    box.append(s);
+  }
+  if(r.exploratory&&r.exploratory.length){
+    var xb=h('div',{class:'vbars'},h('h3',null,'Exploratorio, solo descriptivo: datos extra de GMGN frente al retorno (Spearman)'));
+    r.exploratory.forEach(function(x){
+      xb.append(h('div',{class:'xr'},h('span',null,x.feature.replace(/_/g,' ')+' · n '+x.n),
+        h('span',{class:'mono'},'rho '+(Math.round(x.spearman*100)/100)+' · p '+nf1.format(x.p*100)+' %')));
+    });
+    xb.append(h('p',{class:'risk'},'Son muchas pruebas sin corregir: aunque alguna salga «significativa», no se usa para decidir. Si una parece útil se pre-registra y se prueba con datos nuevos.'));
+    box.append(xb);
+  }
+  if(r.selection_table){
+    var vb=h('div',{class:'vbars'},h('h3',null,'Las 12 variantes en la 1.ª mitad: exceso medio sobre el azar (a la derecha de la línea = mejor que el azar)'));
+    var mx=0.05; r.selection_table.forEach(function(x){ if(x.mean_excess!=null) mx=Math.max(mx,Math.abs(x.mean_excess)); });
+    r.selection_table.forEach(function(x){
+      var lane=h('div',{class:'lane'}), v=x.mean_excess;
+      if(v!=null){ var i=h('i'); var w=Math.abs(v)/mx*50; i.style.width=w+'%'; i.style.left=v>=0?'50%':(50-w)+'%'; i.style.background=v>=0?'var(--good)':'var(--bad)'; lane.append(i); }
+      vb.append(h('div',{class:'vb'},h('span',{class:'id'},x.id),lane,h('span',{class:'val'},v!=null?sret(v)+' n'+x.n_select:'n'+x.n_select+' —')),
+        h('div',{class:'vb'},h('span'),h('span',{class:'dsc'},x.desc)));
+    });
+    box.append(vb);
+  }
+  m.append(box);
+  m.append(h('p',{class:'risk'},'Riesgos que no se pueden medir con un panel: la mayoría de memecoins va a cero; muchas wallets «rentables» son bots o gente con información privilegiada; y llegar por aviso significa entrar después que los bots. Si la medición dice «descartar», se descarta.'));
+}
+
+function renderHealth(){
+  var el=$('#health'); el.textContent='';
+  var hl=(S&&S.health)||{};
+  var a=h('div',null,h('h3',null,'Fuente actual'),h('div',null,src.label));
+  var inp=h('input',{type:'text',id:'srcUrl',placeholder:'http://localhost:8787/api/state','aria-label':'Dirección del detector',value:ls('radar_src')||''});
+  var fileIn=h('input',{type:'file',id:'srcFile',accept:'application/json,.json','aria-label':'Cargar archivo de estado',hidden:true});
+  fileIn.addEventListener('change',function(){
+    var f=fileIn.files[0]; if(!f) return;
+    var fr=new FileReader();
+    fr.onload=function(){ try{ var j=JSON.parse(fr.result); if(!j.candidates) throw 0; S=j; src={kind:'archivo',label:'archivo '+f.name}; seen=null; clearTimeout(timer); render(); }catch(e){ alert_inline('El archivo no es un estado válido (se genera con: python -m radar export estado.json).'); } };
+    fr.readAsText(f);
+  });
+  a.append(h('div',{class:'srcbox'},inp,
+    h('button',{class:'btn',type:'button',onclick:function(){ ls('radar_src',inp.value.trim()||null); refresh(); }},'Usar'),
+    h('button',{class:'btn',type:'button',onclick:function(){ fileIn.click(); }},'Cargar archivo'),fileIn));
+  a.append(h('p',{class:'risk'},'Desde la página publicada no se puede leer tu ordenador. Para ver datos reales, abre el panel local (http://localhost:8787) o carga el archivo que genera «python -m radar export estado.json».'));
+  var b=h('div',null,h('h3',null,'Últimos errores del detector'));
+  var errs=hl.errors||[];
+  if(!errs.length) b.append(h('div',{class:'ok'},'Sin errores recientes.'));
+  else { var ul=h('ul',{class:'list'}); errs.forEach(function(e){ ul.append(h('li',{class:'mono'},ago(e.ts)+' · '+e.msg)); }); b.append(ul); }
+  if(hl.sample_fails) b.append(h('p',{class:'risk'},'Seguimiento: '+hl.sample_fails.n+' tokens sin precio en el último muestreo (cuenta como pérdida total en la medición).'));
+  el.append(a,b);
+}
+function alert_inline(msg){ var b=$('#banners'); b.prepend(h('div',{class:'banner demo',role:'alert'},msg)); }
+
+function render(){ renderStrip(); renderBanners(); renderFigures(); renderCandidates(); renderAlerts(); renderMeasure(); renderHealth(); }
+$('#showDisc').addEventListener('change',renderCandidates);
+refresh();
+})();
+</script>
