@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Ensayo de la oficina: repite rondas reales (cada 15 min, L-V 7-21 Madrid) con el código de mesa_radar_btc/office y comprueba invariantes.
-Uso: python3 simulate.py 2026-09-03 [2026-09-04 ...] [--inicio 2026-09-01] [--office DIR] [--csv RUTA]
+Uso: python3 simulate.py 2026-09-03 [2026-09-04 ...] [--inicio 2026-09-01] [--office DIR] [--csv RUTA] [--saltar AAAA-MM-DDTHH:MM,...]
+--saltar: rondas que NO corren (hora de Madrid), para reproducir una ronda perdida o retrasada (incidente del 12 oct 2026, 13:35 UTC).
 Comprueba: (1) ninguna ronda falla; (2) toda salida/stop/parcial tiene antes su entrada avisada; (3) todos los correos tienen asunto de la Mesa
 y ninguno es de relleno; (4) las oportunidades de los aprendices que prevé el motor del Radar aparecen (entrada o bloqueo con motivo);
-(5) el marcador de los aprendices cuenta solo lo que entró. Sale con código 1 si algo falla."""
+(5) el marcador de los aprendices cuenta solo lo que entró; (6) nada abierto ni contado sin su entrada avisada, aunque se pierdan rondas. Sale con código 1 si algo falla."""
 import argparse, json, os, re, shutil, subprocess, sys, datetime as dt
 from zoneinfo import ZoneInfo
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 ap = argparse.ArgumentParser(); ap.add_argument('dias', nargs='+'); ap.add_argument('--inicio'); ap.add_argument('--office', default=os.path.join(ROOT, 'mesa_radar_btc', 'office'))
-ap.add_argument('--csv', default='/tmp/bitstamp/data/updates/btcusd_bitstamp_1min_latest.csv'); ap.add_argument('--work', default='/tmp/simular-ronda')
+ap.add_argument('--saltar', default=''); ap.add_argument('--horas-h', default='167'); ap.add_argument('--horas-15', default='72'); ap.add_argument('--csv', default='/tmp/bitstamp/data/updates/btcusd_bitstamp_1min_latest.csv'); ap.add_argument('--work', default='/tmp/simular-ronda')
 A = ap.parse_args()
 if not os.path.exists(A.csv):
     print('Descargando el histórico de 1 min de Bitstamp…', flush=True)
@@ -20,14 +21,16 @@ utc = dt.timezone.utc; tz = ZoneInfo('Europe/Madrid')
 start = int(dt.datetime.fromisoformat((A.inicio or A.dias[0]) + 'T00:00:00+00:00').timestamp())
 env = dict(os.environ, MESA_GO_LIVE=str(start), MESA_V10=str(start), MESA_V12=str(start))
 fallos, correos, rondas = [], [], 0
+saltar = {x.strip() for x in A.saltar.split(',') if x.strip()}; perdidas = 0
 for d in A.dias:
     day = dt.date.fromisoformat(d)
     if day.weekday() >= 5: continue
     for h in range(7, 21):
         for m in (1, 16, 31, 46):
+            if f'{d}T{h:02d}:{m:02d}' in saltar: perdidas += 1; continue
             now = int(dt.datetime(day.year, day.month, day.day, h, m, tzinfo=tz).timestamp()); ms = str(now * 1000)
-            subprocess.run(['node', mk, A.csv, ms, '3600', '167', W + '/h.json'], check=True)
-            subprocess.run(['node', mk, A.csv, ms, '900', '72', W + '/m15.json'], check=True)
+            subprocess.run(['node', mk, A.csv, ms, '3600', A.horas_h, W + '/h.json'], check=True)
+            subprocess.run(['node', mk, A.csv, ms, '900', A.horas_15, W + '/m15.json'], check=True)
             shutil.rmtree(W + '/out', ignore_errors=True)
             p = subprocess.run(['node', W + '/office/mesa_tick.js', A.csv, W + '/h.json', W + '/db', W + '/out', '', W + '/fund.json', W + '/m15.json'], env=dict(env, MESA_NOW=ms), capture_output=True, text=True)
             rondas += 1; hm = f'{d} {h:02d}:{m:02d}'
@@ -60,7 +63,15 @@ tick = next((json.load(open(W + '/out/' + f)) for f in os.listdir(W + '/out') if
 if tick:
     n_sc = tick['score']['radar']['n']; n_out = sum(1 for k in S if k.startswith('radar-') and '-out-' in k)
     if n_sc != n_out: fallos.append(f'marcador de aprendices {n_sc} ≠ salidas avisadas {n_out}')
+# (6) nada abierto ni contado sin su entrada avisada (v12.1): ni en el marcador ni en la posición abierta del tick
+if tick:
+    for o in (tick.get('radar') or {}).get('open', []):
+        if not any(k.startswith('radar-' + o['agent'] + '-in-') for k in S): fallos.append(f'aprendiz {o["agent"]} abierto en el tick sin ninguna entrada avisada')
+    ent = {re.sub(r'^radar-(\w+)-in-(\d{12})$', r'\1-\2', k) for k in S if k.startswith('radar-') and '-in-' in k}
+    perd = [k for k in S if k.startswith('radar-') and '-lost-' in k]
+    if saltar and n_sc > len(ent): fallos.append(f'marcador de aprendices {n_sc} > entradas avisadas {len(ent)}')
 print(f'\n# simular-ronda · {rondas} rondas · {len(correos)} correos · {len(S)} señales')
+print(f'- Rondas saltadas a propósito: {perdidas}' + (f' · señales perdidas anotadas: {len(perd)}' if tick else ''))
 print(f'- Aprendices: previstas {len(exp)}, entradas {len(got_in)}, bloqueadas {len(exp) - len([1 for a,t in exp if f"radar-{a}-in-{t}" in got_in])}')
 for hm, e in correos: print(f'  {hm}  {e["subject"][:110]}')
 chk = ['rondas sin fallos', 'gestión con su entrada', 'correos válidos', 'oportunidades del Radar cubiertas', 'marcador cuadra']

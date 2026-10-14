@@ -50,6 +50,206 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## v12.3 · eficiencia de las tareas programadas (14 oct 2026)
+
+Sin cambios de estrategia (backtest idéntico). Medido: las 4 rutinas de ronda (280 ejecuciones/semana) son ≈80% del consumo; los escáneres del Radar (155/sem) no se tocan.
+- `radar_desk.js`: la ventana de datos pasa de 167 h / 72 h fijas a `max(60, horas desde la última vela + 16)` (tope 167). Verificado idéntico en la simulación de regresión.
+- Control diario: antes no comprobaba nada (dependía de herramientas que la rutina no tiene). Ahora lo hace `research/control_diario.py`, solo con la base de datos (rondas recibidas, retraso, avisos de datos, señales perdidas, salidas sin entrada, z de Iturbe). Rutina en Haiku.
+- Informe semanal en Haiku. Ningún modelo inferior a Haiku existe.
+- Propuesta pendiente de aprobación: rondas cada 30 min (−50% consumo principal; coste estimado −1 a −1,5R/año y captura 86–93%).
+
+## v12.2 · captura de las señales y búsqueda de una v13 (13 oct 2026)
+
+**Encargo:** una versión que rinda mejor que la v12. **Resultado honesto: ninguna variante de estrategia lo consigue; sí se corrige una fuga real de captura en vivo.**
+
+**1. Ocho variantes de estrategia (pre-registradas antes de mirar, `research/v13_prereg.md`; `v13_eval.py`).** Reducciones de riesgo con razón de mercado sobre la cartera v12g.
+
+| Variante | 2018-21: Sharpe rec. · ops/sem · caída |
+|---|---|
+| v12 | 1,68 · 1,32 · 9,7R |
+| F1/F2 · saltar entradas a favor del funding de multitud (θ 0,0003 / 0,0006) | 1,63 · 1,08 · 8,7R / 1,45 · 1,24 · 9,7R |
+| V1/V2 · riesgo ×0,5 con volatilidad turbulenta (ratio ≥ 2,0 / ≥ 1,5) | **1,69** · 1,32 · 9,7R / 1,49 · 1,31 · 9,7R |
+| T1/T2 · aprendices contra la SMA50 diaria ×0,5 / saltados | 1,57 · 1,34 · 11,4R / 1,45 · 1,10 · 12,4R |
+| S1 · apilado del mismo lado ×0,5 | 1,63 · 1,36 · 7,9R |
+| W1 · saltar viernes 19-21 h | 1,62 · 1,31 · 9,7R |
+
+- La regla de elección (solo 2018-21) escoge V1, con +0,01 de Sharpe: ruido. En 2022-26 empeora: 0,75 frente a 0,77, R/año +18,5 frente a +19,1, 2 de 5 años mejores.
+- **Juez: DESCARTAR.** DSR 0,000. Inventario: 3.114 pruebas.
+- Por qué no hay más margen: con 2018-26 consumido por 12 versiones y más de 3.100 pruebas, no queda periodo limpio. Una mejora «de backtest» ya no es certificable; solo el futuro y otros activos lo son.
+
+**2. La fuga de captura (lo que sí mejora).**
+- Un aprendiz solo se avisaba si la vela de señal cerraba hace menos de 20 min. La primera oportunidad real de verla es la ronda a +16 min nominales, que llega 3,4 min tarde de media (mediana 3,4, p90 4,2, máx. 5,6; 6 de 84 rondas del 12-13 oct no se ejecutaron).
+- **Con 20 min, solo el 79% de las señales tenían su primer intento a tiempo** (66 de 84 rondas). Con 35 min, el 93% más un segundo intento: ≈ 99%.
+- Ya perdió la primera señal real (12 oct, vela de las 15:15 Madrid).
+- **v12.2:** ventana de 35 min y, si el aviso llega con 10 min o más de retraso, el correo dice «AVISO TARDÍO», el precio de ahora y la distancia en R a la entrada de la señal. El stop y el objetivo son los de la señal. No cambia ninguna regla de entrada, salida, tamaño ni parada.
+- **Estimación (no medida):** unas +0,16 operaciones por semana de aprendices y alrededor de +2R al año (≈ 10% de los +19R/año). El backtest no cambia (ya supone entrada inmediata); mejora lo que se cobra en vivo.
+- Backtest de la ventana (`v13_delay.py`): entrar 35 min tarde da +0,19R (2018-21) y +0,24R (2022-26) por operación recuperada. Detalle y la desviación del pre-registro (se descarta la guarda de precio) en `v13_prereg.md`.
+
+**3. Pruebas.** `simular-ronda`:
+- 7 y 8 sep, 3 sep: ✅ sin cambios.
+- `--saltar 2026-09-03T15:16`: ✅, las dos entradas se avisan tarde (31 y 16 min) con su aviso.
+- Seis rondas seguidas perdidas el 3 sep: ✅, 0 operaciones contadas y 2 señales perdidas anotadas.
+
+## v12.1 · la contabilidad anota, no deduce (13 oct 2026)
+
+**Incidente.** El 12 oct, a las 13:35 UTC, el marcador contaba un corto del aprendiz de Vega desde 82.533 (cerrado después por objetivo, +1,5R) que nadie había avisado: no hubo evento de entrada, ni correo, ni documento en `signals`. Con él, Iturbe daba z = 0,84 y Calvo «100% ganadoras», y el tope de riesgo abierto estaba ocupado por una operación que no existía para el usuario.
+
+**Causa.**
+- El motor ve oportunidades que el usuario nunca recibió. Una entrada solo se avisa si la vela de señal cerró hace menos de 20 minutos.
+- Ese día faltaron 3 de 56 rondas (≈10:31, 13:01 y 17:01 UTC) y las rondas llegan 2–5 minutos tarde. Perder una sola deja la siguiente en el límite de la ventana o fuera.
+- Si una oportunidad no constaba, `mesa_tick.js` repetía la regla del tope de 2R y la daba por operada.
+- Es el mismo tipo de fallo que el de Salinas: se confundía «el motor cree que hay una operación» con «hay una operación».
+
+**Arreglo (v12.1, solo contabilidad; ninguna regla de entrada, salida, tamaño ni parada cambia).**
+- La rutina pide ahora todas las señales desde el arranque (`2026-10-09`, límite 1.000), no una ventana de 72 h.
+- Una oportunidad solo cuenta si su entrada consta en `signals`. Ya no hay repetición de la regla del tope ni excepción por antigüedad.
+- Lo que ninguna ronda avisó se anota como `radar-<agente>-lost-<hora>` (tipo `bloqueo`, de Calvo). No genera correo y no cuenta. El tick lleva `radar.missed`.
+- El mismo criterio vale para las operaciones propias (`inLive`).
+
+**Prueba de regresión** (`simular-ronda`, opción nueva `--saltar`): el 3 sep 2026 se pierden las rondas de las 15:16, 15:31, 16:01 y 16:16.
+- Código anterior: ‼️ marcador de aprendices 2 con 0 entradas ni salidas avisadas.
+- v12.1: ✅ 0 operaciones contadas y 2 señales perdidas anotadas.
+- Días de regresión habituales (3 sep; 7 y 8 sep): ✅, sin cambios en entradas, salidas ni correos.
+- El simulador ahora también comprueba que nada abierto en el tick falta en `signals`.
+
+**Estado de la v12.** Congelada. `audit/manifest_v12.json` guarda los hashes y los parámetros. Cualquier cambio de estrategia es una v13 con su propia evidencia.
+
+**Pendiente del dictamen del 13 oct** (nada de esto cambia reglas de la v12 sin aprobación):
+- Libro de operaciones con estados (señal, avisada, ejecutada, cerrada, perdida). `trades`, el diario del usuario, ya es la fuente natural de «ejecutada».
+- Política de aviso tardío con guarda de precio: descartada en la v12.2 (descarta entre el 28% y el 39% de las señales y baja el R total).
+- Latido y parte diario fuera del camino del modelo de lenguaje.
+- Datos de una sola fuente (Binance perpetuo) para el backtest.
+- Regla escrita de reanudación tras −10R.
+- Prueba de estabilidad en otros activos y PBO.
+
+## Segunda ala · machine learning (12 oct 2026) · CERRADA Y DESCARTADA
+
+**Cerrada el 12 oct 2026 por decisión del usuario, antes de su primera ronda en vivo.** No hay ventaja fuera de muestra y aprender error a error no la crea.
+- La rutina está desactivada y el panel ya no tiene su sección.
+- El código queda archivado en `ala2/` (`ala2/office`, `ala2/page`) por si algún día hay datos de liquidez real o costes más bajos que justifiquen reabrirla.
+- No repetir sin una razón nueva.
+
+Lo que sigue es el registro de lo que se probó.
+
+Es un ala independiente de la primera: no ve sus señales, posiciones ni decisiones. Decide cada 10 minutos (L–V 7:00–20:50 Madrid) y registra todas las decisiones, también las de «sin operación». No envía correos y no opera con dinero.
+
+**Quién hace qué**
+- **Montes · liquidez.** Flujo comprador o vendedor estimado (BVC), volumen relativo, absorción, mechas de rechazo, iliquidez de Amihud, distancia al VWAP y funding.
+- **Aranda · técnico.** Retornos de 10 min a 7 días, EMAs, RSI de 1 h y 4 h, posición en el rango, distancia a máximos y mínimos, SMA50 diaria.
+- **Lagos · director.** Combina a los dos con un modelo propio (stacking con sus predicciones fuera de muestra y el régimen), versiona los modelos y lleva campeón y retador.
+- **Beltrán · riesgo, con veto.** Calibra el EV con una regresión isotónica sobre los últimos 24 meses fuera de muestra. Reglas:
+  - una posición a la vez, 1R = 0,5%;
+  - EV neto calibrado > +0,05R;
+  - parada diaria en −2R;
+  - mitad de riesgo si la cartera cae más de 8R;
+  - suspensión si cae 12R (solo el campeón);
+  - sin entradas si los datos son dudosos.
+
+**Fase 1 · backtest** (`ala2/`, protocolo de la casa):
+- **Modelo:** LightGBM walk-forward mensual 2018–2026 (106 versiones).
+- **Costes:** 0,14%, más 0,03% en los stops, más funding.
+- **Operación:** entrada 5 min después de la decisión, stop de 1,5 ATR de 1 h, objetivo de 1,5R, máximo 24 h.
+- **Variantes:** 16, cerradas antes de mirar.
+  - Primera tanda: 8 sobre velas de 1 min.
+  - Segunda tanda: 8 sobre velas de 5 min y EV calibrado. Son las mismas variables que ve el vivo; el código es el mismo (`office/ala2_feat.js`).
+- **Elección y prueba:** se elige con 2018–21 y se prueba en 2022–26 sin tocar.
+
+| 2022–26 (prueba) | ops/sem | acierto | R/op neto | R/op antes de costes | payoff | PF | Sharpe | caída |
+|---|---|---|---|---|---|---|---|---|
+| Velas de 1 min, elegida (media, umbral 0,20) | 2,47 | 42,3% | −0,114 | – | 1,12 | 0,82 | −0,84 | 51,0R |
+| Velas de 5 min + calibración, elegida (media, EV > 0,05) · **campeón** | 0,49 | 45,1% | +0,010 | +0,118 | 1,24 | 1,02 | −0,11 | 10,8R |
+| Explorador de Lagos (sin filtro de EV) · **retador** | 14,45 | 40,4% | −0,180 | −0,005 | 1,09 | 0,74 | −3,90 | 328R |
+| Ala 1 · v12 | 2,3 | 44,1% | +0,279 | – | – | – | 0,77 | 14,3R |
+
+**Veredicto: no hay ventaja demostrada. Descartado como estrategia de dinero real.**
+- **Poca señal:** la correlación de las predicciones con el resultado cae de 0,07–0,10 en 2018–21 a 0,01–0,04 en 2022–26.
+- **Los costes se comen lo poco que hay:** 0,11–0,18R por operación con stops de 1,5 ATR de 1 h. Una cadencia de 10 min obliga a stops cortos, y con un 0,14% de comisión eso es estructural.
+- **El campeón no opera desde 2023:** la calibración de Beltrán ya no ve EV positivo y veta.
+- **Por debajo del objetivo:** el payoff realizado (1,1–1,24) no llega al 1,5 pedido, por los cierres por tiempo.
+- **Dato llamativo sin validar:** a favor de la SMA50 diaria el campeón dio +0,26R (34 operaciones). Se vio después de la prueba, así que no se usa.
+
+Inventario: +17 pruebas (16 variantes y el explorador) y +3 del modo a piñón: 3.106 en total.
+
+**Fase 2 · simulación en vivo** (desde el 13 oct 2026):
+- **Ronda:** `office/ala2_tick.js` (rutina «Mesa Radar · Ala 2 ML»; instrucción en `ala2/rutina_ala2.txt`).
+  - Las rutinas no pueden bajar de una hora, así que corre a las :57 y calcula las 6 decisiones de 10 min de esa hora, cada una solo con velas cerradas antes de su minuto.
+  - El registro es el mismo que con una ronda cada 10 min; se publica con hasta 1 h de retraso.
+  - Se usa la rutina antigua de Calvo, desactivada desde el 9 oct, porque es la única libre que tiene el conector de OpenMarket.
+- **Base de datos:** colección `ala2`, un documento `d-AAAAMMDDHHMM` por decisión más `estado`.
+  - Cada decisión guarda: hora, datos, liquidez, técnico, régimen, predicciones de Montes, Aranda y Lagos, dirección, entrada, stop y objetivo, R:R, riesgo en % y € (capital teórico de 10.000 €), costes, EV neto, probabilidad, confianza, motivo, veto de Beltrán y versión del modelo.
+  - Al cerrar se añade: R neto y bruto, costes, MFE/MAE, previsto frente a real y motivo del cierre.
+- **Liquidez real:** cada decisión guarda también el flujo agresor comprador de Binance (10 min, 1 h, 4 h), el interés abierto y las liquidaciones. OpenMarket gratis solo guarda 7 días, así que esta es la única forma de tener histórico para reentrenar a Montes con datos de verdad.
+- **Campeón y retador:** el campeón es la variante elegida; el retador, de momento, es el explorador de Lagos, que da señales simuladas para aprender (y perderá según el backtest).
+- **Versiones:** viven en `office/ala2_models.json` (`historial`). Para volver atrás se vuelve a publicar la versión anterior. Un modelo nuevo entra como retador.
+- **Dinero real:** solo con 100 operaciones simuladas, R medio positivo y aprobación del usuario.
+- **Ensayo:** `node ala2/replay_ala2.js <bitstamp.csv> <dir> <días>`.
+  - 7, 8 y 9 oct y viernes 2 → lunes 5 oct: ✅ (510 rondas, ninguna salida sin entrada, 0 correos).
+  - Con umbral abierto en una copia de prueba: 10 entradas y 10 cierres del campeón, parada diaria correcta.
+- **Paridad de modelos:** Python y JS dan la misma predicción (diferencia máxima 0 en 300 decisiones).
+
+**Modo «a piñón» con aprendizaje (12 oct, petición del usuario).**
+- **Qué hace:** cada decisión de 10 min abre una operación simulada por el lado preferido, unas 84 al día, y cada operación cerrada enseña al aprendiz.
+- **Cómo aprende:** corrección en línea (NLMS) sobre la media de Montes y Aranda, con variables estandarizadas. Aprende del lado operado y también del no operado, que se resuelve como sombra.
+- **Qué corre en paralelo:**
+  - el **control**: los mismos modelos, sin aprender;
+  - el **campeón** de Beltrán.
+- **Backtest 2022–26** (`ala2/a2_online.py`, 3 variantes de η, elección con 2018–21 → η = 0):
+
+| 2022–26 | ops/sem | acierto | R/op neto | R/op antes de costes | payoff | PF |
+|---|---|---|---|---|---|---|
+| Control (sin aprender) | 420 | 41,1% | −0,159 | +0,017 | 1,10 | 0,76 |
+| Aprendiz (η 0,05, lo que corre en vivo) | 420 | 39,8% | −0,190 | −0,015 | 1,09 | 0,72 |
+
+- **Veredicto:** aprender error a error no mejora fuera de muestra. Cada operación es casi todo ruido y el corrector aprende ruido.
+- **Por qué se monta igualmente:** a petición del usuario, en simulación, para medir en vivo si aprender ayuda; el panel enseña la curva del aprendiz frente al control.
+- **Ojo con el R total:** las operaciones se solapan (decenas abiertas a la vez, casi siempre del mismo lado), así que su suma no es una cartera. Se juzga por acierto y R por operación.
+- **Estado:** el documento `estado` guarda las operaciones abiertas en compacto, los pesos del aprendiz y los marcadores. El ensayo de 3 días da unos 4 KB.
+- **Ensayo** (7–9 oct): 270 rondas, 252 decisiones y operaciones, 212 cierres, 424 lecciones, 0 fallos, 0 correos.
+
+## Auditoría externa de la v12 (12 oct 2026)
+
+El dictamen de diez auditores externos dice que la mesa no ha demostrado una ventaja propia y queda lejos del Radar BTC 15m (2022–26: acierto 44% frente a 56%, Sharpe 0,77 frente a 2,51). Sus propuestas se probaron el mismo día con el juez (`validar-estrategia`); ninguna mejora la cartera fuera de muestra. Inventario: 3.081 pruebas.
+
+| Hipótesis | Script | Resultado | Veredicto |
+|---|---|---|---|
+| Aportación de cada agente (cartera sin él) | `au_loo.py` | Vega es lo mejor (sin él, Sharpe 0,57); Ortega aporta (0,69); Paz propia resta en 2022–26 (sin ella 1,12) pero es el motor de 2018–21 (sin ella 0,72) | — |
+| Aprender de las 1.119 extras del Radar (5 variantes con ML) | `au_meta.py` | ML que aprende de todas: +0,10R/op frente a +0,27R de la regla; la mejor elegida con 2018–21 no mejora la cartera | Descartada |
+| Despido automático por resultado reciente (20, 40 ops o 12 meses) | `au_bench.py` | Sharpe 2022–26 de 0,61 a 0,75 frente a 0,77 | Descartada |
+| Oportunidades del modelo en fin de semana | `au_finde.py` | 0,05 ops/semana | Descartada |
+| Mesa sin Paz propia | juez | 2022–26: Sharpe 1,12, acierto 48%, caída 8,9R; pero −63R en 2020–21, −33R en 2023, 1,0 ops/semana | Aspirante en sombra |
+
+Pesos de los aprendices (juez): (a) aprendices a 1,5R → 2022–26 Sharpe 0,71 frente a 0,77, caída 16,9R: descartada; (b) aprendices a 1,5R y Paz propia a 0,25R → 2022–26 Sharpe 1,00 y acierto 45,5%, pero 2018–21 Sharpe 0,74 frente a 1,47: descartada. Inventario: 3.083.
+
+«Aprender cada día» ajustando el peso de cada agente por su resultado reciente (`au_adapt.py`, vida media 90/180/365 días): 2022–26 Sharpe 0,62–0,65 frente a 0,77 y caída de unos 18R. Descartado: el resultado reciente de un agente no predice el siguiente. Inventario: 3.086.
+
+Decisiones:
+- La v12 queda congelada.
+- Aprendizaje diario sin riesgo: Iturbe compara en cada ronda la vigente con las aspirantes en sombra (sin Paz propia y v12a) en `notes.iturbe.val.retadores`; sección «Aprendizaje diario» del panel. Promoción con 20 o más operaciones cerradas, más R y aprobación del usuario.
+- Cada cambio, uno a uno y aprobado por la auditoría.
+
+La visita está en la escena 3D: diez auditores y una reunión de unos 31 minutos, una sola vez (12 oct, una vez por navegador). El dictamen por agente está en la sección «Auditoría externa de la v12» del panel.
+
+## Revisión de la v12a con el juez (12 oct 2026, descartada)
+
+Se pasa por `validar-estrategia` la alternativa v12a frente a la v12 en vivo. La v12a mantiene la tendencia propia de Vega a 0,75R y lleva los aprendices a 0,5R en lugar de 1R. No es una prueba limpia: sus cifras de 2022–26 ya se habían visto al elegir la v12. Cuenta como una prueba más en el inventario (3.071).
+
+| 2022–26 | v12 | v12a |
+|---|---|---|
+| Ops/semana | 2,28 | 2,65 |
+| Acierto | 44,1% | 45,7% |
+| R/op propio | +0,279 | +0,286 |
+| R/op cartera | +0,161 | +0,150 |
+| R/año | +19,1 | +20,8 |
+| Sharpe | 0,77 | 0,85 |
+| Caída | 14,3R | 12,5R |
+
+- En 2018–21 (elección) la v12a es peor: Sharpe 1,38 frente a 1,47 y R/año +20,0 frente a +21,8.
+- Año a año en 2022–26 mejora 2 de 5: 2022 (+3,9R) y 2025 (+13,8R). Empeora 2023, 2024 y 2026.
+- La mejora de Sharpe en 2022–26 se apoya casi entera en 2025.
+- La ventaja de la candidata sola no está demostrada (DSR 0,42).
+- Con ponderación por recencia (vida media de 2 años), en 2022–26 la v12a gana: Sharpe 0,76 frente a 0,65 y R/año +15,2 frente a +13,2. Pero es justo por 2025. En 2018–21 ponderado sigue perdiendo: Sharpe 1,57 frente a 1,68.
+- Veredicto del juez: **DESCARTAR**. Se mantiene la v12.
+
 ## Velas con machine learning (12 oct 2026, descartado)
 
 Se buscó si la forma de las velas (cuerpo, mechas, rango, cierre en el rango y volumen de las últimas 6 velas, más patrones clásicos) da ventaja. Marcos de 15 min, 1 h y 4 h. Operación fija: stop de 1 ATR, objetivo de 1,5R. Costes de la Mesa y horario de oficina. Walk-forward anual con LightGBM (`cv_data.py`, `cv_wf.py`). Elección con 2018–21 y prueba en 2022–26.
@@ -320,4 +520,4 @@ Hay un límite: las combinaciones que llegan a un 45% de acierto en 2022–26 se
 - `page/` contiene las piezas de la página del artefacto; `build_mesa.sh` las monta.
 - `office/mesa_tick.js` hace una ronda completa. Une el histórico de Bitstamp con 167 h de Binance futuros (OpenMarket) y escribe la nota de cada agente, las señales y los correos.
 - `replay.sh` reproduce rondas cada 15 minutos sobre el histórico para probar los avisos; `page/replay12.sh` lo hace con la v12 (incluye las velas de 15 min de los aprendices).
-- Cuatro rutinas en Haiku, a :01, :16, :31 y :46 entre las 7:00 y las 19:59, ejecutan el script y escriben en la base de datos del artefacto Mesa Radar.
+- Dos rutinas en Haiku (desde el 14 oct; antes cuatro), a :01 y :31 entre las 7:00 y las 19:59, ejecutan el script y escriben en la base de datos del artefacto Mesa Radar.

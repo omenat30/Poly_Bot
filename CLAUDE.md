@@ -4,6 +4,7 @@ Repositorio de Alberto. Contiene:
 - `fastloop_trader.py`, `config.json` y el `README.md` de la raíz: plantilla de Polymarket. Ya no se usa; no tocar salvo que lo pida.
 - `mesa_radar_audit/`: el **Radar BTC 15m** (motor `strat.js`, backtests y auditoría). Es otro producto con su propio panel. **No se toca el panel del Radar**: solo se lee su código.
 - `mesa_radar_btc/`: la **Mesa Radar**, la oficina de agentes que opera **solo BTC**. Es donde se trabaja casi siempre.
+- **Segunda ala (ML): cerrada y descartada el 12 oct 2026.** Archivada en `mesa_radar_btc/ala2/` (código, investigación y ensayo). Su rutina está desactivada. No reabrir sin una razón nueva (datos de liquidez real o costes más bajos).
 
 Idioma: español, directo, honesto. Si una idea no funciona, se dice y se documenta como descartada.
 
@@ -53,12 +54,18 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 - Captura del panel (playwright y chromium en `/opt/pw-browsers`) sin errores de consola.
 - Publicar, actualizar las 4 rutinas si cambia la instrucción, commit y push a la rama de trabajo.
 
+## Estado tras la auditoría externa (12 oct 2026)
+- v12 congelada: un cambio cada vez, solo con veredicto ADOPTAR del juez y aprobación explícita del usuario.
+- Aspirantes en sombra (lo mide Iturbe en cada ronda, `notes.iturbe.val.retadores`): sin la estrategia propia de Paz y v12a. Promoción con 20+ operaciones cerradas, más R y aprobación del usuario.
+- Ya probado y descartado (no repetir sin una razón nueva): 8 reducciones de riesgo sobre la cartera (funding de multitud, volatilidad, aprendices contra tendencia, apilado, fin de semana; v13, juez DESCARTAR), guarda de precio en el aviso tardío, segunda ala de ML cada 10 min (a piñón y con aprendizaje error a error: sin ventaja tras costes), ML sobre todas las extras del Radar, despido automático por racha, pesos adaptativos por resultado reciente, señales de fin de semana, velas/patrones, v12a.
+
 ## Errores ya cometidos (no repetir)
 - La ronda envió un correo «placeholder». La instrucción de las rutinas prohíbe enviar nada que no salga de `EMAIL_JSON`.
 - Llegó una salida de una entrada nunca avisada (señal en fin de semana). `inLive` exige que la entrada conste en `signals`.
 - Se contaban como operadas oportunidades que Salinas había bloqueado.
 - El cierre de las velas de 15 min de `mklive_bs.js` era incorrecto; está corregido.
 - La v11 copió las señales del Radar sin que se pidiera. Hay que aprender del Radar, no clonarlo.
+- El marcador contó (12 oct, 13:35 UTC) un corto de un aprendiz que nunca se avisó, porque una regla de reserva daba por operadas las oportunidades que no constaban en `signals`. Desde la v12.1 solo cuenta lo que consta; lo no avisado se anota como `-lost-`. Regresión: `simulate.py --saltar` (ver `simular-ronda`). Desde la v12.2 la ventana de aviso de los aprendices es de 35 min (antes 20, que dejaba perder ~21% de las señales por el retraso de 2-5,6 min de las rondas).
 
 ## Working preferences
 - Aprende del Radar BTC 15m, nunca copies sus señales ni toques su panel.
@@ -66,3 +73,6 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 - Nunca envíes correos de prueba o relleno; solo las líneas EMAIL_JSON del script.
 - No vuelvas con resultados hasta que el cambio esté completo, probado y funcione.
 - Si algo no mejora fuera de muestra, dilo claro y descártalo.
+
+## v12.3 (14 oct 2026)
+Solo eficiencia: ventanas de datos más cortas, `research/control_diario.py` (control diario determinista, alojado en el artefacto como `ops/control_diario.py.txt`), rutinas de control e informe en Haiku. Rondas cada 30 min (:01 y :31) aplicadas el 14 oct por orden del usuario; las rutinas :16 y :46 están pausadas.
