@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS series(
 CREATE TABLE IF NOT EXISTS alerts(
   id INTEGER PRIMARY KEY, mint TEXT UNIQUE, ts INTEGER, price REAL, mcap REAL, progress REAL, score REAL,
   name TEXT, symbol TEXT, reason TEXT, result TEXT, emailed INTEGER DEFAULT 0, email_note TEXT);
+CREATE TABLE IF NOT EXISTS trades(
+  sig TEXT PRIMARY KEY, mint TEXT, ts INTEGER, wallet TEXT, is_buy INTEGER, sol REAL, tokens REAL, slot INTEGER);
+CREATE INDEX IF NOT EXISTS ix_trades_mint ON trades(mint, ts);
 CREATE TABLE IF NOT EXISTS wallet_cache(addr TEXT PRIMARY KEY, ts INTEGER, data TEXT);
 CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
 """
@@ -131,6 +134,24 @@ class Store:
     def alerts(self):
         rows = self.db.execute("SELECT * FROM alerts ORDER BY ts DESC").fetchall()
         return [dict(r) for r in rows]
+
+    # --- trades de la curva (incremental)
+    def add_trades(self, mint, trades):
+        self.db.executemany("INSERT OR IGNORE INTO trades VALUES(?,?,?,?,?,?,?,?)",
+                            [(t["sig"], mint, int(t["ts"]), t["wallet"], int(t["is_buy"]), t["sol"], t["tokens"], t.get("slot"))
+                             for t in trades])
+        self.db.commit()
+
+    def trades_since(self, mint, ts):
+        rows = self.db.execute("SELECT * FROM trades WHERE mint=? AND ts>=? ORDER BY ts", (mint, ts)).fetchall()
+        return [{"sig": r["sig"], "ts": r["ts"], "wallet": r["wallet"], "is_buy": bool(r["is_buy"]), "sol": r["sol"],
+                 "tokens": r["tokens"], "slot": r["slot"]} for r in rows]
+
+    def last_trade_sig(self, mint):
+        return self.get_meta("lastsig:" + mint)
+
+    def set_last_trade_sig(self, mint, sig):
+        self.set_meta("lastsig:" + mint, sig)
 
     # --- caché de wallets
     def get_wallet(self, addr, max_age, now):

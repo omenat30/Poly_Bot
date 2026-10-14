@@ -17,16 +17,18 @@ Probado contra las APIs reales desde la sesión de desarrollo:
 | Tu puerta de 30.000 USD | Equivale a una curva de **≈ 93 %** con SOL a 104 USD. Solo se mira el último ~7 % de la curva, que se recorre rápido: **poca antelación**. |
 | Progreso de la curva | Se mide en **tokens vendidos**, no en SOL. Medirlo en SOL subestimaba hasta 20 puntos (un token con 74 SOL estaba al 96 %, no al 87 %). **Corregido.** |
 | Listado de pump.fun | Funciona ordenado por `last_trade_timestamp`. Ordenado por capitalización devuelve miles de tokens ya migrados sin marcar. De 50 recientes, 28 ya estaban migrados. |
-| Trades de pump.fun (`/trades/all/{mint}`) | **ROTO.** Devuelve 400 («chainId must match…») y no he logrado la forma correcta. Sin trades no hay compradores únicos, picos ni wash trading. |
-| Monedas del creador de pump.fun | **ROTO** (404). Con GMGN se sustituye por `created_tokens`. |
+| Trades de pump.fun (`/trades/all/{mint}`) | **ROTO** (400, exige un `chainId` que no logré acertar). **Sustituido**: los trades se reconstruyen desde Helius (firmas de la curva + transacciones enriquecidas). **Verificado con datos reales.** |
+| Monedas del creador de pump.fun | La ruta antigua da 404. **Sustituida** por `/coins?creator=<dirección>`, que funciona y trae máximo histórico. |
+| Historial de wallets (Helius) | `events.swap` viene vacío. **Corregido**: se deduce de las transferencias. Verificado: 18 de 23 wallets reales con posiciones vendidas. |
+| Helius | Clave probada: mint, holders, firmas y transacciones enriquecidas funcionan. |
+| Circuito completo con tokens reales | Funciona: 3 tokens reales puntuados de principio a fin. Uno (98 % de curva, 37.500 USD) se descartó porque un clúster controla el 80 %. |
 | Detalle de un token por mint en pump.fun | **No existe** (`/coins/{mint}` da 404 y el filtro `mint=` se ignora). |
 | DexScreener | Funciona. |
 | GMGN | Responde, pide clave. Formatos sin verificar. |
 
-Consecuencia: **con pump.fun solo no se puede puntuar el volumen**. Con la clave de GMGN el descubrimiento sale de
-`trenches` (lista curada «a punto de completar») y las ventanas de volumen de `token info`; los compradores únicos y
-las operaciones sueltas requieren otra fuente (ver «Pendiente»). Hasta decidirlo, el detector se detiene en lugar de
-puntuar con datos que no tiene.
+Limitaciones reales que quedan (detalle en `HIPOTESIS_v3.md`): cobertura parcial de trades en tokens muy activos,
+ciclos lentos en frío (~150 s con 3 tokens), y coste en créditos de Helius **sin medir**: vigila tu panel de Helius
+los primeros días.
 
 ## Qué hay que saber antes de empezar (la parte honesta)
 
@@ -37,7 +39,7 @@ puntuar con datos que no tiene.
    como «probable bot» cuando hacen demasiadas operaciones, pero no se puede distinguir a una persona con información
    privilegiada de una que acierta.
 4. **Esto está construido pero NO verificado contra las APIs reales.** Se desarrolló en un entorno sin acceso a
-   pump.fun, DexScreener, Helius ni GMGN. La lógica está probada con datos sintéticos (65 pruebas). Los campos de
+   pump.fun, DexScreener, Helius ni GMGN. La lógica está probada con datos sintéticos (73 pruebas). Los campos de
    GMGN se leyeron de su documentación oficial; los de pump.fun y Helius están escritos de memoria. **El primer paso es `python -m radar check`**: te dice, línea
    a línea, qué funciona y qué no. Lo que falle se arregla o se descarta; no se maquilla.
 5. **Cuatro de los filtros de seguridad son débiles o triviales en pump.fun** y el panel lo dice en cada token:
@@ -106,7 +108,7 @@ errores»). Con GMGN, Helius solo contrasta mint y freeze. Nunca pongas claves p
 ```
 python -m radar check        # prueba cada fuente y la forma de sus datos
 python -m radar calibrate    # mide cuántos SOL tenía la curva al migrar (ahora asumo 85)
-python -m unittest discover -s tests    # 65 pruebas de la lógica
+python -m unittest discover -s tests    # 73 pruebas de la lógica
 ```
 Si `calibrate` da otro valor, pon `"curve_target_sol": <valor>` en `config.json`. Si `check` falla en algo, **pásame
 la salida** y se arregla antes de seguir.
@@ -140,11 +142,11 @@ No hay correos de prueba: `python -m radar check` solo comprueba que las credenc
 
 ## Pendiente (en orden)
 
-1. Con la clave de GMGN: verificar sus formatos reales y decidir de dónde salen los **trades** (ventanas de volumen de
-   GMGN, `token_top_traders`, o Helius sobre la curva de bonding).
-2. Rediseñar el criterio de volumen con lo que haya: sin compradores únicos por ventana, el criterio cambia y eso exige
-   `HIPOTESIS_v3.md` **antes** de medir.
-3. Reevaluar la puerta de 30.000 USD si la antelación resulta insuficiente (es decisión tuya, no mía).
+1. Medir el consumo real de créditos de Helius durante unas horas y fijar el tope de transacciones por token.
+2. Acelerar el ciclo en frío (consultas de wallets en paralelo, respetando el límite de la clave).
+3. Dejar el detector corriendo 24/7 y empezar la fase de medición sin dinero.
+4. Reevaluar la puerta de 30.000 USD si la antelación resulta insuficiente (es decisión tuya, no mía).
+5. GMGN, solo si algún día quieres pagar el saldo mínimo: opcional y ya integrado.
 
 ## Datos extra de GMGN (se registran, no puntúan)
 
@@ -184,7 +186,7 @@ detectarla).
 `radar/evaluate.py` puntuación · `clusters.py` entidades · `wallet_history.py` historial · `security.py` filtros ·
 `manipulation.py` wash/circular · `costs.py` costes · `analysis.py` + `stats.py` medición · `engine.py` bucle ·
 `alerts.py` avisos y correo · `sources/` pump.fun, GMGN, Helius, DexScreener · `variants.json` las 12 variantes ·
-`HIPOTESIS.md` y `HIPOTESIS_v2.md` · `tests/`.
+`HIPOTESIS.md`, `_v2` y `_v3` · `tests/`.
 
 ## Seguridad del propio programa
 

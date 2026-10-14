@@ -24,6 +24,43 @@ def _tok(raw):
             return 0.0
 
 
+WSOL = "So11111111111111111111111111111111111111112"
+MIN_SOL = 0.001  # por debajo, es polvo o una transferencia, no una operación
+
+
+def derive_trade(wallet, tx):
+    """Compra o venta de la wallet deducida de las transferencias (forma real de Helius, `events` vacío).
+    Compra: entra un token y salen SOL. Venta: sale un token y entran SOL. Los SOL son el cambio de saldo
+    de la wallet más el WSOL neto (pools que envuelven SOL). Se ignoran transacciones fallidas, las que
+    mueven varios tokens a la vez (rutas complejas) y las de importe mínimo."""
+    if tx.get("transactionError"):
+        return None
+    net = {}
+    for x in tx.get("tokenTransfers") or []:
+        m = x.get("mint")
+        if not m:
+            continue
+        amt = float(x.get("tokenAmount") or 0)
+        if x.get("toUserAccount") == wallet:
+            net[m] = net.get(m, 0.0) + amt
+        if x.get("fromUserAccount") == wallet:
+            net[m] = net.get(m, 0.0) - amt
+    wsol = net.pop(WSOL, 0.0)
+    tokens = {m: v for m, v in net.items() if abs(v) > 0}
+    if len(tokens) != 1:
+        return None
+    (mint, tok), = tokens.items()
+    native = sum(a.get("nativeBalanceChange", 0) for a in (tx.get("accountData") or []) if a.get("account") == wallet)
+    sol = native / LAMPORTS + wsol
+    if abs(sol) < MIN_SOL:
+        return None
+    if tok > 0 and sol < 0:
+        return ("buy", mint, -sol, tok)
+    if tok < 0 and sol > 0:
+        return ("sell", mint, sol, -tok)
+    return None
+
+
 def parse_wallet_txs(wallet, txs, limit=100, min_fund_sol=0.02):
     """Devuelve dict con posiciones por mint, fondeador (si fiable) y contrapartes."""
     positions = {}
@@ -50,18 +87,19 @@ def parse_wallet_txs(wallet, txs, limit=100, min_fund_sol=0.02):
             elif to == wallet and fr:
                 counter.add(fr)
         sw = (tx.get("events") or {}).get("swap")
-        if not sw:
+        trade = None
+        if sw:
+            ni, no = sw.get("nativeInput"), sw.get("nativeOutput")
+            tin, tout = sw.get("tokenInputs") or [], sw.get("tokenOutputs") or []
+            if ni and tout and ni.get("account") == wallet:
+                trade = ("buy", tout[0].get("mint"), int(ni["amount"]) / LAMPORTS, _tok(tout[0].get("rawTokenAmount") or {}))
+            elif no and tin and no.get("account") == wallet:
+                trade = ("sell", tin[0].get("mint"), int(no["amount"]) / LAMPORTS, _tok(tin[0].get("rawTokenAmount") or {}))
+        if trade is None:  # forma REAL verificada: `events` viene vacío, se deduce de las transferencias
+            trade = derive_trade(wallet, tx)
+        if trade is None or not trade[1]:
             continue
-        ni, no = sw.get("nativeInput"), sw.get("nativeOutput")
-        tin, tout = sw.get("tokenInputs") or [], sw.get("tokenOutputs") or []
-        if ni and tout and ni.get("account") == wallet:
-            mint, sol, tokens, side = tout[0].get("mint"), int(ni["amount"]) / LAMPORTS, _tok(tout[0].get("rawTokenAmount") or {}), "buy"
-        elif no and tin and no.get("account") == wallet:
-            mint, sol, tokens, side = tin[0].get("mint"), int(no["amount"]) / LAMPORTS, _tok(tin[0].get("rawTokenAmount") or {}), "sell"
-        else:
-            continue
-        if not mint:
-            continue
+        side, mint, sol, tokens = trade
         n_trades += 1
         p = positions.setdefault(mint, {"buy_sol": 0.0, "buy_tok": 0.0, "sell_sol": 0.0, "sell_tok": 0.0,
                                         "first_buy": None, "first_sell": None, "last_sell": None})

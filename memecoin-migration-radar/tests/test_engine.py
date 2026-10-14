@@ -25,6 +25,8 @@ class FakeWorld:
         self.data = {}
         for kind in ("good", "unsafe"):
             coin, trades, holders, minfo, cc, wd = demo.synth_inputs(rng, kind, cfg, NOW, 0.9)
+            for t in trades:  # en la realidad cada firma es única en toda la cadena
+                t["sig"] = f"{coin['mint'][:6]}-{t['sig']}"
             self.data[coin["mint"]] = (coin, trades, holders, minfo, cc, wd)
         self.by_wallet = {}
         for coin, _t, _h, _m, _c, wd in self.data.values():
@@ -50,8 +52,36 @@ class FakeWorld:
         c["price_usd"] = c["price_usd"] * self.price_factor
         return c
 
-    # --- helius
+    # --- helius (curva: firmas y transacciones con la FORMA REAL verificada de Helius)
     available = True
+
+    def _all_trades(self, mint):
+        return sorted(self.data[mint][1], key=lambda t: -t["ts"])
+
+    def curve_signatures(self, address, until=None, limit=1000):
+        mint = next(m for m, d in self.data.items() if d[0]["bonding_curve"] == address)
+        out = []
+        for t in self._all_trades(mint):
+            if t["sig"] == until:
+                break
+            out.append({"signature": t["sig"], "blockTime": int(t["ts"]), "err": None})
+        self.calls["parse_sigs"] = self.calls.get("parse_sigs", 0)
+        return out
+
+    def parse_transactions(self, sigs):
+        self.calls["parse_sigs"] = self.calls.get("parse_sigs", 0) + len(sigs)
+        by = {t["sig"]: (m, t) for m, d in self.data.items() for t in d[1]}
+        res = []
+        for sg in sigs:
+            m, t = by[sg]
+            curve = self.data[m][0]["bonding_curve"]
+            a, b = (curve, t["wallet"]) if t["is_buy"] else (t["wallet"], curve)
+            res.append({"signature": sg, "timestamp": int(t["ts"]), "slot": t.get("slot"), "type": "SWAP", "source": "PUMP_FUN",
+                        "events": {}, "transactionError": None,
+                        "tokenTransfers": [{"fromUserAccount": a, "toUserAccount": b, "tokenAmount": t["tokens"], "mint": m}],
+                        "nativeTransfers": [],
+                        "accountData": [{"account": curve, "nativeBalanceChange": int((1 if t["is_buy"] else -1) * t["sol"] * 1e9)}]})
+        return res
 
     def holders(self, mint, exclude):
         return self.data[mint][2], 1e9 - 793.1e6 * 0.9

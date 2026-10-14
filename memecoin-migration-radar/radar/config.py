@@ -42,6 +42,8 @@ DEFAULTS = {
         "helius_api": "https://api.helius.xyz",
     },
     "helius_rps": 5,
+    # Trades de la curva vía Helius: tope de transacciones parseadas por token y ciclo (cuida los créditos).
+    "helius_trades": {"parse_budget": 400, "sig_limit": 1000},
     # GMGN (solo lectura). Rate/capacity = plan gratuito 5/5 con pesos por ruta (ver sources/gmgn.py).
     "gmgn": {"enabled": True, "rate": 5, "capacity": 5, "holders_limit": 100, "activity_limit": 50,
              "history_wallets": 14},

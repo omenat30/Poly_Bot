@@ -87,6 +87,7 @@ class PumpFun:
         return out
 
     def creator_coins(self, creator, sol_usd=None):
-        raw = self._get(f"/coins/user-created-coins/{creator}?offset=0&limit=50&includeNsfw=true")
+        # Ruta VERIFICADA el 14 oct 2026. La anterior (/coins/user-created-coins/...) da 404.
+        raw = self._get(f"/coins?creator={creator}&offset=0&limit=50&sort=created_timestamp&order=DESC&includeNsfw=true")
         raw = raw if isinstance(raw, list) else raw.get("coins", [])
         return [normalize_coin(r, self.supply, sol_usd) for r in raw if r.get("mint")]

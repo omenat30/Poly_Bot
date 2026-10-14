@@ -58,6 +58,21 @@ class Helius:
         out.sort(key=lambda h: -h["amount"])
         return out, excluded
 
+    def curve_signatures(self, address, until=None, limit=1000):
+        """Firmas más recientes de una cuenta (la curva), de más nueva a más vieja.
+        `until`: se detiene al llegar a esta firma (ya vista). Incluye las fallidas (campo `err`)."""
+        opts = {"limit": limit, "commitment": "confirmed"}
+        if until:
+            opts["until"] = until
+        return self._rpc("getSignaturesForAddress", [address, opts]) or []
+
+    def parse_transactions(self, signatures):
+        """Transacciones enriquecidas (máx. 100 por llamada)."""
+        if not signatures:
+            return []
+        return http_json(f"{self.api}/v0/transactions?api-key={self.key}", body={"transactions": signatures[:100]},
+                         limiter=self.limiter)
+
     def wallet_txs(self, wallet, limit=100):
         return http_json(f"{self.api}/v0/addresses/{wallet}/transactions?api-key={self.key}&limit={limit}",
                          limiter=self.limiter)

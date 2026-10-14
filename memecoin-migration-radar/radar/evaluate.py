@@ -72,14 +72,20 @@ def score_volume(trades, now, cfg):
     spike = (max(buckets.values()) / tot) if tot else 1.0
     covered = bool(trades) and min(t["ts"] for t in trades) <= now - 2 * w
     s_ub = 40 * clamp(ub / v["min_unique_buyers"])
-    s_gr = 25 * clamp((growth - 1) / 1.0)
     s_ra = 25 * clamp((ratio - 1) / (v["min_buy_sell_ratio"] * 2 - 1 - 0.0) if v["min_buy_sell_ratio"] else 0)
-    s_sp = 10 * (1 - clamp((spike - 0.3) / (v["max_spike_share"] - 0.3)))
-    score = s_ub + s_gr + s_ra + s_sp
+    if covered:
+        s_gr = 25 * clamp((growth - 1) / 1.0)
+        s_sp = 10 * (1 - clamp((spike - 0.3) / (v["max_spike_share"] - 0.3)))
+        score = s_ub + s_gr + s_ra + s_sp
+    else:
+        # Sin la ventana anterior completa, crecimiento y picos NO son medibles (salían inflados o hundidos).
+        # Se puntúa solo con compradores y ratio, reescalado a 100, y la nota lo dice.
+        score = (s_ub + s_ra) / 65 * 100
     return {
         "score": round(score, 1), "ok": True,
         "note": (f"{ub} compradores únicos (prev {ubp}) · compra/venta {ratio:.1f} · "
-                 f"mayor minuto {spike*100:.0f}%" + ("" if covered else " · cobertura parcial")),
+                 f"mayor minuto {spike*100:.0f}%" if covered else
+                 f"{ub} compradores únicos · compra/venta {ratio:.1f} · cobertura parcial: crecimiento y picos no medidos"),
         "metrics": {"unique_buyers": ub, "unique_buyers_prev": ubp, "growth": round(growth, 2),
                     "buy_sol": round(buy, 2), "sell_sol": round(sell, 2), "ratio": round(ratio, 2),
                     "spike_share": round(spike, 2), "covered": covered, "vol_sol": round(buy + sell, 2)},

@@ -204,9 +204,20 @@ class Evaluate(unittest.TestCase):
 
     def test_volume_spike_scores_lower_than_spread(self):
         now = 10_000
-        spread = [{"ts": now - i * 10, "wallet": f"w{i}", "is_buy": True, "sol": 1.0} for i in range(28)]
-        spike = [{"ts": now - 5, "wallet": f"w{i}", "is_buy": True, "sol": 1.0} for i in range(28)]
+        old = [{"ts": now - 700, "wallet": "z", "is_buy": True, "sol": 1.0}]  # cubre la ventana anterior
+        spread = old + [{"ts": now - i * 10, "wallet": f"w{i}", "is_buy": True, "sol": 1.0} for i in range(28)]
+        spike = old + [{"ts": now - 5, "wallet": f"w{i}", "is_buy": True, "sol": 1.0} for i in range(28)]
         self.assertGreater(evaluate.score_volume(spread, now, CFG)["score"], evaluate.score_volume(spike, now, CFG)["score"])
+
+    def test_partial_coverage_does_not_invent_growth_or_spikes(self):
+        """Sin ventana anterior, crecimiento y picos no se miden: la nota lo dice y no cambian la puntuación."""
+        now = 10_000
+        recent = [{"ts": now - 5, "wallet": f"w{i}", "is_buy": True, "sol": 1.0} for i in range(28)]  # todo en 1 minuto
+        r = evaluate.score_volume(recent, now, CFG)
+        self.assertFalse(r["metrics"]["covered"])
+        self.assertIn("no medidos", r["note"])
+        spread = [{"ts": now - i * 10, "wallet": f"w{i}", "is_buy": True, "sol": 1.0} for i in range(28)]
+        self.assertEqual(r["score"], evaluate.score_volume(spread, now, CFG)["score"])  # el pico no penaliza sin cobertura
 
 
 class Costs(unittest.TestCase):

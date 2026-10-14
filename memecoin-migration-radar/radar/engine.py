@@ -5,6 +5,7 @@ import time
 from . import alerts as alerts_mod
 from . import evaluate, wallet_history
 from .sources.dexscreener import DexScreener
+from .sources.curve_trades import CurveTrades
 from .sources.gmgn import Gmgn, GmgnError, GmgnRateLimited
 from .sources.helius import Helius
 from .sources.pumpfun import PumpFun
@@ -19,6 +20,7 @@ class Engine:
         self.helius = helius or Helius(cfg, RateLimiter(cfg["helius_rps"]))
         self.dex = dex or DexScreener(cfg, RateLimiter(4))
         self.gmgn = gmgn or Gmgn(cfg)
+        self.curve_trades = CurveTrades(self.helius, store, cfg)
         self.rng = rng or random.Random()
         variants = {v["id"]: v for v in load_variants()}
         self.alert_variant = variants[cfg["alert_variant"]]
@@ -67,12 +69,22 @@ class Engine:
     def deep(self, coin, now):
         """Descarga todo lo necesario y puntúa. GMGN si hay clave (1 llamada de holders trae
         también el fondeador de cada wallet); si no, Helius. Los trades siempre vienen de pump.fun."""
-        trades = self.pump.trades(coin["mint"])
+        trades = self.trades_for(coin, now)
         if self.gmgn.available:
             return self.deep_gmgn(coin, trades, now)
         if self.helius.available:
             return self.deep_helius(coin, trades, now)
         return None
+
+    def trades_for(self, coin, now):
+        """Trades de la curva. Helius (verificado) si hay clave; pump.fun solo como último recurso,
+        porque su endpoint de trades devuelve 400 desde el 14 oct 2026 (ver README)."""
+        if self.helius.available and coin.get("bonding_curve"):
+            trades, meta = self.curve_trades.refresh(coin["mint"], coin["bonding_curve"], now)
+            if meta["capped"]:
+                self.log(f"  {coin.get('symbol')}: tope de {self.curve_trades.budget} transacciones; cobertura parcial")
+            return trades
+        return self.pump.trades(coin["mint"])
 
     def deep_gmgn(self, coin, trades, now):
         cfg, mint = self.cfg, coin["mint"]
