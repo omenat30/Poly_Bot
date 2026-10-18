@@ -108,7 +108,7 @@ const ownPos = AGS.flatMap(k => [...R[k].trades, ...(R[k].open ? [R[k].open] : [
 const radarSeen = tr => { const k = RAD_AG[tr.kind || 'bo'], tg = tag15(tr.sigT); return [...known].some(id => id.startsWith('radar-' + k + '-') && id.endsWith('-' + tg) && !id.includes('-out-')); };
 // v12.2 (13 oct): ventana de aviso de 35 min (antes 20). Las rondas llegan 2-5,6 min tarde cada 15 min, así que con 20 min cada señal tenía en la práctica un solo intento
 // (la 2.ª ronda cae hacia el minuto 18-21). Con 35 min hay dos intentos seguros. Entrar 35 min tarde sigue siendo rentable en el backtest (research/v13_delay.py).
-const RADAR_WINDOW = 35 * 60;
+const RADAR_WINDOW = 80 * 60;   // v12.4 (18 oct): rondas cada hora (antes 35 min con rondas cada 30)
 const radarDecideNow = tr => tr.sigT >= now - RADAR_WINDOW && !radarSeen(tr);
 const radarLive = [], radarMissed = [];
 for (const tr of radarAll) {

@@ -50,6 +50,14 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## v12.4 · rondas cada hora y liquidez solo L–V (18 oct 2026)
+
+Por orden del usuario (gasto): rondas de la Mesa solo a las :01 (la :31 queda pausada) y el correo de liquidez de la mañana solo de lunes a viernes. Estrategia sin cambios.
+- `RADAR_WINDOW` pasa de 35 a 80 min para que cada señal de aprendiz siga viéndose en la siguiente ronda horaria.
+- Coste medido (`v13_delay.py`, aprendices, entrada tarde con stop y objetivo de la señal): R total 2022-26 con entrada inmediata 52,8; a 35 min 45,8; a 45 min 42,3; a 60 min 42,8; a 75 min 28,1. Con rondas horarias el retraso medio de entrada es ~45 min: se esperan unas −10 a −12R en 4,6 años en los aprendices (≈ −2,5R/año), sin contar que los avisos de salida y parcial llegan hasta 1 h tarde. En 2018-21 el retraso de 60-75 min deja el R/op en +0,08 a +0,03 (frente a +0,14 inmediato).
+- Simulación de regresión (`simulate.py` con todas las rondas :16/:31/:46 saltadas, 3 y 7 sep): ✅ sin salidas sin entrada, 0 señales perdidas.
+- Reversible: reactivar las rutinas :16/:31/:46 y devolver `RADAR_WINDOW` a 35 min.
+
 ## v12.3 · eficiencia de las tareas programadas (14 oct 2026)
 
 Sin cambios de estrategia (backtest idéntico). Medido: las 4 rutinas de ronda (280 ejecuciones/semana) son ≈80% del consumo; los escáneres del Radar (155/sem) no se tocan.
