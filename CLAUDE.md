@@ -76,3 +76,6 @@ Más acierto, más R por operación y por año, más Sharpe anual, menos caída 
 
 ## v12.3 (14 oct 2026)
 Solo eficiencia: ventanas de datos más cortas, `research/control_diario.py` (control diario determinista, alojado en el artefacto como `ops/control_diario.py.txt`), rutinas de control e informe en Haiku. Rondas cada hora (solo :01) desde el 18 oct por orden del usuario (v12.4, ventana de aviso 80 min); las rutinas :16, :31 y :46 están pausadas. Correo de liquidez solo L–V.
+
+## Mesa CERRADA (19 oct 2026)
+Tras la v14 (rehacer desde cero: 8 variantes, juez DESCARTAR; ETH: sin datos históricos) ninguna opción mejoró a la v12, y la v12 rinde menos que el Radar solo. Rutinas de ronda, control diario e informe semanal pausadas. No reabrir sin una razón nueva (ver README, sección v14). El Radar BTC 15m sigue activo y no se toca.

@@ -50,6 +50,18 @@ La paridad entre JS y Python (`parity2.js`) da 0 diferencias en 2.033 operacione
 
 **Sala de emergencias.** Se activa cuando BTC se mueve 3,5σ o más en 1–3 h, unas 1,5 veces por semana en horario. Los cuatro agentes votan según su sistema y Calvo da el veredicto, que te llega por correo.
 
+## v14 · rehacer la Mesa desde cero y probar ETH (19 oct 2026) · MESA CERRADA
+
+Encargo: o se rehace la estrategia desde cero, o se opera solo ETH con OpenMarket; se devuelve la mejor y, si ninguna mejora a la v12, se cierra. Pre-registro: `research/v14_prereg.md`; código: `research/v14_eval.py`.
+- **ETH: no evaluable.** OpenMarket sirve 167 h de velas con esta clave (364 días en Plus); el protocolo pide elegir con 2018-21 y probar en 2022-26. Bitstamp ETH, Binance, data.binance.vision y Coinbase no son accesibles desde el entorno. Descartada por falta de datos, no por rendimiento.
+- **Desde cero en BTC (8 variantes, familias de las skills de trading):** A ruptura tras contracción (VCP), B pullback en tendencia, C ráfaga de momento, D agotamiento (fade), E momento de semanas con trailing. Solo velas cerradas de 1 h, horario de oficina, costes de la Mesa y funding.
+- **Elección con 2018-21** (corte ≥ 0,4 ops/sem y R/op > 0,10; mayor Sharpe reciente): pasan A1, C1 y E1; se elige **A1** (+0,563R/op, +12,1R/año, Sharpe 1,06).
+- **Prueba 2022-26 de A1:** 0,36 ops/sem · 27% de acierto · −0,112R/op · −2,1R/año · Sharpe −0,30 · caída 17,1R. Sumada a la v12 empeora (Sharpe 0,77 → 0,65, R/año 19,1 → 15,9). Juez: **DESCARTAR**, DSR 0,000 (inventario 3.122).
+- Informativo, sin re-elegir: en 2022-26 el mejor del resto (B2) da +6,9R/año y Sharpe 0,78 frente a +19,1R/año de la v12; D1 (fade de agotamientos) pierde en los dos periodos.
+- **Hallazgo previo (19 oct):** los aprendices del Radar tienen correlación 0,65 con la operación del Radar en la que se apoyan (194 pares, 2022-26): ganan el 74% cuando el Radar gana y el 4% cuando pierde. No son señales independientes. Radar solo en 2022-26: +36,2R/año, Sharpe 2,51, caída 8,9R, frente a la v12: +19,1R/año, Sharpe 0,77, caída 14,3R.
+- **En vivo:** del 9 al 19 oct, 0 operaciones reales en la Mesa.
+- **Decisión:** ninguna opción mejora a la v12 y la v12 rinde menos que el Radar solo. Se cierra la Mesa: rutinas de ronda, control diario e informe semanal pausadas (no borradas). El Radar BTC 15m y su correo de liquidez siguen. Reabrir solo con una razón nueva (datos de ETH con años de histórico, o una señal independiente del Radar validada fuera de muestra).
+
 ## v12.4 · rondas cada hora y liquidez solo L–V (18 oct 2026)
 
 Por orden del usuario (gasto): rondas de la Mesa solo a las :01 (la :31 queda pausada) y el correo de liquidez de la mañana solo de lunes a viernes. Estrategia sin cambios.
