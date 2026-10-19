@@ -53,6 +53,9 @@ header.top p { color: var(--muted); max-width: 64ch; margin-top: 6px; }
 .bub::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 10px; height: 10px; background: inherit; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: translateX(-50%) rotate(45deg); }
 .bub b { font-family: var(--f-display); font-weight: 600; display: block; font-size: .78rem; }
 .bub.idea { border-color: var(--accent); } .bub.trade { border-color: var(--long); background: var(--long-soft); } .bub.alerta { border-color: var(--warn); }
+.auditbar { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: var(--paper); border: 1px solid var(--warn); color: var(--ink); padding: 6px 14px; border-radius: 999px; font: .8rem var(--f-body); z-index: 3; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.tag3d.aud { border-color: var(--warn); }
+.bub.aud { border-color: var(--warn); }
 .tag3d { position: absolute; left: 0; top: 0; transform: translate(-50%, 0); font: 600 .7rem var(--f-mono); color: var(--ink); background: var(--paper); border: 1px solid var(--line); padding: 1px 7px; border-radius: 999px; pointer-events: none; white-space: nowrap; opacity: .92; }
 .stage-cap { position: absolute; left: 10px; bottom: 10px; right: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; pointer-events: none; }
 .stage-cap span { font: .72rem var(--f-mono); color: var(--muted); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }

@@ -1,0 +1,111 @@
+{
+ "version": "v12.3",
+ "fecha": "2026-10-13",
+ "nota": "v12 congelada. v12.1: contabilidad (lo que consta en signals es lo que cuenta). v12.2: ventana de aviso de los aprendices de 20 a 35 min y aviso tardío con distancia en R. Ninguna regla de entrada, salida, tamaño ni parada cambia. Cualquier cambio de estrategia es una v13 con su propia evidencia (las 8 variantes probadas el 13 oct: descartadas). v12.3: solo eficiencia (ventanas de datos más cortas en radar_desk.js, control diario sin LLM pesado, rutinas en Haiku); ninguna regla de estrategia cambia.",
+ "commit": "4bca7ffeadb0ac17476244a8d03dca20053d334a (+ v12.2 sin confirmar hasta el siguiente commit)",
+ "sha256": {
+  "office/engine.js": "7be7655e7513054d6086ce677e12a10ac6f8afc2b8b946b81ffab3701a0fe87a",
+  "office/mesa_tick.js": "23c5e65e06a61dbc62fc622637a25ed41b1778625a0f20bedbd5e3071ef2626b",
+  "office/ml.js": "90409dc869d6ac92f453e37cd785d3430156590d8120cb7df61f7d5be1c23005",
+  "office/ml_hist.json": "73cc7592ab1733028ebb77af35866a65315ddb369560da21ff743b341d201ea1",
+  "office/radar_multi.js": "e232cff68d0117fdbc5a6310a3bb3d193a7fd358069425e94de2f5950f8decdb",
+  "office/radar_desk.js": "8873b676850864a5886b4d2f9b5135fd7dab735c191a76392313badde8ffedcf",
+  "rutina_mesa.txt": "147f3d63f418e5776878be3169ed30501debc717693adb0a803f72520e95ae6b"
+ },
+ "parametros": {
+  "PICK": {
+   "vega": {
+    "n": 50,
+    "k": 2,
+    "shorts": 1,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    }
+   },
+   "ortega": {
+    "N": 5,
+    "k": 2,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    }
+   },
+   "paz": {
+    "rsiLo": 40,
+    "en": 50,
+    "k": 2,
+    "tk": 5,
+    "maxh": 96,
+    "lb": 6,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    },
+    "conf": false,
+    "nub": true
+   },
+   "rios": {
+    "q": 0.2,
+    "vm": 1,
+    "k": 4,
+    "G": {},
+    "conf": false,
+    "nub": true
+   },
+   "ferrer": {
+    "lo": -5e-05,
+    "hi": 0.0005,
+    "N": 12,
+    "k": 2,
+    "T": 3,
+    "G": {
+     "be": 1,
+     "beoff": 0.3
+    }
+   }
+  },
+  "PM": {
+   "base": {
+    "vega": 0,
+    "ortega": 1,
+    "paz": 0.5,
+    "rios": 0,
+    "ferrer": 0
+   },
+   "cap": 2,
+   "ddR": 8,
+   "ddCut": 0.5,
+   "minW": 0.2
+  },
+  "SHADOW": {
+   "vega": {
+    "n": 20,
+    "k": 3.5,
+    "shorts": 0,
+    "G": {}
+   },
+   "ortega": {
+    "N": 5,
+    "k": 2,
+    "G": {
+     "tp": 1.5,
+     "f": 0.33,
+     "be": 0.75,
+     "beoff": 0.3
+    }
+   }
+  },
+  "costes": {
+   "fee": 0.0014,
+   "stopSlip": 0.0003
+  },
+  "aprendices": {
+   "ru_max": 0.8,
+   "riesgo_R": 1,
+   "objetivo_R": 1.65,
+   "cierre_h": 72,
+   "ventana_aviso_min": 35
+  }
+ }
+}

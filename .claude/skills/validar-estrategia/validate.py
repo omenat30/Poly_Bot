@@ -12,11 +12,11 @@ RES = os.path.join(ROOT, 'mesa_radar_btc', 'research')
 ts = lambda y: int(dt.datetime(y, 1, 1, tzinfo=dt.timezone.utc).timestamp())
 ap = argparse.ArgumentParser(); ap.add_argument('cand'); ap.add_argument('--peso', type=float, default=1.0)
 ap.add_argument('--reemplaza', default=''); ap.add_argument('--costes-extra-pb', type=float, default=4)
-ap.add_argument('--pruebas', type=int, default=1); ap.add_argument('--no-registrar', action='store_true')
-A = ap.parse_args()
+ap.add_argument('--pruebas', type=int, default=1); ap.add_argument('--vida-media', type=float, default=2.0); ap.add_argument('--no-registrar', action='store_true')
+A = ap.parse_args(); HL = A.vida_media
 base = json.load(open(os.path.join(RES, 'v12g_trades.json'))); END = base['end']; B = base['trades']
 C = json.load(open(A.cand)); C = C['trades'] if isinstance(C, dict) else C
-for x in C: x.setdefault('src', 'candidata'); x['w'] = A.peso
+for x in C: x.setdefault('src', 'candidata'); x.setdefault('w', A.peso)
 P1, P2 = (ts(2018), ts(2022)), (ts(2022), END)
 
 def port(items, a, b):
@@ -34,10 +34,13 @@ def stats(tk, a, b, weighted=True):
     d0 = a // 86400; v = [0.0] * (min(b, END) // 86400 - d0 + 1)
     for x, q in zip(tk, wr): v[min(len(v) - 1, x['t1'] // 86400 - d0)] += q
     m = sum(v) / len(v); sd = math.sqrt(sum((q - m) ** 2 for q in v) / len(v)) or 1e-9
+    # ponderado por recencia (vida media HL años hasta el final del periodo): lo reciente pesa más
+    e = min(b, END) // 86400; wd = [0.5 ** ((e - (d0 + i)) / (HL * 365.25)) for i in range(len(v))]; W = sum(wd)
+    mw = sum(q * k for q, k in zip(v, wd)) / W; sdw = math.sqrt(sum(k * (q - mw) ** 2 for q, k in zip(v, wd)) / W) or 1e-9
     cum = pk = dd = 0
     for x, q in sorted(zip(tk, wr), key=lambda p: p[0]['t1']): cum += q; pk = max(pk, cum); dd = max(dd, pk - cum)
-    return dict(n=len(r), sem=len(r) / yrs / 52.18, win=sum(q > 0 for q in r) / len(r), rop=sum(r) / len(r), cop=sum(wr) / len(wr), ry=sum(wr) / yrs, sh=m / sd * math.sqrt(365), dd=dd, v=v)
-def line(s): return '—' if not s else f"ops/sem {s['sem']:.2f} · acierto {s['win']*100:.1f}% · R/op {s['rop']:+.3f} (cartera {s['cop']:+.3f}) · R/año {s['ry']:+.1f} · Sharpe {s['sh']:.2f} · caída {s['dd']:.1f}R"
+    return dict(n=len(r), sem=len(r) / yrs / 52.18, win=sum(q > 0 for q in r) / len(r), rop=sum(r) / len(r), cop=sum(wr) / len(wr), ry=sum(wr) / yrs, sh=m / sd * math.sqrt(365), shw=mw / sdw * math.sqrt(365), ryw=mw * 365.25, dd=dd, v=v)
+def line(s): return '—' if not s else f"ops/sem {s['sem']:.2f} · acierto {s['win']*100:.1f}% · R/op {s['rop']:+.3f} (cartera {s['cop']:+.3f}) · R/año {s['ry']:+.1f} · Sharpe {s['sh']:.2f} (reciente {s['shw']:.2f}) · R/año reciente {s['ryw']:+.1f} · caída {s['dd']:.1f}R"
 def years(tk):
     out = {}
     for y in range(2018, 2027): out[y] = round(sum(x['r'] * x.get('wt', 1) for x in tk if ts(y) <= x['t0'] < ts(y + 1)), 1)
@@ -51,6 +54,7 @@ for nm, (a, b) in (('2018-21 (elección)', P1), ('2022-26 (prueba)', P2)):
     s0 = stats(port(B, a, b), a, b); s1 = stats(port(Bk + C, a, b), a, b); res[nm] = (sc, s0, s1)
     print(f'\n## {nm}\n- Candidata sola: {line(sc)}\n- Mesa v12:       {line(s0)}\n- v12 + candidata:{line(s1)}')
 y0 = years(port(B, ts(2018), END)); y1 = years(port(Bk + C, ts(2018), END))
+dep = max((y1[y] - y0[y] for y in y0 if y >= 2022), default=0); tot = sum(y1[y] - y0[y] for y in y0 if y >= 2022)
 print('\n## Año a año (R de cartera)\n| año | v12 | con candidata | Δ |\n|---|---|---|---|')
 for y in y0: print(f'| {y} | {y0[y]:+.1f} | {y1[y]:+.1f} | {y1[y]-y0[y]:+.1f} |')
 mejora_años = sum(1 for y in y0 if y >= 2022 and y1[y] > y0[y] + 0.05)
@@ -86,13 +90,14 @@ if not A.no_registrar:
     inv['trials'] = N; json.dump(inv, open(inv_p, 'w'), ensure_ascii=False); print(f'- Inventario actualizado: {N} pruebas.')
 # veredicto: sobre la cartera, con la regla de elección en 2018-21 y la confirmación en 2022-26
 e0, e1 = res['2018-21 (elección)'][1], res['2018-21 (elección)'][2]
-mejora_eleccion = e1['sh'] > e0['sh']
-mejora_prueba = s1['sh'] > s0['sh'] and s1['cop'] >= s0['cop'] - 0.005
+mejora_eleccion = e1['shw'] > e0['shw']   # elección y prueba: Sharpe ponderado por recencia
+mejora_prueba = s1['shw'] > s0['shw'] and s1['ryw'] >= s0['ryw']
 no_rompe = s1['dd'] <= s0['dd'] * 1.25 and (ss is None or ss['rop'] > 0)
+un_solo_año = tot > 0 and dep > tot   # sin su mejor año, la mejora de 2022-26 desaparece
 print('\n## Veredicto')
-if mejora_eleccion and mejora_prueba and no_rompe and mejora_años >= 3: v = 'ADOPTAR (en prueba en real, riesgo mínimo)'
+if mejora_eleccion and mejora_prueba and no_rompe and mejora_años >= 3 and not un_solo_año: v = 'ADOPTAR (en prueba en real, riesgo mínimo)'
 elif mejora_eleccion and (mejora_prueba or mejora_años >= 3): v = 'DUDOSO: mejora parcial; no adoptar sin más evidencia'
 else: v = 'DESCARTAR'
 print(f'- {v}')
-print(f'- Mejora el Sharpe de la cartera en la elección: {"sí" if mejora_eleccion else "no"} · en la prueba: {"sí" if mejora_prueba else "no"} · años 2022-26 que mejora: {mejora_años} de 5 · caída y costes aceptables: {"sí" if no_rompe else "no"}')
+print(f'- Mejora el Sharpe de la cartera en la elección: {"sí" if mejora_eleccion else "no"} · en la prueba: {"sí" if mejora_prueba else "no"} · años 2022-26 que mejora: {mejora_años} de 5 · caída y costes aceptables: {"sí" if no_rompe else "no"} · depende de un solo año: {"sí" if un_solo_año else "no"} (vida media {HL:g} años)')
 if dsr is not None and dsr < 0.95: print('- Aviso: la ventaja de la candidata sola no es estadísticamente demostrable tras corregir por todas las pruebas.')
